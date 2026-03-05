@@ -7,10 +7,10 @@ export default async function handler(req) {
         return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
     }
 
-    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    const API_KEY = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
-    if (!DEEPSEEK_API_KEY) {
-        return new Response(JSON.stringify({ error: 'Missing DEEPSEEK_API_KEY' }), { status: 500 });
+    if (!API_KEY) {
+        return new Response(JSON.stringify({ error: 'Missing GEMINI_API_KEY' }), { status: 500 });
     }
 
     const GENERATION_PROMPT = `Ти генеруєш дані для когнітивного тренажера для літніх людей (українською мовою).
@@ -44,32 +44,24 @@ export default async function handler(req) {
 Використай цей випадковий seed для унікальності: ${Math.random().toString(36).substring(2, 10)} - ${Date.now()}`;
 
     try {
-        const response = await fetch('https://api.deepseek.com/chat/completions', {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'deepseek-chat',
-                messages: [
-                    { role: 'system', content: 'You are a helpful assistant that only outputs strictly valid JSON.' },
-                    { role: 'user', content: GENERATION_PROMPT }
-                ],
-                response_format: { type: 'json_object' }
+                system_instruction: { parts: [{ text: "You are a helpful assistant that only outputs strictly valid JSON." }] },
+                contents: [{ parts: [{ text: GENERATION_PROMPT }] }],
+                generationConfig: { responseMimeType: "application/json" }
             })
         });
 
         if (!response.ok) {
             const errText = await response.text();
-            console.error('DeepSeek API error:', errText);
-            return new Response(JSON.stringify({ error: `DeepSeek API status: ${response.status}` }), { status: response.status });
+            console.error('Gemini API error:', errText);
+            return new Response(JSON.stringify({ error: `Gemini API status: ${response.status}` }), { status: response.status });
         }
 
         const data = await response.json();
-        const content = data.choices[0].message.content;
-
-        // Deepseek might return markdown backticks even with json_object format, standard safety parsing:
+        const content = data.candidates[0].content.parts[0].text;
         const cleanJsonStr = content.replace(/^```json/g, '').replace(/```$/g, '').trim();
 
         return new Response(cleanJsonStr, {
