@@ -88,13 +88,18 @@ async function generateAllTasks() {
 
 УВАГА: Згенеруй АБСОЛЮТНО НОВІ варіанти. Використай цей випадковий seed для унікальності: ${Math.random().toString(36).substring(2, 10)} - ${Date.now()}`;
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+            const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
                 body: JSON.stringify({
-                    system_instruction: { parts: [{ text: "You are a helpful assistant that only outputs strictly valid JSON." }] },
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { responseMimeType: "application/json" }
+                    model: "glm-4-flash",
+                    messages: [
+                        { role: "system", "content": "You are a helpful assistant that only outputs strictly valid JSON." },
+                        { role: "user", "content": prompt }
+                    ]
                 })
             });
 
@@ -110,7 +115,7 @@ async function generateAllTasks() {
                 return null;
             }
 
-            const content = data.candidates[0].content.parts[0].text;
+            const content = data.choices[0].message.content;
             resultData = JSON.parse(content.replace(/^```json/g, '').replace(/```$/g, '').trim());
         }
 

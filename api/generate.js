@@ -44,24 +44,29 @@ export default async function handler(req) {
 Використай цей випадковий seed для унікальності: ${Math.random().toString(36).substring(2, 10)} - ${Date.now()}`;
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+        const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`
+            },
             body: JSON.stringify({
-                system_instruction: { parts: [{ text: "You are a helpful assistant that only outputs strictly valid JSON." }] },
-                contents: [{ parts: [{ text: GENERATION_PROMPT }] }],
-                generationConfig: { responseMimeType: "application/json" }
+                model: "glm-4-flash",
+                messages: [
+                    { role: "system", "content": "You are a helpful assistant that only outputs strictly valid JSON." },
+                    { role: "user", "content": GENERATION_PROMPT }
+                ]
             })
         });
 
         if (!response.ok) {
             const errText = await response.text();
-            console.error('Gemini API error:', errText);
-            return new Response(JSON.stringify({ error: `Gemini API status: ${response.status}` }), { status: response.status });
+            console.error('GLM API error:', errText);
+            return new Response(JSON.stringify({ error: `GLM API status: ${response.status}`, details: errText }), { status: response.status });
         }
 
         const data = await response.json();
-        const content = data.candidates[0].content.parts[0].text;
+        const content = data.choices[0].message.content;
         const cleanJsonStr = content.replace(/^```json/g, '').replace(/```$/g, '').trim();
 
         return new Response(cleanJsonStr, {
