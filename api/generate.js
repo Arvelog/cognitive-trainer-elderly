@@ -7,10 +7,10 @@ export default async function handler(req) {
         return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
     }
 
-    const API_KEY = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    const API_KEY = process.env.VITE_GLM_API_KEY || process.env.GLM_API_KEY;
 
     if (!API_KEY) {
-        return new Response(JSON.stringify({ error: 'Missing GEMINI_API_KEY' }), { status: 500 });
+        return new Response(JSON.stringify({ error: 'Missing GLM_API_KEY' }), { status: 500 });
     }
 
     const GENERATION_PROMPT = `Ти генеруєш дані для когнітивного тренажера для літніх людей (українською мовою).

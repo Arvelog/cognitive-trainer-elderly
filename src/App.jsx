@@ -57,9 +57,9 @@ async function generateAllTasks() {
                 return { _rateLimited: true };
             }
 
-            const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+            const apiKey = import.meta.env.VITE_GLM_API_KEY;
             if (!apiKey) {
-                console.warn('No VITE_GEMINI_API_KEY found, using hardcoded fallback');
+                console.warn('No VITE_GLM_API_KEY found, using hardcoded fallback');
                 return null;
             }
 
