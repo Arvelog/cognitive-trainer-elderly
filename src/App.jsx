@@ -217,9 +217,9 @@ function Task4({ onScore, initialData }) {
     const [imgError, setImgError] = useState(false);
 
     const imgPrompt = data.img || 'object';
-    // Extract strictly the first english word to avoid 403 Forbidden from LoremFlickr for spaces/commas
-    const imgKeyword = imgPrompt.split(/[\s,]+/)[0].replace(/[^a-zA-Z]/g, '') || 'object';
-    const primaryImgUrl = `https://loremflickr.com/512/512/${imgKeyword.toLowerCase()}`;
+    // Parse comma-separated keywords for LoremFlickr (e.g. 'grandmother,pie' max 3 keywords)
+    const imgKeywords = imgPrompt.split(',').map(w => w.trim().replace(/[^a-zA-Z]/g, '').toLowerCase()).filter(Boolean).slice(0, 3).join(',') || 'object';
+    const primaryImgUrl = `https://loremflickr.com/512/512/${imgKeywords}`;
     // Fallback to a nice abstract shape based on the sentence if AI generation is down
     const fallbackImgUrl = `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(data.sentence)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
     const imgUrl = imgError ? fallbackImgUrl : primaryImgUrl;

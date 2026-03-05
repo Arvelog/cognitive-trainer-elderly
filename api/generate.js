@@ -22,7 +22,7 @@ export default async function handler(req) {
   "findOdd": { "cat": "назва категорії", "items": ["emoji предмет1", "emoji предмет2", "emoji предмет3", "emoji НЕвідповідний"], "odd": 3 },
   "sequence": { "title": "назва процесу", "steps": ["крок1", "крок2", "крок3", "крок4"] },
   "budget": { "wallet": 1200, "label": "назва", "items": [{"n":"товар","p":150},{"n":"товар2","p":200},{"n":"товар3","p":100},{"n":"товар4","p":80}] },
-  "sentence": { "img": "SINGLE english noun for image (e.g. dog, nature, food)", "sentence": "Просте речення з 4-6 слів" },
+  "sentence": { "img": "2-3 english keywords describing the image, separated by commas (e.g. grandmother,pie,kitchen)", "sentence": "Просте речення з 4-6 слів" },
   "associations": { "q": "Питання?", "correct": ["emoji правильний1", "emoji правильний2", "emoji правильний3"], "wrong": ["emoji неправильний1", "emoji неправильний2", "emoji неправильний3"] },
   "categories": { "q": "Що належить до ...?", "correct": ["emoji вірний1", "emoji вірний2", "emoji вірний3"], "wrong": ["emoji невірний1", "emoji невірний2", "emoji невірний3"] },
   "trueFalse": { "text": "Твердження про світ", "answer": true },
