@@ -147,12 +147,14 @@ const VOWELS_DATA = [
     { words: [{ full: 'ПІДЛОГА', hint: 'По ній ходять вдома' }, { full: 'ДЗЕРКАЛО', hint: 'У нього дивляться щоранку' }, { full: 'КОШИК', hint: 'У ньому несуть продукти з ринку' }] },
 ];
 const VERB_DATA = [
-    { obj: '📰 Газета', correct: 'Читати', wrong: ['Пити', 'Одягати'] },
-    { obj: '🍵 Чай', correct: 'Пити', wrong: ['Читати', 'Копати'] },
-    { obj: '👗 Сукня', correct: 'Одягати', wrong: ['Пити', 'Їсти'] },
-    { obj: '🎹 Піаніно', correct: 'Грати', wrong: ['Їсти', 'Прати'] },
-    { obj: '🧹 Мітла', correct: 'Мести', wrong: ['Пити', 'Читати'] },
-    { obj: '✉️ Лист', correct: 'Писати', wrong: ['Їсти', 'Копати'] },
+    { obj: '📰 Газета', context: 'Що ми робимо з газетою?', correct: 'Читати', wrong: ['Дивитися', 'Малювати', 'Слухати', 'Їсти'] },
+    { obj: '🍵 Чай', context: 'Що ми робимо з чаєм?', correct: 'Пити', wrong: ['Їсти', 'Варити', 'Нюхати', 'Читати'] },
+    { obj: '👗 Сукня', context: 'Що ми робимо із сукнею?', correct: 'Одягати', wrong: ['Вдягнути', 'Прасувати', 'Прати', 'Носити'] },
+    { obj: '🎹 Піаніно', context: 'Що ми робимо з піаніно?', correct: 'Грати', wrong: ['Слухати', 'Настроювати', 'Співати', 'Торкати'] },
+    { obj: '🧹 Мітла', context: 'Навіщо потрібна мітла?', correct: 'Мести', wrong: ['Прибирати', 'Витирати', 'Чистити', 'Мити'] },
+    { obj: '✉️ Лист', context: 'Що ми робимо з листом?', correct: 'Писати', wrong: ['Читати', 'Відправляти', 'Складати', 'Друкувати'] },
+    { obj: '🌱 Розсада', context: 'Що ми робимо з розсадою?', correct: 'Садити', wrong: ['Поливати', 'Вирощувати', 'Збирати', 'Пересаджувати'] },
+    { obj: '🎣 Вудка', context: 'Навіщо потрібна вудка?', correct: 'Ловити рибу', wrong: ['Кидати', 'Тримати', 'Нести', 'Плавати'] },
 ];
 
 const VOWELS_UK = ['А', 'Е', 'И', 'І', 'Ї', 'О', 'У', 'Ю', 'Я', 'Є'];
@@ -371,22 +373,25 @@ function Task9({ onScore, initialData }) {
     </Card>);
 }
 
-// 10. Хто що робить (Дієслова)
+// 10. Хто що робить (Дієслова) — upgraded
 function Task10({ onScore, initialData }) {
     const [data] = useState(() => initialData || pick(VERB_DATA));
-    const [options] = useState(() => shuffle([data.correct, ...data.wrong]));
+    // Show correct + 4 wrong (pick 4 random from wrong pool)
+    const [options] = useState(() => shuffle([data.correct, ...shuffle(data.wrong).slice(0, 4)]));
     const [selected, setSelected] = useState(null);
     const done = selected !== null;
     const correct = selected === data.correct;
     const handle = (v) => { if (done) return; setSelected(v); if (v === data.correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
-    return (<Card><TaskHeader icon="🎯" title="Хто що робить?" desc="Оберіть правильну дію для предмета" />
+    return (<Card><TaskHeader icon="🎯" title="Хто що робить?" desc={data.context || 'Оберіть правильну дію'} />
         <div className="max-w-md mx-auto text-center">
-            <div className="text-7xl mb-2">{data.obj.split(' ')[0]}</div>
-            <p className="text-2xl font-extrabold text-warm-gray mb-6">{data.obj.split(' ').slice(1).join(' ')}</p>
+            <div className="text-7xl mb-6">{data.obj.split(' ')[0]}</div>
             <div className="space-y-3">{options.map((opt, i) => (
-                <button key={i} onClick={() => handle(opt)} className={`w-full p-5 text-xl font-bold rounded-3xl border-3 transition-all ${done ? (opt === data.correct ? 'bg-green-100 border-green-400' : opt === selected ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : 'bg-white border-pastel-green hover:bg-pastel-green-light active:scale-95'}`}>{opt}</button>
+                <button key={i} onClick={() => handle(opt)} className={`w-full p-4 text-xl font-bold rounded-3xl border-2 transition-all ${done
+                        ? (opt === data.correct ? 'bg-green-100 border-green-400' : opt === selected ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200')
+                        : 'bg-white border-pastel-green hover:bg-pastel-green-light active:scale-95'
+                    }`}>{opt}</button>
             ))}</div>
-            {done && <Result correct={correct} msg={correct ? 'Правильна дія!' : `Правильно: ${data.correct}`} />}
+            {done && <Result correct={correct} msg={correct ? 'Правильна дія! 🎉' : `Правильно: ${data.correct}`} />}
         </div>
     </Card>);
 }
