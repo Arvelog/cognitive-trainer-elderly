@@ -405,7 +405,6 @@ export default function App() {
     const restart = () => { setSlide(0); setScore(0); setAiData(null); setGenError(false); setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random())); };
 
     const startSession = async () => {
-        if (!GEMINI_KEY) { next(); return; }
         setGenerating(true); setGenError(false);
         const data = await generateAllTasks();
         setGenerating(false);
@@ -456,7 +455,7 @@ export default function App() {
                             ) : (
                                 <div className="flex flex-col items-center gap-4">
                                     <BigBtn onClick={startSession} className="bg-pastel-green text-warm-gray text-2xl"><Sparkles className="inline w-6 h-6 mr-2" />Розпочати</BigBtn>
-                                    {GEMINI_KEY && <p className="text-sm text-warm-gray-light flex items-center gap-1"><Sparkles className="w-4 h-4 text-pastel-green" /> AI генерує унікальні завдання щоразу</p>}
+                                    <p className="text-sm text-warm-gray-light flex items-center gap-1"><Sparkles className="w-4 h-4 text-pastel-green" /> AI генерує унікальні завдання щоразу</p>
                                     <div className="flex items-center gap-2 text-warm-gray-light"><Volume2 className="w-5 h-5" /><span className="text-sm">Увімкніть звук для кращого досвіду</span></div>
                                 </div>
                             )}
