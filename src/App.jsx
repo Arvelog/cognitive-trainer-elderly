@@ -52,6 +52,11 @@ async function generateAllTasks() {
 
         // 2. Якщо бекенд недоступний (локальна розробка)
         if (!resultData || resultData.error) {
+            if (resultData && typeof resultData.error === 'string' && resultData.error.includes('429')) {
+                console.warn('Backend reported 429 Too Many Requests.');
+                return { _rateLimited: true };
+            }
+
             const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
             if (!apiKey) {
                 console.warn('No VITE_GEMINI_API_KEY found, using hardcoded fallback');
@@ -92,7 +97,19 @@ async function generateAllTasks() {
                     generationConfig: { responseMimeType: "application/json" }
                 })
             });
+
+            if (response.status === 429) {
+                console.warn('Local API fetch reported 429 Too Many Requests.');
+                return { _rateLimited: true };
+            }
+
             const data = await response.json();
+            if (data.error) {
+                console.warn('API returned error payload:', data.error);
+                if (data.error.code === 429 || String(data.error.message).includes('429')) return { _rateLimited: true };
+                return null;
+            }
+
             const content = data.candidates[0].content.parts[0].text;
             resultData = JSON.parse(content.replace(/^```json/g, '').replace(/```$/g, '').trim());
         }
@@ -459,16 +476,24 @@ export default function App() {
     const [aiData, setAiData] = useState(null);
     const [generating, setGenerating] = useState(false);
     const [genError, setGenError] = useState(false);
+    const [rateLimitError, setRateLimitError] = useState(false);
     const addScore = useCallback(() => setScore(s => s + 1), []);
     const next = () => setSlide(s => Math.min(s + 1, SLIDES - 1));
     const prev = () => setSlide(s => Math.max(s - 1, 0));
-    const restart = () => { setSlide(0); setScore(0); setAiData(null); setGenError(false); setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random())); };
+    const restart = () => { setSlide(0); setScore(0); setAiData(null); setGenError(false); setRateLimitError(false); setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random())); };
 
     const startSession = async () => {
-        setGenerating(true); setGenError(false);
+        setGenerating(true); setGenError(false); setRateLimitError(false);
         const data = await generateAllTasks();
         setGenerating(false);
-        if (data) { setAiData(data); } else { setGenError(true); }
+        if (data && data._rateLimited) {
+            setRateLimitError(true);
+            setAiData(null); // use fallback
+        } else if (data) {
+            setAiData(data);
+        } else {
+            setGenError(true);
+        }
         next();
     };
 
@@ -488,7 +513,13 @@ export default function App() {
     ];
 
     return (
-        <div className="min-h-screen bg-pastel-beige flex flex-col">
+        <div className="min-h-screen bg-pastel-beige flex flex-col relative">
+            {rateLimitError && (
+                <div className="absolute top-0 left-0 right-0 bg-yellow-400 text-yellow-900 px-4 py-3 text-center text-sm md:text-base font-bold shadow-md z-50">
+                    ⚠️ Штучний інтелект перевантажено (забагато запитів). Увімкнено базові завдання. Спробуйте пізніше для нових завдань.
+                </div>
+            )}
+
             {/* Header */}
             <header className="bg-white/70 backdrop-blur-md shadow-sm py-4 px-6 flex items-center justify-between sticky top-0 z-10">
                 <div className="flex items-center gap-3"><Brain className="w-8 h-8 text-pastel-green" /><h1 className="text-xl md:text-2xl font-extrabold text-warm-gray">Тренажер Пам'яті</h1></div>
@@ -497,7 +528,7 @@ export default function App() {
             </header>
 
             {/* Content */}
-            <main className="flex-1 flex items-start justify-center p-4 md:p-8 overflow-y-auto">
+            <main className="flex-1 flex items-start justify-center p-4 md:p-8 overflow-y-auto mt-2">
                 <div className="w-full max-w-2xl">
                     {/* Intro */}
                     {slide === 0 && (
