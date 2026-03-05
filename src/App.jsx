@@ -241,17 +241,31 @@ function Task4({ onScore, initialData }) {
     const [pool, setPool] = useState(() => shuffle(words));
     const [built, setBuilt] = useState([]);
     const [checked, setChecked] = useState(false);
+    const [imgLoaded, setImgLoaded] = useState(false);
+    const [imgError, setImgError] = useState(false);
+
     const imgPrompt = data.img || `Illustration for sentence: ${data.sentence}`;
-    const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(imgPrompt)}?width=512&height=512&nologo=true`;
+    const primaryImgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(imgPrompt)}?width=512&height=512&nologo=true`;
+    // Fallback to a nice abstract shape based on the sentence if AI generation is down
+    const fallbackImgUrl = `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(data.sentence)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+    const imgUrl = imgError ? fallbackImgUrl : primaryImgUrl;
+
     const addWord = (w, i) => { if (checked) return; setBuilt([...built, w]); setPool(pool.filter((_, j) => j !== i)); };
     const removeWord = (w, i) => { if (checked) return; setPool([...pool, w]); setBuilt(built.filter((_, j) => j !== i)); };
     const correct = built.join(' ') === data.sentence;
     const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
+
     return (<Card><TaskHeader icon="✍️" title="Складіть речення" desc="Розставте слова у правильному порядку" />
         <div className="max-w-md mx-auto">
             <div className="w-full h-52 bg-pastel-green-light rounded-2xl mb-4 overflow-hidden relative">
-                <div className="absolute inset-0 flex items-center justify-center text-pastel-green"><Loader2 className="w-8 h-8 animate-spin" /></div>
-                <img src={imgUrl} alt="Ілюстрація" className="relative z-10 w-full h-full object-cover rounded-2xl" />
+                {!imgLoaded && <div className="absolute inset-0 flex items-center justify-center text-pastel-green"><Loader2 className="w-8 h-8 animate-spin" /></div>}
+                <img
+                    src={imgUrl}
+                    alt="Ілюстрація"
+                    className={`relative z-10 w-full h-full object-cover rounded-2xl transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    onLoad={() => setImgLoaded(true)}
+                    onError={() => { if (!imgError) setImgError(true); setImgLoaded(true); }}
+                />
             </div>
             <div className="min-h-16 p-3 mb-3 bg-pastel-beige rounded-2xl border-2 border-dashed border-pastel-green flex flex-wrap gap-2">
                 {built.length === 0 && <span className="text-warm-gray-light text-lg">Натискайте на слова нижче...</span>}
