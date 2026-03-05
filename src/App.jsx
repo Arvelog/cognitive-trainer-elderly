@@ -241,14 +241,18 @@ function Task4({ onScore, initialData }) {
     const [pool, setPool] = useState(() => shuffle(words));
     const [built, setBuilt] = useState([]);
     const [checked, setChecked] = useState(false);
-    const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(data.img)}?width=512&height=512&nologo=true`;
+    const imgPrompt = data.img || `Illustration for sentence: ${data.sentence}`;
+    const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(imgPrompt)}?width=512&height=512&nologo=true`;
     const addWord = (w, i) => { if (checked) return; setBuilt([...built, w]); setPool(pool.filter((_, j) => j !== i)); };
     const removeWord = (w, i) => { if (checked) return; setPool([...pool, w]); setBuilt(built.filter((_, j) => j !== i)); };
     const correct = built.join(' ') === data.sentence;
     const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
     return (<Card><TaskHeader icon="✍️" title="Складіть речення" desc="Розставте слова у правильному порядку" />
         <div className="max-w-md mx-auto">
-            <img src={imgUrl} alt="" className="w-full max-h-52 object-cover rounded-2xl mb-4 bg-pastel-green-light" />
+            <div className="w-full h-52 bg-pastel-green-light rounded-2xl mb-4 overflow-hidden relative">
+                <div className="absolute inset-0 flex items-center justify-center text-pastel-green"><Loader2 className="w-8 h-8 animate-spin" /></div>
+                <img src={imgUrl} alt="Ілюстрація" className="relative z-10 w-full h-full object-cover rounded-2xl" />
+            </div>
             <div className="min-h-16 p-3 mb-3 bg-pastel-beige rounded-2xl border-2 border-dashed border-pastel-green flex flex-wrap gap-2">
                 {built.length === 0 && <span className="text-warm-gray-light text-lg">Натискайте на слова нижче...</span>}
                 {built.map((w, i) => <button key={i} onClick={() => removeWord(w, i)} className="px-4 py-2 bg-pastel-green text-warm-gray font-bold rounded-2xl text-lg">{w}</button>)}
@@ -387,8 +391,8 @@ function Task10({ onScore, initialData }) {
             <div className="text-7xl mb-6">{data.obj.split(' ')[0]}</div>
             <div className="space-y-3">{options.map((opt, i) => (
                 <button key={i} onClick={() => handle(opt)} className={`w-full p-4 text-xl font-bold rounded-3xl border-2 transition-all ${done
-                        ? (opt === data.correct ? 'bg-green-100 border-green-400' : opt === selected ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200')
-                        : 'bg-white border-pastel-green hover:bg-pastel-green-light active:scale-95'
+                    ? (opt === data.correct ? 'bg-green-100 border-green-400' : opt === selected ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200')
+                    : 'bg-white border-pastel-green hover:bg-pastel-green-light active:scale-95'
                     }`}>{opt}</button>
             ))}</div>
             {done && <Result correct={correct} msg={correct ? 'Правильна дія! 🎉' : `Правильно: ${data.correct}`} />}
