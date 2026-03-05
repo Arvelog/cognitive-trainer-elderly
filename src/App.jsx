@@ -216,8 +216,10 @@ function Task4({ onScore, initialData }) {
     const [imgLoaded, setImgLoaded] = useState(false);
     const [imgError, setImgError] = useState(false);
 
-    const imgPrompt = data.img || `Illustration for sentence: ${data.sentence}`;
-    const primaryImgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(imgPrompt)}?width=512&height=512&nologo=true`;
+    const imgPrompt = data.img || 'object';
+    // Extract strictly the first english word to avoid 403 Forbidden from LoremFlickr for spaces/commas
+    const imgKeyword = imgPrompt.split(/[\s,]+/)[0].replace(/[^a-zA-Z]/g, '') || 'object';
+    const primaryImgUrl = `https://loremflickr.com/512/512/${imgKeyword.toLowerCase()}`;
     // Fallback to a nice abstract shape based on the sentence if AI generation is down
     const fallbackImgUrl = `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(data.sentence)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
     const imgUrl = imgError ? fallbackImgUrl : primaryImgUrl;
