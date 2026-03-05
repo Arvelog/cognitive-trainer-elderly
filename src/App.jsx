@@ -1,6 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Brain, Star, RefreshCw, Loader2, Heart, Trophy, Sparkles, Check, X, Volume2 } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
 
 // ─── Sound helpers ───
 const audioCtx = () => { if (!window._actx) window._actx = new (window.AudioContext || window.webkitAudioContext)(); return window._actx; };
@@ -30,48 +28,21 @@ const TaskHeader = ({ icon, title, desc }) => (<div className="text-center mb-6"
 const Result = ({ correct, msg }) => (<div className={`mt-4 p-4 rounded-2xl text-center text-xl font-bold ${correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{correct ? '✅ ' : '❌ '}{msg}</div>);
 
 // ═══════════════════════════════════════
-// GEMINI AI GENERATION
+// AI GENERATION (via Backend API)
 // ═══════════════════════════════════════
-const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
-
-const GENERATION_PROMPT = `Ти генеруєш дані для когнітивного тренажера для літніх людей (українською мовою).
-Створі ОДИН JSON-об'єкт із 10 полями — по одному набору даних для кожного завдання.
-Все має бути про побутові, знайомі літнім людям теми: кулінарія, город, побут, тварини, здоров'я, природа.
-
-Точна структура (додержуйся типів!):
-{
-  "findOdd": { "cat": "назва категорії", "items": ["emoji предмет1", "emoji предмет2", "emoji предмет3", "emoji НЕвідповідний"], "odd": 3 },
-  "sequence": { "title": "назва процесу", "steps": ["крок1", "крок2", "крок3", "крок4"] },
-  "budget": { "wallet": 1200, "label": "назва", "items": [{"n":"товар","p":150},{"n":"товар2","p":200},{"n":"товар3","p":100},{"n":"товар4","p":80}] },
-  "sentence": { "img": "english prompt for image generation max 6 words", "sentence": "Просте речення з 4-6 слів" },
-  "associations": { "q": "Питання?", "correct": ["emoji правильний1", "emoji правильний2", "emoji правильний3"], "wrong": ["emoji неправильний1", "emoji неправильний2", "emoji неправильний3"] },
-  "categories": { "q": "Що належить до ...?", "correct": ["emoji вірний1", "emoji вірний2", "emoji вірний3"], "wrong": ["emoji невірний1", "emoji невірний2", "emoji невірний3"] },
-  "trueFalse": { "text": "Твердження про світ", "answer": true },
-  "antonyms": { "sentences": [{"s": "Речення з антонімом...", "a": "антонім"}, {"s": "Ще речення...", "a": "антонім"}, {"s": "І ще...", "a": "антонім"}, {"s": "Четверте...", "a": "антонім"}] },
-  "vowels": { "words": [{"full": "СЛОВО", "hint": "Підказка"}, {"full": "ДРУГЕ", "hint": "Підказка"}, {"full": "ТРЕТЄ", "hint": "Підказка"}] },
-  "verbs": { "obj": "emoji Предмет", "correct": "Дієслово", "wrong": ["НеправильнеДієслово1", "НеправильнеДієслово2"] }
-}
-
-ВАЖЛИВО:
-- Кожного разу генеруй НОВІ унікальні дані, не повторюй приклади
-- Використовуй emoji де вказано
-- "odd" — це індекс зайвого (0-3), зайвий завжди має бути з іншої категорії
-- "steps" в sequence — в ПРАВИЛЬНОМУ порядку
-- "wallet" — сума в гаманці (має бути більша за суму items)
-- "vowels.words[].full" — ВЕЛИКИМИ ЛІТЕРАМИ
-- Відповідай ТІЛЬКИ JSON, без markdown, без коментарів`;
 
 async function generateAllTasks() {
-    if (!GEMINI_KEY) return null;
     try {
-        const ai = new GoogleGenAI({ apiKey: GEMINI_KEY });
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash',
-            contents: GENERATION_PROMPT,
-            config: { responseMimeType: 'application/json' },
+        const response = await fetch('/api/generate', {
+            method: 'POST'
         });
-        const text = response.text;
-        const data = JSON.parse(text);
+
+        if (!response.ok) {
+            console.warn('Backend API error:', response.statusText);
+            return null;
+        }
+
+        const data = await response.json();
         // Validate essential fields exist
         if (!data.findOdd || !data.sequence || !data.budget || !data.sentence ||
             !data.associations || !data.categories || !data.trueFalse ||
