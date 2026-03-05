@@ -1,3 +1,4 @@
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Brain, Star, RefreshCw, Loader2, Heart, Trophy, Sparkles, Check, X, Volume2 } from 'lucide-react';
 
 // ─── Sound helpers ───
