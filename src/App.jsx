@@ -25,7 +25,7 @@ const Card = ({ children, className = '' }) => (<div className={`bg-white rounde
 const BigBtn = ({ children, onClick, className = '', disabled }) => (<button disabled={disabled} onClick={onClick} className={`px-8 py-4 text-xl font-bold rounded-3xl shadow-md transition-all duration-200 active:scale-95 disabled:opacity-50 ${className}`}>{children}</button>);
 const Spinner = () => (<div className="flex flex-col items-center justify-center py-16 gap-4"><Loader2 className="w-12 h-12 text-pastel-green animate-spin" /><p className="text-xl text-warm-gray">Завантаження...</p></div>);
 const ErrorBox = ({ msg, onRetry }) => (<div className="flex flex-col items-center justify-center py-12 gap-4"><X className="w-12 h-12 text-error" /><p className="text-xl text-warm-gray text-center">{msg}</p><BigBtn onClick={onRetry} className="bg-pastel-green text-warm-gray"><RefreshCw className="inline w-5 h-5 mr-2" />Спробувати знову</BigBtn></div>);
-const TaskHeader = ({ icon, title, desc }) => (<div className="text-center mb-6"><div className="text-5xl mb-3">{icon}</div><h2 className="text-2xl md:text-3xl font-extrabold text-warm-gray mb-2">{title}</h2><p className="text-lg text-warm-gray-light">{desc}</p></div>);
+const TaskHeader = ({ icon, title, desc }) => (<div className="text-center mb-8"><div className="text-7xl mb-4">{icon}</div><h2 className="text-4xl md:text-5xl font-extrabold text-warm-gray mb-4">{title}</h2><p className="text-2xl md:text-3xl text-warm-gray-light">{desc}</p></div>);
 const Result = ({ correct, msg }) => (<div className={`mt-4 p-4 rounded-2xl text-center text-xl font-bold ${correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{correct ? '✅ ' : '❌ '}{msg}</div>);
 
 // ═══════════════════════════════════════
@@ -233,7 +233,7 @@ function Task2({ onScore, initialData }) {
     const undo = () => { if (checked || selected.length === 0) return; setSelected(selected.slice(0, -1)); };
     const correct = selected.length === 4 && selected.every((s, i) => s.idx === i);
     return (<Card><TaskHeader icon="📋" title="Відновіть послідовність" desc={data.title} />
-        <p className="text-center text-lg text-warm-gray-light mb-4">Натискайте на кроки у правильному порядку: 1, 2, 3, 4</p>
+        <p className="text-center text-2xl md:text-3xl text-warm-gray-light mb-6">Натискайте на кроки у правильному порядку: 1, 2, 3, 4</p>
         {selected.length > 0 && <div className="max-w-lg mx-auto mb-4 space-y-2">
             <p className="text-sm font-bold text-warm-gray">Ваш порядок:</p>
             {selected.map((s, i) => (
@@ -336,7 +336,7 @@ function Task5({ onScore, initialData }) {
     const correct = data.correct.every(c => sel.has(c)) && sel.size === 3;
     const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
     return (<Card><TaskHeader icon="🔗" title="Асоціації" desc={data.q} />
-        <p className="text-center text-lg text-warm-gray-light mb-4">Оберіть 3 правильні відповіді</p>
+        <p className="text-center text-2xl md:text-3xl text-warm-gray-light mb-6">Оберіть 3 правильні відповіді</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl mx-auto">{items.map((it, i) => {
             const isSel = sel.has(it); const isCorr = data.correct.includes(it);
             return <button key={i} onClick={() => toggle(it)} className={`p-8 text-4xl md:text-5xl font-bold rounded-3xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-green border-green-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light'}`}>{it}</button>;
@@ -356,7 +356,7 @@ function Task6({ onScore, initialData }) {
     const correct = data.correct.every(c => sel.has(c)) && [...sel].every(s => data.correct.includes(s));
     const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
     return (<Card><TaskHeader icon="📦" title="Категорії" desc={data.q} />
-        <p className="text-center text-lg text-warm-gray-light mb-4">Оберіть усі правильні варіанти</p>
+        <p className="text-center text-2xl md:text-3xl text-warm-gray-light mb-6">Оберіть усі правильні варіанти</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl mx-auto">{items.map((it, i) => {
             const isSel = sel.has(it); const isCorr = data.correct.includes(it);
             return <button key={i} onClick={() => toggle(it)} className={`p-8 text-4xl md:text-5xl font-bold rounded-3xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{it}</button>;
