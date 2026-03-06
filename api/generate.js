@@ -7,10 +7,10 @@ export default async function handler(req) {
         return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
     }
 
-    const API_KEY = process.env.VITE_GLM_API_KEY || process.env.GLM_API_KEY;
+    const API_KEY = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
     if (!API_KEY) {
-        return new Response(JSON.stringify({ error: 'Missing GLM_API_KEY' }), { status: 500 });
+        return new Response(JSON.stringify({ error: 'Missing GEMINI_API_KEY' }), { status: 500 });
     }
 
     const GENERATION_PROMPT = `Ти генеруєш дані для когнітивного тренажера для літніх людей (українською мовою).
@@ -44,25 +44,20 @@ export default async function handler(req) {
 Використай цей випадковий seed для унікальності: ${Math.random().toString(36).substring(2, 10)} - ${Date.now()}`;
 
     try {
-        const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_KEY}`
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: "glm-4-flash",
-                messages: [
-                    { role: "system", "content": "You are a helpful assistant that only outputs strictly valid JSON." },
-                    { role: "user", "content": GENERATION_PROMPT }
-                ]
+                system_instruction: { parts: [{ text: "You are a helpful assistant that only outputs strictly valid JSON." }] },
+                contents: [{ parts: [{ text: GENERATION_PROMPT }] }],
+                generationConfig: { responseMimeType: "application/json" }
             })
         });
 
         if (!response.ok) {
             const errText = await response.text();
-            console.error('GLM API error:', errText);
-            return new Response(JSON.stringify({ error: `GLM API status: ${response.status}`, details: errText }), { status: response.status });
+            console.error('Gemini API error:', errText);
+            return new Response(JSON.stringify({ error: `Gemini API status: ${response.status}`, details: errText }), { status: response.status });
         }
 
         const data = await response.json();
