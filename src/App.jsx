@@ -25,7 +25,7 @@ const Card = ({ children, className = '' }) => (<div className={`bg-white rounde
 const BigBtn = ({ children, onClick, className = '', disabled }) => (<button disabled={disabled} onClick={onClick} className={`px-8 py-4 text-xl font-bold rounded-3xl shadow-md transition-all duration-200 active:scale-95 disabled:opacity-50 ${className}`}>{children}</button>);
 const Spinner = () => (<div className="flex flex-col items-center justify-center py-16 gap-4"><Loader2 className="w-12 h-12 text-pastel-green animate-spin" /><p className="text-xl text-warm-gray">Завантаження...</p></div>);
 const ErrorBox = ({ msg, onRetry }) => (<div className="flex flex-col items-center justify-center py-12 gap-4"><X className="w-12 h-12 text-error" /><p className="text-xl text-warm-gray text-center">{msg}</p><BigBtn onClick={onRetry} className="bg-pastel-green text-warm-gray"><RefreshCw className="inline w-5 h-5 mr-2" />Спробувати знову</BigBtn></div>);
-const TaskHeader = ({ icon, title, desc }) => (<div className="text-center mb-10"><div className="text-7xl mb-4">{icon}</div><h2 className="text-5xl md:text-6xl font-extrabold text-warm-gray mb-6">{title}</h2><p className="text-3xl md:text-4xl font-semibold text-warm-gray-light leading-snug">{desc}</p></div>);
+const TaskHeader = ({ icon, title, desc }) => (<div className="text-center mb-6 md:mb-8"><div className="text-6xl mb-3">{icon}</div><h2 className="text-4xl md:text-5xl font-extrabold text-warm-gray mb-4">{title}</h2><p className="text-2xl md:text-3xl font-semibold text-warm-gray-light leading-snug">{desc}</p></div>);
 const Result = ({ correct, msg }) => (<div className={`mt-4 p-4 rounded-2xl text-center text-xl font-bold ${correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{correct ? '✅ ' : '❌ '}{msg}</div>);
 
 // ═══════════════════════════════════════
@@ -214,7 +214,7 @@ function Task1({ onScore, initialData }) {
     const handleClick = (i) => { if (done) return; setSelected(i); if (i === data.odd) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
     return (<Card><TaskHeader icon="🔍" title="Знайди зайве" desc={`Категорія: ${data.cat}. Один предмет не підходить!`} />
         <div className="grid grid-cols-2 gap-6 max-w-2xl mx-auto">{data.items.map((it, i) => (
-            <button key={i} onClick={() => handleClick(i)} className={`p-8 text-4xl md:text-6xl font-bold rounded-3xl border-3 transition-all duration-200 ${done ? (i === data.odd ? 'bg-green-100 border-green-400' : i === selected ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : 'bg-white border-pastel-green hover:bg-pastel-green-light hover:scale-105 active:scale-95'}`}>{it}</button>
+            <button key={i} onClick={() => handleClick(i)} className={`p-4 md:p-6 text-3xl md:text-5xl font-bold rounded-2xl border-3 transition-all duration-200 ${done ? (i === data.odd ? 'bg-green-100 border-green-400' : i === selected ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : 'bg-white border-pastel-green hover:bg-pastel-green-light hover:scale-105 active:scale-95'}`}>{it}</button>
         ))}</div>
         {done && <Result correct={correct} msg={correct ? 'Чудово! Ви знайшли зайве!' : `Зайве було: ${data.items[data.odd]}`} />}
     </Card>);
@@ -244,7 +244,7 @@ function Task2({ onScore, initialData }) {
         <div className="space-y-3 max-w-lg mx-auto">
             {shuffled.map((item, i) => {
                 const used = selected.find(s => s.idx === item.idx);
-                return <button key={i} onClick={() => tapStep(item)} disabled={!!used || checked} className={`w-full text-left p-6 rounded-2xl border-2 transition-all text-2xl font-semibold ${used ? 'opacity-40 bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light hover:border-pastel-green active:scale-[0.98]'}`}>{item.text}</button>;
+                return <button key={i} onClick={() => tapStep(item)} disabled={!!used || checked} className={`w-full text-left p-4 md:p-5 rounded-2xl border-2 transition-all text-xl md:text-2xl font-semibold ${used ? 'opacity-40 bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light hover:border-pastel-green active:scale-[0.98]'}`}>{item.text}</button>;
             })}
         </div>
         {checked && <Result correct={correct} msg={correct ? 'Бездоганний порядок!' : 'Правильний порядок: ' + data.steps.join(' → ')} />}
@@ -336,7 +336,7 @@ function Task5({ onScore, initialData }) {
         <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть 3 правильні відповіді</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">{items.map((it, i) => {
             const isSel = sel.has(it); const isCorr = data.correct.includes(it);
-            return <button key={i} onClick={() => toggle(it)} className={`p-4 md:p-6 text-3xl md:text-4xl font-bold rounded-3xl border-2 transition-all break-words whitespace-normal leading-tight ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-green border-green-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light'}`}>{it}</button>;
+            return <button key={i} onClick={() => toggle(it)} className={`p-3 md:p-5 text-2xl md:text-3xl font-bold rounded-2xl border-2 transition-all break-words whitespace-normal leading-tight ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-green border-green-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light'}`}>{it}</button>;
         })}</div>
         {!checked && sel.size === 3 && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
         {checked && <Result correct={correct} msg={correct ? 'Всі асоціації правильні!' : `Правильні: ${data.correct.join(', ')}`} />}
@@ -356,7 +356,7 @@ function Task6({ onScore, initialData }) {
         <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть усі правильні варіанти</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">{items.map((it, i) => {
             const isSel = sel.has(it); const isCorr = data.correct.includes(it);
-            return <button key={i} onClick={() => toggle(it)} className={`p-4 md:p-6 text-3xl md:text-4xl font-bold rounded-3xl border-2 transition-all break-words whitespace-normal leading-tight ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{it}</button>;
+            return <button key={i} onClick={() => toggle(it)} className={`p-3 md:p-5 text-2xl md:text-3xl font-bold rounded-2xl border-2 transition-all break-words whitespace-normal leading-tight ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{it}</button>;
         })}</div>
         {!checked && sel.size > 0 && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
         {checked && <Result correct={correct} msg={correct ? 'Все вірно! Чудова логіка!' : `Правильні: ${data.correct.join(', ')}`} />}
@@ -459,9 +459,9 @@ function Task9({ onScore, initialData }) {
     return (<Card><TaskHeader icon="📝" title="Загублені голосні" desc="Відновіть слова, вписавши пропущені літери" />
         <div className="max-w-lg mx-auto space-y-6">{data.words.map((w, i) => (
             <div key={i} className={`p-6 rounded-3xl border-2 ${checked[i] ? (isCorrect(w, i) ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-white border-pastel-beige-dark'}`}>
-                <p className="text-5xl md:text-6xl font-extrabold text-warm-gray tracking-[0.3em] text-center mb-4">{removeVowels(w.full)}</p>
+                <p className="text-4xl md:text-5xl font-extrabold text-warm-gray tracking-[0.2em] text-center mb-3 md:mb-4">{removeVowels(w.full)}</p>
                 <p className="text-xl md:text-2xl text-warm-gray-light text-center italic mb-6">💡 {w.hint}</p>
-                <input type="text" value={answers[i]} onChange={e => setAns(i, e.target.value)} disabled={checked[i]} placeholder="Введіть слово..." className="w-full p-6 text-4xl uppercase rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center mb-4" />
+                <input type="text" value={answers[i]} onChange={e => setAns(i, e.target.value)} disabled={checked[i]} placeholder="Введіть слово..." className="w-full p-4 md:p-5 text-3xl md:text-4xl uppercase rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center mb-3 md:mb-4" />
 
                 {!checked[i] ? (
                     <button onClick={() => checkWord(i)} disabled={!answers[i].trim()} className="w-full py-4 text-2xl font-bold bg-pastel-green text-warm-gray rounded-2xl shadow-md hover:bg-green-400 active:scale-95 disabled:opacity-50 transition-all">
@@ -502,11 +502,11 @@ function Task10({ onScore, initialData }) {
 
     return (<Card><TaskHeader icon="🎯" title="Хто що робить?" desc={data.context || 'Оберіть правильні дії'} />
         <div className="max-w-4xl mx-auto text-center">
-            <div className="text-9xl mb-6">{data.obj.split(' ')[0]}</div>
+            <div className="text-7xl md:text-8xl mb-4 md:mb-6">{data.obj.split(' ')[0]}</div>
             <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть 3 правильні відповіді</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">{options.map((opt, i) => {
                 const isSel = sel.has(opt); const isCorr = data.correct.includes(opt);
-                return <button key={i} onClick={() => toggle(opt)} className={`p-4 md:p-6 text-3xl md:text-4xl font-bold rounded-3xl border-2 transition-all break-words whitespace-normal leading-tight ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{opt}</button>;
+                return <button key={i} onClick={() => toggle(opt)} className={`p-3 md:p-5 text-2xl md:text-3xl font-bold rounded-2xl border-2 transition-all break-words whitespace-normal leading-tight ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{opt}</button>;
             })}</div>
             {!checked && sel.size === 3 && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
             {checked && <Result correct={correct} msg={correct ? 'Всі дії правильні! 🎉' : `Правильні: ${data.correct.join(', ')}`} />}
@@ -523,7 +523,7 @@ function Task10Single({ onScore, data }) {
     const handle = (v) => { if (done) return; setSelected(v); if (v === data.correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
     return (<Card><TaskHeader icon="🎯" title="Хто що робить?" desc={data.context || 'Оберіть правильну дію'} />
         <div className="max-w-2xl mx-auto text-center">
-            <div className="text-9xl mb-10">{data.obj.split(' ')[0]}</div>
+            <div className="text-7xl md:text-8xl mb-6 md:mb-8">{data.obj.split(' ')[0]}</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{options.map((opt, i) => (
                 <button key={i} onClick={() => handle(opt)} className={`w-full p-6 text-3xl md:text-4xl font-bold rounded-3xl border-2 transition-all ${done
                     ? (opt === data.correct ? 'bg-green-100 border-green-400' : opt === selected ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200')
