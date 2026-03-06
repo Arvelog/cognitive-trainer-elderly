@@ -72,7 +72,7 @@ async function generateAllTasks() {
   "findOdd": { "cat": "назва категорії", "items": ["emoji предмет1", "emoji предмет2", "emoji предмет3", "emoji НЕвідповідний"], "odd": 3 },
   "sequence": { "title": "назва процесу", "steps": ["крок1", "крок2", "крок3", "крок4"] },
   "budget": { "wallet": 1200, "label": "назва", "items": [{"n":"товар","p":150},{"n":"товар2","p":200},{"n":"товар3","p":100},{"n":"товар4","p":80}] },
-  "sentence": { "img": "A short English description for an AI image generator (e.g. A grandmother baking a pie in a cozy kitchen)", "sentence": "Просте речення з 4-6 слів" },
+  "sentence": { "svg": "<svg viewBox=\\"0 0 512 512\\" xmlns=\\"http://www.w3.org/2000/svg\\">...beautiful clean scalable vector graphic code illustrating the sentence. Use pastel colors. NO markdown. Escape quotes if needed...</svg>", "sentence": "Просте речення з 4-6 слів" },
   "associations": { "q": "Питання?", "correct": ["emoji правильний1", "emoji правильний2", "emoji правильний3"], "wrong": ["emoji неправильний1", "emoji неправильний2", "emoji неправильний3"] },
   "categories": { "q": "Що належить до ...?", "correct": ["emoji вірний1", "emoji вірний2", "emoji вірний3"], "wrong": ["emoji невірний1", "emoji невірний2", "emoji невірний3"] },
   "trueFalse": { "text": "Твердження про світ", "answer": true },
@@ -285,20 +285,18 @@ function Task4({ onScore, initialData }) {
     const [pool, setPool] = useState(() => shuffle(words));
     const [built, setBuilt] = useState([]);
     const [checked, setChecked] = useState(false);
-    const [imgLoaded, setImgLoaded] = useState(false);
-    const [imgError, setImgError] = useState(false);
+    const [svgLoaded, setSvgLoaded] = useState(false);
+    const [svgError, setSvgError] = useState(false);
 
-    const imgPrompt = data.img || 'beautiful landscape positive atmosphere';
-    // Use Pollinations.ai for free on-the-fly AI image generation
-    const fullPrompt = `${imgPrompt}, watercolor style, pastel colors, soft lighting, relaxing`;
-
-    // Generate a fixed random seed per component mount to bypass browser cache consistently
-    const [imgSeed] = useState(() => Math.floor(Math.random() * 1000000));
-    const primaryImgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=512&height=512&nologo=true&seed=${imgSeed}`;
-
-    // Fallback to a nice abstract shape based on the sentence if AI generation is down
+    // Fallback to a nice abstract shape based on the sentence if SVG generation fails
     const fallbackImgUrl = `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(data.sentence)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
-    const imgUrl = imgError ? fallbackImgUrl : primaryImgUrl;
+
+    // We expect data.svg to contain the raw SVG string from Gemini
+    const svgDataUri = data.svg && data.svg.startsWith('<svg')
+        ? `data:image/svg+xml;utf8,${encodeURIComponent(data.svg)}`
+        : fallbackImgUrl;
+
+    const imgUrl = svgError ? fallbackImgUrl : svgDataUri;
 
     const addWord = (w, i) => { if (checked) return; setBuilt([...built, w]); setPool(pool.filter((_, j) => j !== i)); };
     const removeWord = (w, i) => { if (checked) return; setPool([...pool, w]); setBuilt(built.filter((_, j) => j !== i)); };
@@ -308,13 +306,13 @@ function Task4({ onScore, initialData }) {
     return (<Card><TaskHeader icon="✍️" title="Складіть речення" desc="Розставте слова у правильному порядку" />
         <div className="max-w-md mx-auto">
             <div className="w-full h-52 bg-pastel-green-light rounded-2xl mb-4 overflow-hidden relative">
-                {!imgLoaded && <div className="absolute inset-0 flex items-center justify-center text-pastel-green"><Loader2 className="w-8 h-8 animate-spin" /></div>}
+                {!svgLoaded && <div className="absolute inset-0 flex items-center justify-center text-pastel-green"><Loader2 className="w-8 h-8 animate-spin" /></div>}
                 <img
                     src={imgUrl}
                     alt="Ілюстрація"
-                    className={`relative z-10 w-full h-full object-cover rounded-2xl transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
-                    onLoad={() => setImgLoaded(true)}
-                    onError={() => { if (!imgError) setImgError(true); setImgLoaded(true); }}
+                    className={`relative z-10 w-full h-full object-contain p-2 rounded-2xl transition-opacity duration-300 ${svgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    onLoad={() => setSvgLoaded(true)}
+                    onError={() => { if (!svgError) setSvgError(true); setSvgLoaded(true); }}
                 />
             </div>
             <div className="min-h-16 p-3 mb-3 bg-pastel-beige rounded-2xl border-2 border-dashed border-pastel-green flex flex-wrap gap-2">

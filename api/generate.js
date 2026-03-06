@@ -22,7 +22,7 @@ export default async function handler(req) {
   "findOdd": { "cat": "назва категорії", "items": ["emoji предмет1", "emoji предмет2", "emoji предмет3", "emoji НЕвідповідний"], "odd": 3 },
   "sequence": { "title": "назва процесу", "steps": ["крок1", "крок2", "крок3", "крок4"] },
   "budget": { "wallet": 1200, "label": "назва", "items": [{"n":"товар","p":150},{"n":"товар2","p":200},{"n":"товар3","p":100},{"n":"товар4","p":80}] },
-  "sentence": { "img": "A short English description for an AI image generator (e.g. A grandmother baking a pie in a cozy kitchen)", "sentence": "Просте речення з 4-6 слів" },
+  "sentence": { "svg": "<svg viewBox=\\"0 0 512 512\\" xmlns=\\"http://www.w3.org/2000/svg\\">...beautiful clean scalable vector graphic code illustrating the sentence. Use pastel colors. NO markdown. Escape quotes if needed...</svg>", "sentence": "Просте речення з 4-6 слів" },
   "associations": { "q": "Питання?", "correct": ["emoji правильний1", "emoji правильний2", "emoji правильний3"], "wrong": ["emoji неправильний1", "emoji неправильний2", "emoji неправильний3"] },
   "categories": { "q": "Що належить до ...?", "correct": ["emoji вірний1", "emoji вірний2", "emoji вірний3"], "wrong": ["emoji невірний1", "emoji невірний2", "emoji невірний3"] },
   "trueFalse": { "text": "Твердження про світ", "answer": true },
