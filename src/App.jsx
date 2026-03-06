@@ -337,9 +337,9 @@ function Task5({ onScore, initialData }) {
     const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
     return (<Card><TaskHeader icon="🔗" title="Асоціації" desc={data.q} />
         <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть 3 правильні відповіді</p>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl mx-auto">{items.map((it, i) => {
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">{items.map((it, i) => {
             const isSel = sel.has(it); const isCorr = data.correct.includes(it);
-            return <button key={i} onClick={() => toggle(it)} className={`p-8 text-4xl md:text-5xl font-bold rounded-3xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-green border-green-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light'}`}>{it}</button>;
+            return <button key={i} onClick={() => toggle(it)} className={`p-4 md:p-6 text-3xl md:text-4xl font-bold rounded-3xl border-2 transition-all break-words whitespace-normal leading-tight ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-green border-green-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light'}`}>{it}</button>;
         })}</div>
         {!checked && sel.size === 3 && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
         {checked && <Result correct={correct} msg={correct ? 'Всі асоціації правильні!' : `Правильні: ${data.correct.join(', ')}`} />}
@@ -357,9 +357,9 @@ function Task6({ onScore, initialData }) {
     const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
     return (<Card><TaskHeader icon="📦" title="Категорії" desc={data.q} />
         <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть усі правильні варіанти</p>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl mx-auto">{items.map((it, i) => {
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">{items.map((it, i) => {
             const isSel = sel.has(it); const isCorr = data.correct.includes(it);
-            return <button key={i} onClick={() => toggle(it)} className={`p-8 text-4xl md:text-5xl font-bold rounded-3xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{it}</button>;
+            return <button key={i} onClick={() => toggle(it)} className={`p-4 md:p-6 text-3xl md:text-4xl font-bold rounded-3xl border-2 transition-all break-words whitespace-normal leading-tight ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{it}</button>;
         })}</div>
         {!checked && sel.size > 0 && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
         {checked && <Result correct={correct} msg={correct ? 'Все вірно! Чудова логіка!' : `Правильні: ${data.correct.join(', ')}`} />}
