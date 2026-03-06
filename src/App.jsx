@@ -25,7 +25,7 @@ const Card = ({ children, className = '' }) => (<div className={`bg-white rounde
 const BigBtn = ({ children, onClick, className = '', disabled }) => (<button disabled={disabled} onClick={onClick} className={`px-8 py-4 text-xl font-bold rounded-3xl shadow-md transition-all duration-200 active:scale-95 disabled:opacity-50 ${className}`}>{children}</button>);
 const Spinner = () => (<div className="flex flex-col items-center justify-center py-16 gap-4"><Loader2 className="w-12 h-12 text-pastel-green animate-spin" /><p className="text-xl text-warm-gray">Завантаження...</p></div>);
 const ErrorBox = ({ msg, onRetry }) => (<div className="flex flex-col items-center justify-center py-12 gap-4"><X className="w-12 h-12 text-error" /><p className="text-xl text-warm-gray text-center">{msg}</p><BigBtn onClick={onRetry} className="bg-pastel-green text-warm-gray"><RefreshCw className="inline w-5 h-5 mr-2" />Спробувати знову</BigBtn></div>);
-const TaskHeader = ({ icon, title, desc }) => (<div className="text-center mb-8"><div className="text-7xl mb-4">{icon}</div><h2 className="text-4xl md:text-5xl font-extrabold text-warm-gray mb-4">{title}</h2><p className="text-2xl md:text-3xl text-warm-gray-light">{desc}</p></div>);
+const TaskHeader = ({ icon, title, desc }) => (<div className="text-center mb-10"><div className="text-7xl mb-4">{icon}</div><h2 className="text-5xl md:text-6xl font-extrabold text-warm-gray mb-6">{title}</h2><p className="text-3xl md:text-4xl font-semibold text-warm-gray-light leading-snug">{desc}</p></div>);
 const Result = ({ correct, msg }) => (<div className={`mt-4 p-4 rounded-2xl text-center text-xl font-bold ${correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{correct ? '✅ ' : '❌ '}{msg}</div>);
 
 // ═══════════════════════════════════════
@@ -233,7 +233,7 @@ function Task2({ onScore, initialData }) {
     const undo = () => { if (checked || selected.length === 0) return; setSelected(selected.slice(0, -1)); };
     const correct = selected.length === 4 && selected.every((s, i) => s.idx === i);
     return (<Card><TaskHeader icon="📋" title="Відновіть послідовність" desc={data.title} />
-        <p className="text-center text-2xl md:text-3xl text-warm-gray-light mb-6">Натискайте на кроки у правильному порядку: 1, 2, 3, 4</p>
+        <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Натискайте на кроки у правильному порядку: 1, 2, 3, 4</p>
         {selected.length > 0 && <div className="max-w-lg mx-auto mb-4 space-y-2">
             <p className="text-sm font-bold text-warm-gray">Ваш порядок:</p>
             {selected.map((s, i) => (
@@ -336,7 +336,7 @@ function Task5({ onScore, initialData }) {
     const correct = data.correct.every(c => sel.has(c)) && sel.size === 3;
     const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
     return (<Card><TaskHeader icon="🔗" title="Асоціації" desc={data.q} />
-        <p className="text-center text-2xl md:text-3xl text-warm-gray-light mb-6">Оберіть 3 правильні відповіді</p>
+        <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть 3 правильні відповіді</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl mx-auto">{items.map((it, i) => {
             const isSel = sel.has(it); const isCorr = data.correct.includes(it);
             return <button key={i} onClick={() => toggle(it)} className={`p-8 text-4xl md:text-5xl font-bold rounded-3xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-green border-green-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light'}`}>{it}</button>;
@@ -356,7 +356,7 @@ function Task6({ onScore, initialData }) {
     const correct = data.correct.every(c => sel.has(c)) && [...sel].every(s => data.correct.includes(s));
     const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
     return (<Card><TaskHeader icon="📦" title="Категорії" desc={data.q} />
-        <p className="text-center text-2xl md:text-3xl text-warm-gray-light mb-6">Оберіть усі правильні варіанти</p>
+        <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть усі правильні варіанти</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl mx-auto">{items.map((it, i) => {
             const isSel = sel.has(it); const isCorr = data.correct.includes(it);
             return <button key={i} onClick={() => toggle(it)} className={`p-8 text-4xl md:text-5xl font-bold rounded-3xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{it}</button>;
@@ -385,18 +385,23 @@ function Task7({ onScore, initialData }) {
     </Card>);
 }
 
-// 8. Протилежності (Антоніми) — two-level hints
+// 8. Протилежності (Антоніми) — three-level hints
 function Task8({ onScore, initialData }) {
     const [data] = useState(() => initialData || pick(ANTONYM_DATA));
     const [answers, setAnswers] = useState(data.sentences.map(() => ''));
     const [checked, setChecked] = useState(false);
-    const [hintLevel, setHintLevel] = useState(data.sentences.map(() => 0)); // 0=none, 1=first letter, 2=length+more
+    const [hintLevel, setHintLevel] = useState(data.sentences.map(() => 0)); // 0=none, 1=1st, 2=1st+last, 3=1st,2nd+last,2nd-to-last
     const correct = data.sentences.every((s, i) => answers[i].trim().toLowerCase() === s.a.toLowerCase());
     const setAns = (i, v) => { const n = [...answers]; n[i] = v; setAnswers(n); };
-    const addHint = (i) => { const n = [...hintLevel]; n[i] = Math.min(n[i] + 1, 2); setHintLevel(n); };
+    const addHint = (i) => { const n = [...hintLevel]; n[i] = Math.min(n[i] + 1, 3); setHintLevel(n); };
     const getHintText = (s, level) => {
-        if (level === 1) return `Перша літера: "${s.a[0].toUpperCase()}"`;
-        if (level === 2) return `"${s.a[0].toUpperCase()}${'_'.repeat(s.a.length - 2)}${s.a[s.a.length - 1]}" (${s.a.length} літер)`;
+        const u = s.a.toUpperCase();
+        if (level === 1) return `Перша літера: "${u[0]}"`;
+        if (level === 2) return `"${u[0]}${'_'.repeat(u.length - 2)}${u[u.length - 1]}" (${u.length} літер)`;
+        if (level === 3) {
+            if (u.length <= 4) return `"${u}"`;
+            return `"${u[0]}${u[1]}${'_'.repeat(u.length - 4)}${u[u.length - 2]}${u[u.length - 1]}" (${u.length} літер)`;
+        }
         return '';
     };
     const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
@@ -408,7 +413,7 @@ function Task8({ onScore, initialData }) {
                 </p>
                 <div className="flex gap-3">
                     <input type="text" value={answers[i]} onChange={e => setAns(i, e.target.value)} disabled={checked} placeholder="..." className="flex-1 p-4 text-3xl rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400" />
-                    {!checked && hintLevel[i] < 2 && <button onClick={() => addHint(i)} className="px-5 py-3 text-xl bg-pastel-yellow rounded-2xl text-warm-gray font-semibold flex items-center gap-1 hover:bg-yellow-200 active:scale-95 transition-all">💡{hintLevel[i] === 0 ? '' : ' ще'}</button>}
+                    {!checked && hintLevel[i] < 3 && <button onClick={() => addHint(i)} className="px-5 py-3 text-xl bg-pastel-yellow rounded-2xl text-warm-gray font-semibold flex items-center gap-1 hover:bg-yellow-200 active:scale-95 transition-all">💡{hintLevel[i] === 0 ? '' : ' ще'}</button>}
                 </div>
                 {hintLevel[i] > 0 && !checked && <p className="text-sm mt-2 px-3 py-1.5 bg-yellow-50 rounded-xl text-warm-gray italic">💡 {getHintText(s, hintLevel[i])}</p>}
                 {checked && answers[i].trim().toLowerCase() !== s.a.toLowerCase() && <p className="text-sm text-red-500 mt-1">Відповідь: {s.a}</p>}
