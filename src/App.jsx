@@ -78,7 +78,7 @@ async function generateAllTasks() {
   "trueFalse": { "text": "Твердження про світ", "answer": true },
   "antonyms": { "sentences": [{"s": "Речення з пропуском (замість антоніма пиши ...)", "a": "антонім"}, {"s": "Ще речення...", "a": "антонім"}, {"s": "І ще...", "a": "антонім"}, {"s": "Четверте...", "a": "антонім"}] },
   "vowels": { "words": [{"full": "СЛОВО", "hint": "Підказка"}, {"full": "ДРУГЕ", "hint": "Підказка"}, {"full": "ТРЕТЄ", "hint": "Підказка"}] },
-  "verbs": { "obj": "emoji Предмет", "correct": "Дієслово", "wrong": ["НеправильнеДієслово1", "НеправильнеДієслово2"], "context": "Контекстне питання?" }
+  "verbs": { "obj": "emoji Хто/Що", "correct": ["Правильне1", "Правильне2", "Правильне3"], "wrong": ["Невірно1", "Невірно2", "Невірно3"], "context": "Що може робити...?" }
 }
 
 ВАЖЛИВО:
@@ -191,14 +191,11 @@ const VOWELS_DATA = [
     { words: [{ full: 'ПІДЛОГА', hint: 'По ній ходять вдома' }, { full: 'ДЗЕРКАЛО', hint: 'У нього дивляться щоранку' }, { full: 'КОШИК', hint: 'У ньому несуть продукти з ринку' }] },
 ];
 const VERB_DATA = [
-    { obj: '📰 Газета', context: 'Що ми робимо з газетою?', correct: 'Читати', wrong: ['Дивитися', 'Малювати', 'Слухати', 'Їсти'] },
-    { obj: '🍵 Чай', context: 'Що ми робимо з чаєм?', correct: 'Пити', wrong: ['Їсти', 'Варити', 'Нюхати', 'Читати'] },
-    { obj: '👗 Сукня', context: 'Що ми робимо із сукнею?', correct: 'Одягати', wrong: ['Вдягнути', 'Прасувати', 'Прати', 'Носити'] },
-    { obj: '🎹 Піаніно', context: 'Що ми робимо з піаніно?', correct: 'Грати', wrong: ['Слухати', 'Настроювати', 'Співати', 'Торкати'] },
-    { obj: '🧹 Мітла', context: 'Навіщо потрібна мітла?', correct: 'Мести', wrong: ['Прибирати', 'Витирати', 'Чистити', 'Мити'] },
-    { obj: '✉️ Лист', context: 'Що ми робимо з листом?', correct: 'Писати', wrong: ['Читати', 'Відправляти', 'Складати', 'Друкувати'] },
-    { obj: '🌱 Розсада', context: 'Що ми робимо з розсадою?', correct: 'Садити', wrong: ['Поливати', 'Вирощувати', 'Збирати', 'Пересаджувати'] },
-    { obj: '🎣 Вудка', context: 'Навіщо потрібна вудка?', correct: 'Ловити рибу', wrong: ['Кидати', 'Тримати', 'Нести', 'Плавати'] },
+    { obj: '👨‍🍳 Кухар', context: 'Що може робити кухар?', correct: ['Варити', 'Смажити', 'Пекти'], wrong: ['Будувати', 'Лікувати', 'Співати'] },
+    { obj: '🩺 Лікар', context: 'Що робить лікар?', correct: ['Лікувати', 'Оглядати', 'Виписувати'], wrong: ['Будувати', 'Співати', 'Малювати'] },
+    { obj: '📰 Газета', context: 'Що можна робити з газетою?', correct: ['Читати', 'Купувати', 'Гортати'], wrong: ['Їсти', 'Слухати', 'Пити'] },
+    { obj: '👗 Одяг', context: 'Що ми робимо з одягом?', correct: ['Одягати', 'Прасувати', 'Прати'], wrong: ['Їсти', 'Писати', 'Співати'] },
+    { obj: '🌱 Город', context: 'Що роблять на городі?', correct: ['Садити', 'Поливати', 'Копати'], wrong: ['Читати', 'Літати', 'Малювати'] },
 ];
 
 const VOWELS_UK = ['А', 'Е', 'И', 'І', 'Ї', 'О', 'У', 'Ю', 'Я', 'Є'];
@@ -485,10 +482,40 @@ function Task9({ onScore, initialData }) {
     </Card>);
 }
 
-// 10. Хто що робить (Дієслова) — upgraded
+// 10. Хто що робить (Дієслова) — upgraded to multi-select
 function Task10({ onScore, initialData }) {
     const [data] = useState(() => initialData || pick(VERB_DATA));
-    // Show correct + 4 wrong (pick 4 random from wrong pool)
+    const [options] = useState(() => shuffle([...data.correct, ...shuffle(data.wrong).slice(0, 3)]));
+    const [sel, setSel] = useState(new Set());
+    const [checked, setChecked] = useState(false);
+
+    // Safety check just in case AI returns a single string instead of array
+    const isArray = Array.isArray(data.correct);
+    if (!isArray) {
+        // Fallback for old AI output shape during transition
+        return <Task10Single onScore={onScore} data={data} />;
+    }
+
+    const toggle = (opt) => { if (checked) return; const n = new Set(sel); n.has(opt) ? n.delete(opt) : (n.size < 3 && n.add(opt)); setSel(n); };
+    const correct = data.correct.every(c => sel.has(c)) && sel.size === 3;
+    const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
+
+    return (<Card><TaskHeader icon="🎯" title="Хто що робить?" desc={data.context || 'Оберіть правильні дії'} />
+        <div className="max-w-4xl mx-auto text-center">
+            <div className="text-9xl mb-6">{data.obj.split(' ')[0]}</div>
+            <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть 3 правильні відповіді</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">{options.map((opt, i) => {
+                const isSel = sel.has(opt); const isCorr = data.correct.includes(opt);
+                return <button key={i} onClick={() => toggle(opt)} className={`p-4 md:p-6 text-3xl md:text-4xl font-bold rounded-3xl border-2 transition-all break-words whitespace-normal leading-tight ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{opt}</button>;
+            })}</div>
+            {!checked && sel.size === 3 && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
+            {checked && <Result correct={correct} msg={correct ? 'Всі дії правильні! 🎉' : `Правильні: ${data.correct.join(', ')}`} />}
+        </div>
+    </Card>);
+}
+
+// Fallback for single strictness (if cached API hit returns older structure)
+function Task10Single({ onScore, data }) {
     const [options] = useState(() => shuffle([data.correct, ...shuffle(data.wrong).slice(0, 4)]));
     const [selected, setSelected] = useState(null);
     const done = selected !== null;
