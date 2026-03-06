@@ -217,7 +217,7 @@ function Task1({ onScore, initialData }) {
     const handleClick = (i) => { if (done) return; setSelected(i); if (i === data.odd) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
     return (<Card><TaskHeader icon="🔍" title="Знайди зайве" desc={`Категорія: ${data.cat}. Один предмет не підходить!`} />
         <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">{data.items.map((it, i) => (
-            <button key={i} onClick={() => handleClick(i)} className={`p-5 text-xl font-bold rounded-3xl border-3 transition-all duration-200 ${done ? (i === data.odd ? 'bg-green-100 border-green-400' : i === selected ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : 'bg-white border-pastel-green hover:bg-pastel-green-light hover:scale-105 active:scale-95'}`}>{it}</button>
+            <button key={i} onClick={() => handleClick(i)} className={`p-6 text-2xl md:text-3xl font-bold rounded-3xl border-3 transition-all duration-200 ${done ? (i === data.odd ? 'bg-green-100 border-green-400' : i === selected ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : 'bg-white border-pastel-green hover:bg-pastel-green-light hover:scale-105 active:scale-95'}`}>{it}</button>
         ))}</div>
         {done && <Result correct={correct} msg={correct ? 'Чудово! Ви знайшли зайве!' : `Зайве було: ${data.items[data.odd]}`} />}
     </Card>);
@@ -339,7 +339,7 @@ function Task5({ onScore, initialData }) {
         <p className="text-center text-lg text-warm-gray-light mb-4">Оберіть 3 правильні відповіді</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-lg mx-auto">{items.map((it, i) => {
             const isSel = sel.has(it); const isCorr = data.correct.includes(it);
-            return <button key={i} onClick={() => toggle(it)} className={`p-4 text-lg font-bold rounded-2xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-green border-green-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light'}`}>{it}</button>;
+            return <button key={i} onClick={() => toggle(it)} className={`p-5 text-2xl md:text-3xl font-bold rounded-2xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-green border-green-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light'}`}>{it}</button>;
         })}</div>
         {!checked && sel.size === 3 && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
         {checked && <Result correct={correct} msg={correct ? 'Всі асоціації правильні!' : `Правильні: ${data.correct.join(', ')}`} />}
@@ -359,7 +359,7 @@ function Task6({ onScore, initialData }) {
         <p className="text-center text-lg text-warm-gray-light mb-4">Оберіть усі правильні варіанти</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-lg mx-auto">{items.map((it, i) => {
             const isSel = sel.has(it); const isCorr = data.correct.includes(it);
-            return <button key={i} onClick={() => toggle(it)} className={`p-4 text-lg font-bold rounded-2xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{it}</button>;
+            return <button key={i} onClick={() => toggle(it)} className={`p-5 text-2xl md:text-3xl font-bold rounded-2xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{it}</button>;
         })}</div>
         {!checked && sel.size > 0 && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
         {checked && <Result correct={correct} msg={correct ? 'Все вірно! Чудова логіка!' : `Правильні: ${data.correct.join(', ')}`} />}
