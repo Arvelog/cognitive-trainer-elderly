@@ -428,21 +428,60 @@ function Task8({ onScore, initialData }) {
 function Task9({ onScore, initialData }) {
     const [data] = useState(() => initialData || pick(VOWELS_DATA));
     const [answers, setAnswers] = useState(data.words.map(() => ''));
-    const [checked, setChecked] = useState(false);
-    const correct = data.words.every((w, i) => answers[i].trim().toUpperCase() === w.full.toUpperCase());
+    const [checked, setChecked] = useState(data.words.map(() => false));
+    const [allDone, setAllDone] = useState(false);
+
+    const isCorrect = (w, i) => answers[i].trim().toUpperCase() === w.full.toUpperCase();
     const setAns = (i, v) => { const n = [...answers]; n[i] = v; setAnswers(n); };
-    const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
+
+    const checkWord = (i) => {
+        if (!answers[i].trim()) return; // don't allow checking empty
+        const n = [...checked];
+        n[i] = true;
+        setChecked(n);
+
+        if (isCorrect(data.words[i], i)) {
+            playCorrect();
+        } else {
+            playWrong();
+        }
+
+        const allChecked = n.every(c => c);
+        if (allChecked) {
+            setAllDone(true);
+            const allCorrect = data.words.every((w, idx) => isCorrect(w, idx));
+            if (allCorrect) {
+                setTimeout(() => {
+                    fireConfetti();
+                    onScore();
+                }, 500);
+            }
+        }
+    };
+
     return (<Card><TaskHeader icon="📝" title="Загублені голосні" desc="Відновіть слова, вписавши пропущені літери" />
-        <div className="max-w-lg mx-auto space-y-5">{data.words.map((w, i) => (
-            <div key={i} className={`p-4 rounded-2xl border-2 ${checked ? (answers[i].trim().toUpperCase() === w.full.toUpperCase() ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-white border-pastel-beige-dark'}`}>
+        <div className="max-w-lg mx-auto space-y-6">{data.words.map((w, i) => (
+            <div key={i} className={`p-6 rounded-3xl border-2 ${checked[i] ? (isCorrect(w, i) ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-white border-pastel-beige-dark'}`}>
                 <p className="text-5xl md:text-6xl font-extrabold text-warm-gray tracking-[0.3em] text-center mb-4">{removeVowels(w.full)}</p>
-                <p className="text-xl text-warm-gray-light text-center italic mb-4">💡 {w.hint}</p>
-                <input type="text" value={answers[i]} onChange={e => setAns(i, e.target.value)} disabled={checked} placeholder="Введіть слово..." className="w-full p-6 text-4xl uppercase rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center" />
-                {checked && answers[i].trim().toUpperCase() !== w.full.toUpperCase() && <p className="text-center text-sm text-red-500 mt-1">Відповідь: {w.full}</p>}
+                <p className="text-xl md:text-2xl text-warm-gray-light text-center italic mb-6">💡 {w.hint}</p>
+                <input type="text" value={answers[i]} onChange={e => setAns(i, e.target.value)} disabled={checked[i]} placeholder="Введіть слово..." className="w-full p-6 text-4xl uppercase rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center mb-4" />
+
+                {!checked[i] ? (
+                    <button onClick={() => checkWord(i)} disabled={!answers[i].trim()} className="w-full py-4 text-2xl font-bold bg-pastel-green text-warm-gray rounded-2xl shadow-md hover:bg-green-400 active:scale-95 disabled:opacity-50 transition-all">
+                        Перевірити
+                    </button>
+                ) : (
+                    <div className="text-center mt-2">
+                        {isCorrect(w, i) ? (
+                            <p className="text-2xl text-green-600 font-bold">✅ Правильно!</p>
+                        ) : (
+                            <p className="text-xl text-red-500 font-bold">❌ Відповідь: {w.full}</p>
+                        )}
+                    </div>
+                )}
             </div>
         ))}</div>
-        {!checked && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
-        {checked && <Result correct={correct} msg={correct ? 'Всі слова відновлено!' : 'Деякі слова невірні'} />}
+        {allDone && <Result correct={data.words.every((w, idx) => isCorrect(w, idx))} msg={data.words.every((w, idx) => isCorrect(w, idx)) ? 'Всі слова відновлено!' : 'Деякі слова невірні'} />}
     </Card>);
 }
 
