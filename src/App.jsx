@@ -574,13 +574,13 @@ export default function App() {
     const tasks = [
         <Task1 key={taskKeys[0]} onScore={addScore} initialData={aiData?.findOdd} />,
         <Task2 key={taskKeys[1]} onScore={addScore} initialData={aiData?.sequence} />,
+        <Task9 key={taskKeys[8]} onScore={addScore} initialData={aiData?.vowels} />,
         <Task3 key={taskKeys[2]} onScore={addScore} initialData={aiData?.budget} />,
         <Task4 key={taskKeys[3]} onScore={addScore} initialData={aiData?.sentence} />,
         <Task5 key={taskKeys[4]} onScore={addScore} initialData={aiData?.associations} />,
         <Task6 key={taskKeys[5]} onScore={addScore} initialData={aiData?.categories} />,
         <Task7 key={taskKeys[6]} onScore={addScore} initialData={aiData?.trueFalse} />,
         <Task8 key={taskKeys[7]} onScore={addScore} initialData={aiData?.antonyms} />,
-        <Task9 key={taskKeys[8]} onScore={addScore} initialData={aiData?.vowels} />,
         <Task10 key={taskKeys[9]} onScore={addScore} initialData={aiData?.verbs} />,
     ];
 
