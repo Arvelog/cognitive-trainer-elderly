@@ -457,25 +457,28 @@ function Task9({ onScore, initialData }) {
     };
 
     return (<Card><TaskHeader icon="📝" title="Загублені голосні" desc="Відновіть слова, вписавши пропущені літери" />
-        <div className="max-w-lg mx-auto space-y-3 md:space-y-4">{data.words.map((w, i) => (
-            <div key={i} className={`p-4 md:p-5 rounded-3xl border-2 ${checked[i] ? (isCorrect(w, i) ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-white border-pastel-beige-dark'}`}>
-                <p className="text-4xl md:text-5xl font-extrabold text-warm-gray tracking-[0.2em] text-center mb-1 md:mb-2">{removeVowels(w.full)}</p>
-                <p className="text-lg md:text-xl text-warm-gray-light text-center italic mb-3">💡 {w.hint}</p>
-                <input type="text" value={answers[i]} onChange={e => setAns(i, e.target.value)} disabled={checked[i]} placeholder="Введіть слово..." className="w-full p-3 md:p-4 text-2xl md:text-3xl uppercase rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center mb-3" />
+        <div className="max-w-lg mx-auto space-y-2 md:space-y-3">{data.words.map((w, i) => (
+            <div key={i} className={`p-3 md:p-4 rounded-2xl border-2 ${checked[i] ? (isCorrect(w, i) ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-white border-pastel-beige-dark'}`}>
+                <p className="text-3xl md:text-4xl font-extrabold text-warm-gray tracking-[0.2em] text-center mb-1">{removeVowels(w.full)}</p>
+                <p className="text-base md:text-lg text-warm-gray-light text-center italic mb-2">💡 {w.hint}</p>
 
-                {!checked[i] ? (
-                    <button onClick={() => checkWord(i)} disabled={!answers[i].trim()} className="w-full py-3 md:py-4 text-xl md:text-2xl font-bold bg-pastel-green text-warm-gray rounded-2xl shadow-md hover:bg-green-400 active:scale-95 disabled:opacity-50 transition-all">
-                        Перевірити
-                    </button>
-                ) : (
-                    <div className="text-center mt-2">
-                        {isCorrect(w, i) ? (
-                            <p className="text-2xl text-green-600 font-bold">✅ Правильно!</p>
-                        ) : (
-                            <p className="text-xl text-red-500 font-bold">❌ Відповідь: {w.full}</p>
-                        )}
-                    </div>
-                )}
+                <div className="flex gap-2 items-stretch justify-center">
+                    <input type="text" value={answers[i]} onChange={e => setAns(i, e.target.value)} disabled={checked[i]} placeholder="Слово..." className="flex-1 w-full min-w-0 p-2 md:p-3 text-2xl md:text-3xl uppercase rounded-xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center" />
+
+                    {!checked[i] ? (
+                        <button onClick={() => checkWord(i)} disabled={!answers[i].trim()} className="px-6 py-2 text-2xl font-bold bg-pastel-green text-warm-gray rounded-xl shadow-md hover:bg-green-400 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center">
+                            ✓
+                        </button>
+                    ) : (
+                        <div className="flex items-center justify-center px-4 bg-white/50 rounded-xl">
+                            {isCorrect(w, i) ? (
+                                <p className="text-2xl text-green-600 font-bold">✅</p>
+                            ) : (
+                                <p className="text-lg text-red-500 font-bold leading-tight">❌ {w.full}</p>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
         ))}</div>
         {allDone && <Result correct={data.words.every((w, idx) => isCorrect(w, idx))} msg={data.words.every((w, idx) => isCorrect(w, idx)) ? 'Всі слова відновлено!' : 'Деякі слова невірні'} />}
