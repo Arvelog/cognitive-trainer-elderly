@@ -76,7 +76,7 @@ async function generateAllTasks() {
   "associations": { "q": "Питання?", "correct": ["emoji правильний1", "emoji правильний2", "emoji правильний3"], "wrong": ["emoji неправильний1", "emoji неправильний2", "emoji неправильний3"] },
   "categories": { "q": "Що належить до ...?", "correct": ["emoji вірний1", "emoji вірний2", "emoji вірний3"], "wrong": ["emoji невірний1", "emoji невірний2", "emoji невірний3"] },
   "trueFalse": { "text": "Твердження про світ", "answer": true },
-  "antonyms": { "sentences": [{"s": "Речення з антонімом...", "a": "антонім"}, {"s": "Ще речення...", "a": "антонім"}, {"s": "І ще...", "a": "антонім"}, {"s": "Четверте...", "a": "антонім"}] },
+  "antonyms": { "sentences": [{"s": "Речення з пропуском (замість антоніма пиши ...)", "a": "антонім"}, {"s": "Ще речення...", "a": "антонім"}, {"s": "І ще...", "a": "антонім"}, {"s": "Четверте...", "a": "антонім"}] },
   "vowels": { "words": [{"full": "СЛОВО", "hint": "Підказка"}, {"full": "ДРУГЕ", "hint": "Підказка"}, {"full": "ТРЕТЄ", "hint": "Підказка"}] },
   "verbs": { "obj": "emoji Предмет", "correct": "Дієслово", "wrong": ["НеправильнеДієслово1", "НеправильнеДієслово2"], "context": "Контекстне питання?" }
 }
@@ -403,7 +403,9 @@ function Task8({ onScore, initialData }) {
     return (<Card><TaskHeader icon="↔️" title="Протилежності" desc="Допишіть слово-антонім" />
         <div className="max-w-lg mx-auto space-y-4">{data.sentences.map((s, i) => (
             <div key={i} className={`p-4 rounded-2xl border-2 ${checked ? (answers[i].trim().toLowerCase() === s.a.toLowerCase() ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-white border-pastel-beige-dark'}`}>
-                <p className="text-2xl font-semibold text-warm-gray mb-3">{s.s}</p>
+                <p className="text-2xl font-semibold text-warm-gray mb-3">
+                    {s.s.replace(new RegExp(s.a, 'gi'), '...').replace(/\.\.\.\.\.\./g, '...')}
+                </p>
                 <div className="flex gap-3">
                     <input type="text" value={answers[i]} onChange={e => setAns(i, e.target.value)} disabled={checked} placeholder="..." className="flex-1 p-4 text-3xl rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400" />
                     {!checked && hintLevel[i] < 2 && <button onClick={() => addHint(i)} className="px-5 py-3 text-xl bg-pastel-yellow rounded-2xl text-warm-gray font-semibold flex items-center gap-1 hover:bg-yellow-200 active:scale-95 transition-all">💡{hintLevel[i] === 0 ? '' : ' ще'}</button>}
