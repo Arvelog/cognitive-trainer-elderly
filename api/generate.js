@@ -61,7 +61,14 @@ export default async function handler(req) {
         }
 
         const data = await response.json();
-        const content = data.choices[0].message.content;
+
+        // Ensure candidates exist to avoid crashes
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+            console.error('Unexpected Gemini Response format:', JSON.stringify(data));
+            return new Response(JSON.stringify({ error: 'Unexpected AI Response format' }), { status: 500 });
+        }
+
+        const content = data.candidates[0].content.parts[0].text;
         const cleanJsonStr = content.replace(/^```json/g, '').replace(/```$/g, '').trim();
 
         return new Response(cleanJsonStr, {
