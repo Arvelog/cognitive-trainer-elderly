@@ -78,6 +78,13 @@ async function generateAllTasks() {
             console.warn('App: incomplete data, using fallback');
             return null;
         }
+
+        // Validate that findOdd generated exactly 4 items
+        if (!Array.isArray(data.findOdd.items) || data.findOdd.items.length !== 4) {
+            console.warn('App: findOdd data is malformed (not exactly 4 items), using fallback to prevent UI breakage');
+            return null;
+        }
+
         return data;
     } catch (e) {
         console.warn('AI generation failed:', e);
