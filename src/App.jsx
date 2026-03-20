@@ -224,7 +224,7 @@ function Task3({ onScore, initialData }) {
                 <div className="flex items-center gap-4"><label className="text-2xl font-bold text-warm-gray w-56">Загальна сума:</label><input type="number" value={inputTotal} onChange={e => setInputTotal(e.target.value)} disabled={checked} className="flex-1 p-5 text-3xl rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400" placeholder="?" /></div>
                 <div className="flex items-center gap-4"><label className="text-2xl font-bold text-warm-gray w-56">Решта:</label><input type="number" value={inputRest} onChange={e => setInputRest(e.target.value)} disabled={checked} className="flex-1 p-5 text-3xl rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400" placeholder="?" /></div>
             </div>
-            {!checked && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
+            {!checked && <div className="text-center mt-4"><BigBtn onClick={check} disabled={!inputTotal.trim() || !inputRest.trim()} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
             {checked && <Result correct={correct} msg={correct ? 'Відмінно порахували!' : `Правильно: сума ${total} грн, решта ${rest} грн`} />}
         </div>
     </Card>);
@@ -571,7 +571,7 @@ function Task8({ onScore, initialData }) {
                 {checked && answers[i].trim().toLowerCase() !== s.a.toLowerCase() && <p className="text-sm text-red-500 mt-1">Відповідь: {s.a}</p>}
             </div>
         ))}</div>
-        {!checked && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
+        {!checked && <div className="text-center mt-4"><BigBtn onClick={check} disabled={answers.some(a => !a.trim())} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
         {checked && <Result correct={correct} msg={correct ? 'Всі антоніми правильні!' : 'Деякі відповіді неточні'} />}
     </Card>);
 }
