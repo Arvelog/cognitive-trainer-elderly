@@ -32,6 +32,8 @@ export default async function handler(req) {
 }
 
 ВАЖЛИВО:
+- МОВА: ВИКЛЮЧНО УКРАЇНСЬКА! НЕ використовуй російські слова! Наприклад: "прогулянка" (НЕ "прогулка"), "городина" (НЕ "овощі"), "кошик" (НЕ "корзина"), "ліжко" (НЕ "кровать"), "праска" (НЕ "утюг"), "холодильник", "каструля". Перевіряй кожне слово — воно має бути саме українською мовою, а не русизмом.
+- Для "vowels": слова мають бути ПРАВИЛЬНИМИ УКРАЇНСЬКИМИ словами. Голосні літери в українській мові: А, Е, И, І, Ї, О, У, Ю, Я, Є. Перевір, що після видалення голосних маска збігається зі словом.
 - Кожного разу генеруй НОВІ унікальні дані, не повторюй приклади
 - Використовуй emoji де вказано
 - "findOdd.items" — ПОВИННО БУТИ РІВНО 4 ЕЛЕМЕНТИ (масив з 4 рядків)
@@ -56,7 +58,7 @@ export default async function handler(req) {
             body: JSON.stringify({
                 model: 'gpt-5.4-mini',
                 messages: [
-                    { role: 'system', content: 'You are a helpful assistant that only outputs strictly valid JSON.' },
+                    { role: 'system', content: 'You are a helpful assistant that only outputs strictly valid JSON. You MUST write ONLY in Ukrainian language (українська мова). NEVER use Russian words. For example: use "прогулянка" NOT "прогулка", "кошик" NOT "корзина", "праска" NOT "утюг", "городина" NOT "овощі". Every single word must be correct Ukrainian.' },
                     { role: 'user', content: GENERATION_PROMPT }
                 ],
                 response_format: { type: 'json_object' }
