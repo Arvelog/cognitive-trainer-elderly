@@ -25,7 +25,7 @@ export default async function handler(req) {
   "sentence": { "svg": "<svg viewBox=\\"0 0 512 512\\" xmlns=\\"http://www.w3.org/2000/svg\\">...beautiful clean scalable vector graphic code illustrating the sentence. Use pastel colors. NO markdown. Escape quotes if needed...</svg>", "sentence": "Просте речення з 4-6 слів" },
   "associations": { "q": "Питання?", "correct": ["emoji правильний1", "emoji правильний2", "emoji правильний3"], "wrong": ["emoji неправильний1", "emoji неправильний2", "emoji неправильний3"] },
   "categories": { "q": "Що належить до ...?", "correct": ["emoji вірний1", "emoji вірний2", "emoji вірний3"], "wrong": ["emoji невірний1", "emoji невірний2", "emoji невірний3"] },
-  "trueFalse": { "text": "Твердження про світ", "answer": true },
+  "trueFalse": { "statements": [{"text": "Твердження 1", "answer": true}, {"text": "Твердження 2", "answer": false}, {"text": "Твердження 3", "answer": true}] },
   "antonyms": { "sentences": [{"s": "Речення з пропуском (замість антоніма пиши ...)", "a": "антонім"}, {"s": "Ще речення...", "a": "антонім"}, {"s": "І ще...", "a": "антонім"}, {"s": "Четверте...", "a": "антонім"}] },
   "vowels": { "words": [{"full": "СЛОВО", "hint": "Підказка"}, {"full": "ДРУГЕ", "hint": "Підказка"}, {"full": "ТРЕТЄ", "hint": "Підказка"}] },
   "verbs": { "obj": "emoji Хто/Що", "correct": ["Правильне1", "Правильне2", "Правильне3"], "wrong": ["Невірно1", "Невірно2", "Невірно3"], "context": "Що може робити...?" }

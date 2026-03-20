@@ -134,14 +134,9 @@ const CATEGORY_DATA = [
     { q: 'Що можна знайти в лісі?', correct: ['🍄 Гриби', '🌲 Ялинка', '🐿️ Білка'], wrong: ['🚗 Машина', '📱 Телефон', '🛋️ Диван'] },
 ];
 const TRUEFALSE_DATA = [
-    { text: 'Взимку ведмеді сплять у барлозі', answer: true },
-    { text: 'Щоб висушити одяг, його треба намочити у відрі', answer: false },
-    { text: 'Сонце сходить на сході', answer: true },
-    { text: 'Кішки вміють гавкати', answer: false },
-    { text: 'Вода замерзає при нулі градусів', answer: true },
-    { text: 'Рибу ловлять сачком для метеликів', answer: false },
-    { text: 'Мед роблять бджоли', answer: true },
-    { text: 'Зайці люблять їсти капусту', answer: true },
+    { statements: [{ text: 'Взимку ведмеді сплять у барлозі', answer: true }, { text: 'Кішки вміють гавкати', answer: false }, { text: 'Мед роблять бджоли', answer: true }] },
+    { statements: [{ text: 'Сонце сходить на сході', answer: true }, { text: 'Рибу ловлять сачком для метеликів', answer: false }, { text: 'Вода замерзає при нулі градусів', answer: true }] },
+    { statements: [{ text: 'Зайці люблять їсти капусту', answer: true }, { text: 'Щоб висушити одяг, його треба намочити у відрі', answer: false }, { text: 'Восени листя опадає з дерев', answer: true }] },
 ];
 const ANTONYM_DATA = [
     { sentences: [{ s: 'Чай гарячий, а морозиво...', a: 'холодне' }, { s: 'Слон великий, а мишка...', a: 'маленька' }, { s: 'Вдень світло, а вночі...', a: 'темно' }, { s: 'Цукор солодкий, а лимон...', a: 'кислий' }] },
@@ -325,21 +320,61 @@ function Task6({ onScore, initialData }) {
     </Card>);
 }
 
-// 7. Правда чи Ні?
+// 7. Правда чи Ні? (3 твердження)
 function Task7({ onScore, initialData }) {
-    const [data] = useState(() => initialData || pick(TRUEFALSE_DATA));
-    const [answer, setAnswer] = useState(null);
-    const done = answer !== null;
-    const correct = answer === data.answer;
-    const handle = (v) => { if (done) return; setAnswer(v); if (v === data.answer) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
-    return (<Card><TaskHeader icon="🤔" title="Правда чи Ні?" desc="Чи правильне це твердження?" />
-        <div className="max-w-lg mx-auto">
-            <div className="bg-pastel-yellow p-8 rounded-3xl text-center mb-8"><p className="text-4xl font-bold text-warm-gray leading-tight">"{data.text}"</p></div>
-            <div className="flex gap-4 justify-center">
-                <button onClick={() => handle(true)} className={`flex-1 py-8 text-4xl font-extrabold rounded-3xl border-3 transition-all ${done ? (data.answer === true ? 'bg-green-100 border-green-400' : answer === true ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : 'bg-white border-pastel-green hover:bg-pastel-green-light active:scale-95'}`}>✅ Правда</button>
-                <button onClick={() => handle(false)} className={`flex-1 py-8 text-4xl font-extrabold rounded-3xl border-3 transition-all ${done ? (data.answer === false ? 'bg-green-100 border-green-400' : answer === false ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : 'bg-white border-pastel-pink hover:bg-red-50 active:scale-95'}`}>❌ Ні</button>
-            </div>
-            {done && <Result correct={correct} msg={correct ? 'Правильно!' : (data.answer ? 'Це правда!' : 'Це неправда!')} />}
+    const [data] = useState(() => {
+        if (initialData) {
+            // AI returns single { text, answer } — wrap into statements array if needed
+            if (initialData.statements) return initialData;
+            return pick(TRUEFALSE_DATA);
+        }
+        return pick(TRUEFALSE_DATA);
+    });
+    const statements = data.statements;
+    const [answers, setAnswers] = useState(statements.map(() => null));
+    const [checked, setChecked] = useState(false);
+
+    const handle = (idx, v) => {
+        if (checked || answers[idx] !== null) return;
+        const next = [...answers];
+        next[idx] = v;
+        setAnswers(next);
+
+        if (v === statements[idx].answer) {
+            playCorrect();
+        } else {
+            playWrong();
+        }
+
+        // Check if all answered
+        if (next.every(a => a !== null)) {
+            const allCorrect = next.every((a, i) => a === statements[i].answer);
+            setChecked(true);
+            if (allCorrect) {
+                fireConfetti();
+                onScore();
+            }
+        }
+    };
+
+    const correctCount = answers.filter((a, i) => a === statements[i].answer).length;
+
+    return (<Card><TaskHeader icon="🤔" title="Правда чи Ні?" desc="Визначте, чи правильне кожне з трьох тверджень" />
+        <div className="max-w-lg mx-auto space-y-6">
+            {statements.map((s, idx) => {
+                const answered = answers[idx] !== null;
+                const isCorrect = answers[idx] === s.answer;
+                return (
+                    <div key={idx} className={`p-6 rounded-3xl border-2 ${answered ? (isCorrect ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-pastel-yellow border-transparent'}`}>
+                        <p className="text-3xl font-bold text-warm-gray leading-tight text-center mb-4">"{s.text}"</p>
+                        <div className="flex gap-3 justify-center">
+                            <button onClick={() => handle(idx, true)} disabled={answered} className={`flex-1 py-5 text-3xl font-extrabold rounded-2xl border-2 transition-all ${answered ? (s.answer === true ? 'bg-green-100 border-green-400' : answers[idx] === true ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : 'bg-white border-pastel-green hover:bg-pastel-green-light active:scale-95'}`}>✅ Правда</button>
+                            <button onClick={() => handle(idx, false)} disabled={answered} className={`flex-1 py-5 text-3xl font-extrabold rounded-2xl border-2 transition-all ${answered ? (s.answer === false ? 'bg-green-100 border-green-400' : answers[idx] === false ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : 'bg-white border-pastel-pink hover:bg-red-50 active:scale-95'}`}>❌ Ні</button>
+                        </div>
+                    </div>
+                );
+            })}
+            {checked && <Result correct={correctCount === statements.length} msg={correctCount === statements.length ? 'Всі відповіді правильні! 🎉' : `Правильних: ${correctCount} з ${statements.length}`} />}
         </div>
     </Card>);
 }
