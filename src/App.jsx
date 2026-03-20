@@ -320,62 +320,113 @@ function Task6({ onScore, initialData }) {
     </Card>);
 }
 
-// 7. Правда чи Ні? (3 твердження)
+// 7. Правда чи Ні? (3 твердження, по одному з анімацією)
 function Task7({ onScore, initialData }) {
     const [data] = useState(() => {
         if (initialData) {
-            // AI returns single { text, answer } — wrap into statements array if needed
             if (initialData.statements) return initialData;
             return pick(TRUEFALSE_DATA);
         }
         return pick(TRUEFALSE_DATA);
     });
     const statements = data.statements;
-    const [answers, setAnswers] = useState(statements.map(() => null));
-    const [checked, setChecked] = useState(false);
+    const [current, setCurrent] = useState(0);
+    const [answers, setAnswers] = useState([]);
+    const [animating, setAnimating] = useState(false);
+    const [slideIn, setSlideIn] = useState(true);
+    const [done, setDone] = useState(false);
 
-    const handle = (idx, v) => {
-        if (checked || answers[idx] !== null) return;
-        const next = [...answers];
-        next[idx] = v;
-        setAnswers(next);
+    const handle = (v) => {
+        if (animating || done) return;
+        const isCorrect = v === statements[current].answer;
+        const newAnswers = [...answers, { value: v, correct: isCorrect }];
+        setAnswers(newAnswers);
 
-        if (v === statements[idx].answer) {
-            playCorrect();
+        if (isCorrect) playCorrect(); else playWrong();
+
+        if (current < statements.length - 1) {
+            setAnimating(true);
+            // Slide out current
+            setTimeout(() => {
+                setSlideIn(false);
+            }, 800);
+            // Slide in next
+            setTimeout(() => {
+                setCurrent(c => c + 1);
+                setSlideIn(true);
+                setAnimating(false);
+            }, 1200);
         } else {
-            playWrong();
-        }
-
-        // Check if all answered
-        if (next.every(a => a !== null)) {
-            const allCorrect = next.every((a, i) => a === statements[i].answer);
-            setChecked(true);
-            if (allCorrect) {
-                fireConfetti();
-                onScore();
-            }
+            // All done
+            setTimeout(() => {
+                setDone(true);
+                const allCorrect = newAnswers.every(a => a.correct);
+                if (allCorrect) { fireConfetti(); onScore(); }
+            }, 1000);
         }
     };
 
-    const correctCount = answers.filter((a, i) => a === statements[i].answer).length;
+    const correctCount = answers.filter(a => a.correct).length;
+    const s = statements[current];
+    const answered = answers[current] !== undefined;
 
-    return (<Card><TaskHeader icon="🤔" title="Правда чи Ні?" desc="Визначте, чи правильне кожне з трьох тверджень" />
-        <div className="max-w-lg mx-auto space-y-6">
-            {statements.map((s, idx) => {
-                const answered = answers[idx] !== null;
-                const isCorrect = answers[idx] === s.answer;
-                return (
-                    <div key={idx} className={`p-6 rounded-3xl border-2 ${answered ? (isCorrect ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-pastel-yellow border-transparent'}`}>
-                        <p className="text-3xl font-bold text-warm-gray leading-tight text-center mb-4">"{s.text}"</p>
-                        <div className="flex gap-3 justify-center">
-                            <button onClick={() => handle(idx, true)} disabled={answered} className={`flex-1 py-5 text-3xl font-extrabold rounded-2xl border-2 transition-all ${answered ? (s.answer === true ? 'bg-green-100 border-green-400' : answers[idx] === true ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : 'bg-white border-pastel-green hover:bg-pastel-green-light active:scale-95'}`}>✅ Правда</button>
-                            <button onClick={() => handle(idx, false)} disabled={answered} className={`flex-1 py-5 text-3xl font-extrabold rounded-2xl border-2 transition-all ${answered ? (s.answer === false ? 'bg-green-100 border-green-400' : answers[idx] === false ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : 'bg-white border-pastel-pink hover:bg-red-50 active:scale-95'}`}>❌ Ні</button>
-                        </div>
+    return (<Card><TaskHeader icon="🤔" title="Правда чи Ні?" desc={`Твердження ${current + 1} з ${statements.length}`} />
+        <div className="max-w-lg mx-auto">
+            {/* Progress dots */}
+            <div className="flex justify-center gap-3 mb-8">
+                {statements.map((_, idx) => (
+                    <div key={idx} className={`w-4 h-4 rounded-full transition-all duration-500 ${
+                        idx < answers.length ? (answers[idx]?.correct ? 'bg-green-400 scale-125' : 'bg-red-400 scale-125')
+                        : idx === current ? 'bg-pastel-green scale-150 ring-4 ring-pastel-green/30'
+                        : 'bg-gray-300'
+                    }`} />
+                ))}
+            </div>
+
+            {!done && (
+                <div
+                    key={current}
+                    style={{
+                        animation: slideIn ? 'tf-slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' : 'tf-slide-out 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards'
+                    }}
+                >
+                    <div className={`p-8 rounded-3xl text-center mb-8 transition-colors duration-500 ${
+                        answered ? (answers[current]?.correct ? 'bg-green-100 border-2 border-green-300' : 'bg-red-100 border-2 border-red-300')
+                        : 'bg-pastel-yellow'
+                    }`}>
+                        <p className="text-4xl font-bold text-warm-gray leading-tight">"{s.text}"</p>
+                        {answered && (
+                            <p className={`mt-3 text-2xl font-bold ${answers[current]?.correct ? 'text-green-600' : 'text-red-500'}`}>
+                                {answers[current]?.correct ? '✅ Правильно!' : (s.answer ? '❌ Це була правда' : '❌ Це було неправдою')}
+                            </p>
+                        )}
                     </div>
-                );
-            })}
-            {checked && <Result correct={correctCount === statements.length} msg={correctCount === statements.length ? 'Всі відповіді правильні! 🎉' : `Правильних: ${correctCount} з ${statements.length}`} />}
+                    {!answered && (
+                        <div className="flex gap-4 justify-center">
+                            <button onClick={() => handle(true)} className="flex-1 py-8 text-4xl font-extrabold rounded-3xl border-3 transition-all bg-white border-pastel-green hover:bg-pastel-green-light active:scale-95">✅ Правда</button>
+                            <button onClick={() => handle(false)} className="flex-1 py-8 text-4xl font-extrabold rounded-3xl border-3 transition-all bg-white border-pastel-pink hover:bg-red-50 active:scale-95">❌ Ні</button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {done && (
+                <div style={{ animation: 'tf-slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
+                    <Result correct={correctCount === statements.length} msg={correctCount === statements.length ? 'Всі відповіді правильні! 🎉' : `Правильних: ${correctCount} з ${statements.length}`} />
+                </div>
+            )}
         </div>
+
+        <style dangerouslySetInnerHTML={{__html: `
+            @keyframes tf-slide-in {
+                from { opacity: 0; transform: translateX(60px) scale(0.95); }
+                to { opacity: 1; transform: translateX(0) scale(1); }
+            }
+            @keyframes tf-slide-out {
+                from { opacity: 1; transform: translateX(0) scale(1); }
+                to { opacity: 0; transform: translateX(-60px) scale(0.95); }
+            }
+        `}} />
     </Card>);
 }
 
