@@ -117,11 +117,9 @@ const BUDGET_DATA = [
     { wallet: 2000, label: 'Продукти', items: [{ n: 'Крупи', p: 150 }, { n: 'Риба', p: 280 }, { n: 'Масло', p: 90 }, { n: 'Сир', p: 160 }] },
 ];
 const SENTENCE_DATA = [
-    { img: 'grandfather watering flowers in sunny garden', sentence: 'Дідусь поливає квіти в саду' },
-    { img: 'grandmother knitting warm socks by fireplace', sentence: 'Бабуся в\'яже теплі шкарпетки' },
-    { img: 'elderly couple walking in autumn park', sentence: 'Пара гуляє в осінньому парку' },
-    { img: 'old man reading newspaper on bench', sentence: 'Дідусь читає газету на лавці' },
-    { img: 'grandmother baking pie in cozy kitchen', sentence: 'Бабуся пече пиріг на кухні' },
+    { sentences: ['Дідусь поливає квіти в саду', 'Бабуся в\'яже теплі шкарпетки', 'Кіт спить на теплій подушці'] },
+    { sentences: ['Пара гуляє в осінньому парку', 'Дідусь читає газету на лавці', 'Бабуся пече пиріг на кухні'] },
+    { sentences: ['Онуки приїхали на канікули', 'Сонце зійшло над полем', 'Квіти розцвіли біля хати'] },
 ];
 const ASSOC_DATA = [
     { q: 'Що потрібно, щоб зв\'язати светр?', correct: ['🧶 Пряжа', '🪡 Спиці', '📐 Схема'], wrong: ['🔨 Молоток', '🍕 Піца', '📱 Телефон'] },
@@ -232,51 +230,160 @@ function Task3({ onScore, initialData }) {
     </Card>);
 }
 
-// 4. Конструктор речень
+// 4. Конструктор речень (3 речення послідовно, без картинки)
 function Task4({ onScore, initialData }) {
-    const [data] = useState(() => initialData || pick(SENTENCE_DATA));
-    const words = data.sentence.split(' ');
-    const [pool, setPool] = useState(() => shuffle(words));
+    const [data] = useState(() => {
+        if (initialData) {
+            if (initialData.sentences) return initialData;
+            // AI returned old format with single sentence — wrap
+            if (initialData.sentence) return { sentences: [initialData.sentence] };
+            return pick(SENTENCE_DATA);
+        }
+        return pick(SENTENCE_DATA);
+    });
+    const allSentences = data.sentences;
+    const [current, setCurrent] = useState(0);
+    const [pool, setPool] = useState(() => shuffle(allSentences[0].split(' ')));
     const [built, setBuilt] = useState([]);
-    const [checked, setChecked] = useState(false);
-    const [svgLoaded, setSvgLoaded] = useState(false);
-    const [svgError, setSvgError] = useState(false);
+    const [animating, setAnimating] = useState(false);
+    const [slideIn, setSlideIn] = useState(true);
+    const [results, setResults] = useState([]);
+    const [done, setDone] = useState(false);
 
-    // Fallback to a nice abstract shape based on the sentence if SVG generation fails
-    const fallbackImgUrl = `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(data.sentence)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+    const sentence = allSentences[current];
+    const words = sentence.split(' ');
 
-    // We expect data.svg to contain the raw SVG string from Gemini
-    const svgDataUri = data.svg && data.svg.startsWith('<svg')
-        ? `data:image/svg+xml;utf8,${encodeURIComponent(data.svg)}`
-        : fallbackImgUrl;
+    const addWord = (w, i) => {
+        if (animating || done) return;
+        const newBuilt = [...built, w];
+        setBuilt(newBuilt);
+        setPool(pool.filter((_, j) => j !== i));
 
-    const imgUrl = svgError ? fallbackImgUrl : svgDataUri;
+        // Auto-check when all words placed
+        if (newBuilt.length === words.length) {
+            const isCorrect = newBuilt.join(' ') === sentence;
+            if (isCorrect) {
+                playCorrect();
+                setResults(r => [...r, true]);
+                if (current < allSentences.length - 1) {
+                    goToNext(true);
+                } else {
+                    setTimeout(() => { setDone(true); fireConfetti(); onScore(); }, 800);
+                }
+            } else {
+                playWrong();
+                // Reset after short delay
+                setTimeout(() => {
+                    setBuilt([]);
+                    setPool(shuffle(words));
+                }, 1200);
+            }
+        }
+    };
 
-    const addWord = (w, i) => { if (checked) return; setBuilt([...built, w]); setPool(pool.filter((_, j) => j !== i)); };
-    const removeWord = (w, i) => { if (checked) return; setPool([...pool, w]); setBuilt(built.filter((_, j) => j !== i)); };
-    const correct = built.join(' ') === data.sentence;
-    const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
+    const removeWord = (w, i) => {
+        if (animating || done) return;
+        setPool([...pool, w]);
+        setBuilt(built.filter((_, j) => j !== i));
+    };
 
-    return (<Card><TaskHeader icon="✍️" title="Складіть речення" desc="Розставте слова у правильному порядку" />
-        <div className="max-w-md mx-auto">
-            <div className="w-full h-52 bg-pastel-green-light rounded-2xl mb-4 overflow-hidden relative">
-                {!svgLoaded && <div className="absolute inset-0 flex items-center justify-center text-pastel-green"><Loader2 className="w-8 h-8 animate-spin" /></div>}
-                <img
-                    src={imgUrl}
-                    alt="Ілюстрація"
-                    className={`relative z-10 w-full h-full object-contain p-2 rounded-2xl transition-opacity duration-300 ${svgLoaded ? 'opacity-100' : 'opacity-0'}`}
-                    onLoad={() => setSvgLoaded(true)}
-                    onError={() => { if (!svgError) setSvgError(true); setSvgLoaded(true); }}
-                />
+    const goToNext = (correct) => {
+        setAnimating(true);
+        setTimeout(() => setSlideIn(false), 600);
+        setTimeout(() => {
+            const nextIdx = current + 1;
+            setCurrent(nextIdx);
+            setBuilt([]);
+            setPool(shuffle(allSentences[nextIdx].split(' ')));
+            setSlideIn(true);
+            setAnimating(false);
+        }, 1000);
+    };
+
+    const correctCount = results.filter(Boolean).length;
+
+    return (<Card><TaskHeader icon="✍️" title="Складіть речення" desc={`Речення ${current + 1} з ${allSentences.length}`} />
+        <div className="max-w-lg mx-auto">
+            {/* Progress dots */}
+            <div className="flex justify-center gap-3 mb-6">
+                {allSentences.map((_, idx) => (
+                    <div key={idx} className={`w-4 h-4 rounded-full transition-all duration-500 ${
+                        idx < results.length ? (results[idx] ? 'bg-green-400 scale-125' : 'bg-red-400 scale-125')
+                        : idx === current ? 'bg-pastel-green scale-150 ring-4 ring-pastel-green/30'
+                        : 'bg-gray-300'
+                    }`} />
+                ))}
             </div>
-            <div className="min-h-16 p-3 mb-3 bg-pastel-beige rounded-2xl border-2 border-dashed border-pastel-green flex flex-wrap gap-2">
-                {built.length === 0 && <span className="text-warm-gray-light text-lg">Натискайте на слова нижче...</span>}
-                {built.map((w, i) => <button key={i} onClick={() => removeWord(w, i)} className="px-4 py-2 bg-pastel-green text-warm-gray font-bold rounded-2xl text-lg">{w}</button>)}
-            </div>
-            <div className="flex flex-wrap gap-2 justify-center">{pool.map((w, i) => <button key={i} onClick={() => addWord(w, i)} className="px-4 py-2 bg-white border-2 border-pastel-green text-warm-gray font-bold rounded-2xl text-lg hover:bg-pastel-green-light">{w}</button>)}</div>
-            {!checked && built.length === words.length && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
-            {checked && <Result correct={correct} msg={correct ? 'Речення складено правильно!' : `Правильно: "${data.sentence}"`} />}
+
+            {!done && (
+                <div
+                    key={current}
+                    style={{
+                        animation: slideIn ? 'snt-slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' : 'snt-slide-out 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards'
+                    }}
+                >
+                    {/* Sentence building area */}
+                    <div className={`min-h-[100px] p-5 mb-6 rounded-3xl border-3 transition-all duration-300 flex flex-wrap gap-2 items-center justify-center ${
+                        built.length === words.length
+                            ? (built.join(' ') === sentence ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-400 animate-pulse')
+                            : 'bg-white border-pastel-green border-dashed'
+                    }`}>
+                        {built.length === 0 && (
+                            <span className="text-warm-gray-light text-xl italic">Натискайте на слова, щоб скласти речення...</span>
+                        )}
+                        {built.map((w, i) => (
+                            <button
+                                key={`b-${i}`}
+                                onClick={() => removeWord(w, i)}
+                                className="px-5 py-3 bg-pastel-green text-white font-bold rounded-2xl text-2xl shadow-md hover:bg-green-500 active:scale-90 transition-all"
+                                style={{ animation: 'snt-word-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' }}
+                            >
+                                {w}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Word pool */}
+                    <div className="flex flex-wrap gap-3 justify-center">
+                        {pool.map((w, i) => (
+                            <button
+                                key={`p-${i}-${w}`}
+                                onClick={() => addWord(w, i)}
+                                className="px-5 py-3 bg-white border-2 border-pastel-beige-dark text-warm-gray font-bold rounded-2xl text-2xl shadow-sm hover:border-pastel-green hover:bg-pastel-green-light hover:shadow-md active:scale-90 transition-all"
+                            >
+                                {w}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Number hint */}
+                    <p className="text-center text-warm-gray-light text-lg mt-4">
+                        {built.length} / {words.length} слів
+                    </p>
+                </div>
+            )}
+
+            {done && (
+                <div style={{ animation: 'snt-slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
+                    <Result correct={correctCount === allSentences.length} msg={correctCount === allSentences.length ? 'Всі речення складено правильно! 🎉' : `Правильних: ${correctCount} з ${allSentences.length}`} />
+                </div>
+            )}
         </div>
+
+        <style dangerouslySetInnerHTML={{__html: `
+            @keyframes snt-slide-in {
+                from { opacity: 0; transform: translateX(60px) scale(0.95); }
+                to { opacity: 1; transform: translateX(0) scale(1); }
+            }
+            @keyframes snt-slide-out {
+                from { opacity: 1; transform: translateX(0) scale(1); }
+                to { opacity: 0; transform: translateX(-60px) scale(0.95); }
+            }
+            @keyframes snt-word-pop {
+                from { opacity: 0; transform: scale(0.5); }
+                to { opacity: 1; transform: scale(1); }
+            }
+        `}} />
     </Card>);
 }
 
