@@ -22,7 +22,7 @@ export default async function handler(req) {
   "findOdd": { "cat": "назва категорії", "items": ["emoji предмет1", "emoji предмет2", "emoji предмет3", "emoji НЕвідповідний"], "odd": 3 },
   "sequence": { "title": "назва процесу", "steps": ["крок1", "крок2", "крок3", "крок4"] },
   "budget": { "wallet": 1200, "label": "назва", "items": [{"n":"товар","p":150},{"n":"товар2","p":200},{"n":"товар3","p":100},{"n":"товар4","p":80}] },
-  "sentence": { "sentences": ["Просте речення 1 з 4-6 слів", "Просте речення 2 з 4-6 слів", "Просте речення 3 з 4-6 слів"] },
+  "sentence": { "sentences": ["Речення 1 мінімум 5-7 слів", "Речення 2 мінімум 5-7 слів", "Речення 3 мінімум 5-7 слів"] },
   "associations": { "q": "Питання?", "correct": ["emoji правильний1", "emoji правильний2", "emoji правильний3"], "wrong": ["emoji неправильний1", "emoji неправильний2", "emoji неправильний3"] },
   "categories": { "q": "Що належить до ...?", "correct": ["emoji вірний1", "emoji вірний2", "emoji вірний3"], "wrong": ["emoji невірний1", "emoji невірний2", "emoji невірний3"] },
   "trueFalse": { "statements": [{"text": "Твердження 1", "answer": true}, {"text": "Твердження 2", "answer": false}, {"text": "Твердження 3", "answer": true}] },
