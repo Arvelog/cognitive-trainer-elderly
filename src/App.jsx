@@ -693,10 +693,11 @@ export default function App() {
     const [rateLimitError, setRateLimitError] = useState(false);
     const [started, setStarted] = useState(false);
     const [verbImage, setVerbImage] = useState(null);
+    const [verbQuestions, setVerbQuestions] = useState(null);
     const addScore = useCallback(() => setScore(s => s + 1), []);
     const next = () => setSlide(s => Math.min(s + 1, SLIDES - 1));
     const prev = () => setSlide(s => Math.max(s - 1, 0));
-    const restart = () => { setSlide(0); setScore(0); setAiData(null); setGenError(false); setRateLimitError(false); setStarted(false); setVerbImage(null); setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random())); };
+    const restart = () => { setSlide(0); setScore(0); setAiData(null); setGenError(false); setRateLimitError(false); setStarted(false); setVerbImage(null); setVerbQuestions(null); setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random())); };
 
     const generateImage = async (scene) => {
         try {
@@ -706,8 +707,9 @@ export default function App() {
                 body: JSON.stringify({ prompt: scene })
             });
             if (!res.ok) return;
-            const { url } = await res.json();
+            const { url, questions } = await res.json();
             if (url) setVerbImage(url);
+            if (questions) setVerbQuestions(questions);
         } catch { /* silently fail — emoji fallback */ }
     };
 
@@ -740,7 +742,7 @@ export default function App() {
         <Task6 key={taskKeys[5]} onScore={addScore} initialData={aiData?.categories} />,
         <Task9 key={taskKeys[8]} onScore={addScore} initialData={aiData?.vowels} />,
         <Task7 key={taskKeys[6]} onScore={addScore} initialData={aiData?.trueFalse} />,
-        <Task10 key={taskKeys[9]} onScore={addScore} initialData={aiData?.verbs} imageUrl={verbImage} />,
+        <Task10 key={taskKeys[9]} onScore={addScore} initialData={verbQuestions || aiData?.verbs} imageUrl={verbImage} />,
     ];
 
     return (
