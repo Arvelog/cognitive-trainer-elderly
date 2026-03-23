@@ -642,11 +642,13 @@ function Task9({ onScore, initialData }) {
 }
 
 // 10. Хто що робить (Дієслова) — upgraded to multi-select
-function Task10({ onScore, initialData }) {
+function Task10({ onScore, initialData, imageUrl }) {
     const [data] = useState(() => initialData || pick(VERB_DATA));
     const [options] = useState(() => shuffle([...data.correct, ...shuffle(data.wrong).slice(0, 3)]));
     const [sel, setSel] = useState(new Set());
     const [checked, setChecked] = useState(false);
+    const [imgLoaded, setImgLoaded] = useState(false);
+    const [imgError, setImgError] = useState(false);
 
     // Safety check just in case AI returns a single string instead of array
     const isArray = Array.isArray(data.correct);
@@ -659,9 +661,18 @@ function Task10({ onScore, initialData }) {
     const correct = data.correct.every(c => sel.has(c)) && sel.size === 3;
     const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
 
+    const showImage = imageUrl && !imgError;
+
     return (<Card><TaskHeader icon="🎯" title="Хто що робить?" desc={data.context || 'Оберіть правильні дії'} />
         <div className="max-w-4xl mx-auto text-center">
-            <div className="text-7xl md:text-8xl mb-4 md:mb-6">{data.obj.split(' ')[0]}</div>
+            {showImage ? (
+                <div className="mb-4 md:mb-6 flex justify-center">
+                    {!imgLoaded && <div className="w-48 h-48 rounded-3xl bg-pastel-beige animate-pulse flex items-center justify-center text-6xl">{data.obj.split(' ')[0]}</div>}
+                    <img src={imageUrl} alt={data.obj} onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} className={`max-h-48 md:max-h-56 rounded-3xl shadow-lg object-cover ${imgLoaded ? '' : 'hidden'}`} />
+                </div>
+            ) : (
+                <div className="text-7xl md:text-8xl mb-4 md:mb-6">{data.obj.split(' ')[0]}</div>
+            )}
             <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть 3 правильні відповіді</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">{options.map((opt, i) => {
                 const isSel = sel.has(opt); const isCorr = data.correct.includes(opt);
@@ -709,20 +720,35 @@ export default function App() {
     const [genError, setGenError] = useState(false);
     const [rateLimitError, setRateLimitError] = useState(false);
     const [started, setStarted] = useState(false);
+    const [verbImage, setVerbImage] = useState(null);
     const addScore = useCallback(() => setScore(s => s + 1), []);
     const next = () => setSlide(s => Math.min(s + 1, SLIDES - 1));
     const prev = () => setSlide(s => Math.max(s - 1, 0));
-    const restart = () => { setSlide(0); setScore(0); setAiData(null); setGenError(false); setRateLimitError(false); setStarted(false); setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random())); };
+    const restart = () => { setSlide(0); setScore(0); setAiData(null); setGenError(false); setRateLimitError(false); setStarted(false); setVerbImage(null); setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random())); };
+
+    const generateImage = async (scene) => {
+        try {
+            const res = await fetch('/api/generate-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: scene })
+            });
+            if (!res.ok) return;
+            const { url } = await res.json();
+            if (url) setVerbImage(url);
+        } catch { /* silently fail — emoji fallback */ }
+    };
 
     const startSession = async () => {
-        setGenerating(true); setGenError(false); setRateLimitError(false);
+        setGenerating(true); setGenError(false); setRateLimitError(false); setVerbImage(null);
         const data = await generateAllTasks();
         setGenerating(false);
         if (data && data._rateLimited) {
             setRateLimitError(true);
-            setAiData(null); // use fallback
+            setAiData(null);
         } else if (data) {
             setAiData(data);
+            if (data.verbs?.scene) generateImage(data.verbs.scene);
         } else {
             setGenError(true);
         }
@@ -742,7 +768,7 @@ export default function App() {
         <Task6 key={taskKeys[5]} onScore={addScore} initialData={aiData?.categories} />,
         <Task9 key={taskKeys[8]} onScore={addScore} initialData={aiData?.vowels} />,
         <Task7 key={taskKeys[6]} onScore={addScore} initialData={aiData?.trueFalse} />,
-        <Task10 key={taskKeys[9]} onScore={addScore} initialData={aiData?.verbs} />,
+        <Task10 key={taskKeys[9]} onScore={addScore} initialData={aiData?.verbs} imageUrl={verbImage} />,
     ];
 
     return (
