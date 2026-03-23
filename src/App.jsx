@@ -708,10 +708,11 @@ export default function App() {
     const [generating, setGenerating] = useState(false);
     const [genError, setGenError] = useState(false);
     const [rateLimitError, setRateLimitError] = useState(false);
+    const [started, setStarted] = useState(false);
     const addScore = useCallback(() => setScore(s => s + 1), []);
     const next = () => setSlide(s => Math.min(s + 1, SLIDES - 1));
     const prev = () => setSlide(s => Math.max(s - 1, 0));
-    const restart = () => { setSlide(0); setScore(0); setAiData(null); setGenError(false); setRateLimitError(false); setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random())); };
+    const restart = () => { setSlide(0); setScore(0); setAiData(null); setGenError(false); setRateLimitError(false); setStarted(false); setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random())); };
 
     const startSession = async () => {
         setGenerating(true); setGenError(false); setRateLimitError(false);
@@ -725,6 +726,7 @@ export default function App() {
         } else {
             setGenError(true);
         }
+        setStarted(true);
         next();
     };
 
@@ -802,7 +804,7 @@ export default function App() {
             </main>
 
             {/* Navigation */}
-            {slide > 0 && (
+            {(slide > 0 || started) && (
                 <nav className="bg-white/80 backdrop-blur-md shadow-[0_-2px_10px_rgba(0,0,0,0.05)] py-4 px-6 flex justify-between items-center sticky bottom-0 z-10">
                     <BigBtn onClick={prev} className="bg-pastel-beige-dark text-warm-gray" disabled={slide === 0}><ChevronLeft className="inline w-5 h-5 mr-1" />Назад</BigBtn>
                     <div className="flex gap-1">{Array.from({ length: SLIDES }).map((_, i) => <div key={i} className={`w-2.5 h-2.5 rounded-full transition-all ${i === slide ? 'bg-pastel-green scale-125' : i < slide ? 'bg-pastel-green/50' : 'bg-gray-300'}`} />)}</div>
