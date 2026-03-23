@@ -742,7 +742,7 @@ export default function App() {
         <Task6 key={taskKeys[5]} onScore={addScore} initialData={aiData?.categories} />,
         <Task9 key={taskKeys[8]} onScore={addScore} initialData={aiData?.vowels} />,
         <Task7 key={taskKeys[6]} onScore={addScore} initialData={aiData?.trueFalse} />,
-        <Task10 key={taskKeys[9]} onScore={addScore} initialData={verbQuestions || aiData?.verbs} imageUrl={verbImage} />,
+        <Task10 key={taskKeys[9]} onScore={addScore} initialData={verbQuestions?.correct ? verbQuestions : null} imageUrl={verbImage} />,
     ];
 
     return (
