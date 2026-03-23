@@ -146,11 +146,9 @@ const VOWELS_DATA = [
     { words: [{ full: 'ПІДЛОГА', hint: 'По ній ходять вдома' }, { full: 'ДЗЕРКАЛО', hint: 'У нього дивляться щоранку' }, { full: 'КОШИК', hint: 'У ньому несуть продукти з ринку' }] },
 ];
 const VERB_DATA = [
-    { obj: '👨‍🍳 Кухар', context: 'Що може робити кухар?', correct: ['Варити', 'Смажити', 'Пекти'], wrong: ['Будувати', 'Лікувати', 'Співати'] },
-    { obj: '🩺 Лікар', context: 'Що робить лікар?', correct: ['Лікувати', 'Оглядати', 'Виписувати'], wrong: ['Будувати', 'Співати', 'Малювати'] },
-    { obj: '📰 Газета', context: 'Що можна робити з газетою?', correct: ['Читати', 'Купувати', 'Гортати'], wrong: ['Їсти', 'Слухати', 'Пити'] },
-    { obj: '👗 Одяг', context: 'Що ми робимо з одягом?', correct: ['Одягати', 'Прасувати', 'Прати'], wrong: ['Їсти', 'Писати', 'Співати'] },
-    { obj: '🌱 Город', context: 'Що роблять на городі?', correct: ['Садити', 'Поливати', 'Копати'], wrong: ['Читати', 'Літати', 'Малювати'] },
+    { title: 'Кухня', context: 'Що відбувається на цій сцені?', correct: ['Жінка варить борщ', 'На плиті кипить каструля', 'На столі лежать овочі'], wrong: ['Хтось грає на гітарі', 'Діти будують сніговика', 'Чоловік миє машину'] },
+    { title: 'Город', context: 'Що відбувається на цій сцені?', correct: ['Бабуся поливає грядки', 'Ростуть помідори', 'Сонце світить над городом'], wrong: ['Іде сильний дощ', 'Хтось читає книгу', 'Діти грають у м\'яча'] },
+    { title: 'Парк', context: 'Що відбувається на цій сцені?', correct: ['Люди гуляють алеєю', 'На лавці сидить пара', 'Дерева зеленіють'], wrong: ['Хтось їде на лижах', 'Кухар готує обід', 'Машина їде дорогою'] },
 ];
 
 const VOWELS_UK = ['А', 'Е', 'И', 'І', 'Ї', 'О', 'У', 'Ю', 'Я', 'Є'];
@@ -641,21 +639,14 @@ function Task9({ onScore, initialData }) {
     </Card>);
 }
 
-// 10. Хто що робить (Дієслова) — upgraded to multi-select
+// 10. Що відбувається? (Сцена з картинкою)
 function Task10({ onScore, initialData, imageUrl }) {
     const [data] = useState(() => initialData || pick(VERB_DATA));
-    const [options] = useState(() => shuffle([...data.correct, ...shuffle(data.wrong).slice(0, 3)]));
+    const [options] = useState(() => shuffle([...data.correct, ...data.wrong]));
     const [sel, setSel] = useState(new Set());
     const [checked, setChecked] = useState(false);
     const [imgLoaded, setImgLoaded] = useState(false);
     const [imgError, setImgError] = useState(false);
-
-    // Safety check just in case AI returns a single string instead of array
-    const isArray = Array.isArray(data.correct);
-    if (!isArray) {
-        // Fallback for old AI output shape during transition
-        return <Task10Single onScore={onScore} data={data} />;
-    }
 
     const toggle = (opt) => { if (checked) return; const n = new Set(sel); n.has(opt) ? n.delete(opt) : (n.size < 3 && n.add(opt)); setSel(n); };
     const correct = data.correct.every(c => sel.has(c)) && sel.size === 3;
@@ -663,44 +654,25 @@ function Task10({ onScore, initialData, imageUrl }) {
 
     const showImage = imageUrl && !imgError;
 
-    return (<Card><TaskHeader icon="🎯" title="Хто що робить?" desc={data.context || 'Оберіть правильні дії'} />
+    return (<Card><TaskHeader icon="🖼️" title="Що відбувається?" desc={data.context || 'Подивіться на сцену та оберіть, що на ній відбувається'} />
         <div className="max-w-4xl mx-auto text-center">
             {showImage ? (
                 <div className="mb-4 md:mb-6 flex justify-center">
-                    {!imgLoaded && <div className="w-48 h-48 rounded-3xl bg-pastel-beige animate-pulse flex items-center justify-center text-6xl">{data.obj.split(' ')[0]}</div>}
-                    <img src={imageUrl} alt={data.obj} onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} className={`max-h-48 md:max-h-56 rounded-3xl shadow-lg object-cover ${imgLoaded ? '' : 'hidden'}`} />
+                    {!imgLoaded && <div className="w-full max-w-md h-56 rounded-3xl bg-pastel-beige animate-pulse flex items-center justify-center"><Loader2 className="w-10 h-10 text-pastel-green animate-spin" /></div>}
+                    <img src={imageUrl} alt={data.title} onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} className={`w-full max-w-md rounded-3xl shadow-lg object-cover ${imgLoaded ? '' : 'hidden'}`} />
                 </div>
             ) : (
-                <div className="text-7xl md:text-8xl mb-4 md:mb-6">{data.obj.split(' ')[0]}</div>
+                <div className="mb-4 md:mb-6 p-6 bg-pastel-beige rounded-3xl">
+                    <p className="text-4xl font-bold text-warm-gray">🖼️ {data.title}</p>
+                </div>
             )}
             <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть 3 правильні відповіді</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">{options.map((opt, i) => {
+            <div className="space-y-3">{options.map((opt, i) => {
                 const isSel = sel.has(opt); const isCorr = data.correct.includes(opt);
-                return <button key={i} onClick={() => toggle(opt)} className={`p-3 md:p-5 text-2xl md:text-3xl font-bold rounded-2xl border-2 transition-all break-words whitespace-normal leading-tight ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{opt}</button>;
+                return <button key={i} onClick={() => toggle(opt)} className={`w-full text-left p-4 md:p-5 text-xl md:text-2xl font-semibold rounded-2xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>{opt}</button>;
             })}</div>
             {!checked && sel.size === 3 && <div className="text-center mt-4"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
-            {checked && <Result correct={correct} msg={correct ? 'Всі дії правильні! 🎉' : `Правильні: ${data.correct.join(', ')}`} />}
-        </div>
-    </Card>);
-}
-
-// Fallback for single strictness (if cached API hit returns older structure)
-function Task10Single({ onScore, data }) {
-    const [options] = useState(() => shuffle([data.correct, ...shuffle(data.wrong).slice(0, 4)]));
-    const [selected, setSelected] = useState(null);
-    const done = selected !== null;
-    const correct = selected === data.correct;
-    const handle = (v) => { if (done) return; setSelected(v); if (v === data.correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
-    return (<Card><TaskHeader icon="🎯" title="Хто що робить?" desc={data.context || 'Оберіть правильну дію'} />
-        <div className="max-w-2xl mx-auto text-center">
-            <div className="text-7xl md:text-8xl mb-6 md:mb-8">{data.obj.split(' ')[0]}</div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{options.map((opt, i) => (
-                <button key={i} onClick={() => handle(opt)} className={`w-full p-6 text-3xl md:text-4xl font-bold rounded-3xl border-2 transition-all ${done
-                    ? (opt === data.correct ? 'bg-green-100 border-green-400' : opt === selected ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200')
-                    : 'bg-white border-pastel-green hover:bg-pastel-green-light active:scale-95'
-                    }`}>{opt}</button>
-            ))}</div>
-            {done && <Result correct={correct} msg={correct ? 'Правильна дія! 🎉' : `Правильно: ${data.correct}`} />}
+            {checked && <Result correct={correct} msg={correct ? 'Все правильно! 🎉' : `Правильні: ${data.correct.join(', ')}`} />}
         </div>
     </Card>);
 }
