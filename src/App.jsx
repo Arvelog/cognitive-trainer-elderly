@@ -199,7 +199,8 @@ function Task2({ onScore, initialData }) {
         <div className="space-y-3 max-w-lg mx-auto">
             {shuffled.map((item, i) => {
                 const used = selected.find(s => s.idx === item.idx);
-                return <button key={i} onClick={() => tapStep(item)} disabled={!!used || checked} className={`w-full text-left p-4 md:p-5 rounded-2xl border-2 transition-all text-xl md:text-2xl font-semibold ${used ? 'opacity-40 bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light hover:border-pastel-green active:scale-[0.98]'}`}>{item.text}</button>;
+                if (used) return null;
+                return <button key={i} onClick={() => tapStep(item)} disabled={checked} className="w-full text-left p-4 md:p-5 rounded-2xl border-2 transition-all text-xl md:text-2xl font-semibold bg-white border-pastel-beige-dark hover:bg-pastel-green-light hover:border-pastel-green active:scale-[0.98]">{item.text}</button>;
             })}
         </div>
         {checked && <Result correct={correct} msg={correct ? 'Бездоганний порядок!' : 'Правильний порядок: ' + data.steps.join(' → ')} />}
