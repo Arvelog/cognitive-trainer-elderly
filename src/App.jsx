@@ -112,9 +112,11 @@ const SEQUENCE_DATA = [
 ];
 const BUDGET_DATA = [
     { wallet: 1000, label: 'Комунальні', items: [{ n: 'Газ', p: 250 }, { n: 'Вода', p: 150 }, { n: 'Електрика', p: 300 }, { n: 'Інтернет', p: 200 }] },
-    { wallet: 1500, label: 'Ринок', items: [{ n: 'М\'ясо', p: 350 }, { n: 'Овочі', p: 200 }, { n: 'Хліб', p: 50 }, { n: 'Молоко', p: 80 }] },
-    { wallet: 800, label: 'Ліки', items: [{ n: 'Вітаміни', p: 180 }, { n: 'Сироп', p: 120 }, { n: 'Мазь', p: 95 }, { n: 'Пластир', p: 45 }] },
-    { wallet: 2000, label: 'Продукти', items: [{ n: 'Крупи', p: 150 }, { n: 'Риба', p: 280 }, { n: 'Масло', p: 90 }, { n: 'Сир', p: 160 }] },
+    { wallet: 1500, label: 'Ринок', items: [{ n: 'М\'ясо', p: 350 }, { n: 'Овочі', p: 200 }, { n: 'Хліб', p: 25, qty: 2 }, { n: 'Молоко', p: 45, qty: 3 }] },
+    { wallet: 800, label: 'Ліки', items: [{ n: 'Вітаміни', p: 180 }, { n: 'Сироп', p: 120, qty: 2 }, { n: 'Мазь', p: 95 }, { n: 'Пластир', p: 45 }] },
+    { wallet: 2000, label: 'Продукти', items: [{ n: 'Крупи', p: 75, qty: 2 }, { n: 'Риба', p: 280 }, { n: 'Масло', p: 90, qty: 3 }, { n: 'Сир', p: 160 }] },
+    { wallet: 1200, label: 'Канцелярія', items: [{ n: 'Зошит', p: 35, qty: 4 }, { n: 'Ручка', p: 15, qty: 3 }, { n: 'Папір', p: 130 }, { n: 'Фарби', p: 190 }] },
+    { wallet: 1800, label: 'Господарчі', items: [{ n: 'Порошок', p: 240 }, { n: 'Мило', p: 30, qty: 3 }, { n: 'Губки', p: 25, qty: 4 }, { n: 'Відбілювач', p: 130 }] },
 ];
 const SENTENCE_DATA = [
     { sentences: ['Дідусь поливає красиві квіти в саду', 'Бабуся в\'яже теплі шкарпетки для онуків', 'Кіт спить на теплій м\'якій подушці'] },
@@ -208,7 +210,7 @@ function Task2({ onScore, initialData }) {
 // 3. Математика (Бюджет)
 function Task3({ onScore, initialData }) {
     const [data] = useState(() => initialData || pick(BUDGET_DATA));
-    const total = data.items.reduce((s, i) => s + i.p, 0);
+    const total = data.items.reduce((s, i) => s + i.p * (i.qty || 1), 0);
     const rest = data.wallet - total;
     const [inputTotal, setInputTotal] = useState('');
     const [inputRest, setInputRest] = useState('');
@@ -217,7 +219,7 @@ function Task3({ onScore, initialData }) {
     const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
     return (<Card><TaskHeader icon="💰" title={`Бюджет: ${data.label}`} desc={`У вашому гаманці ${data.wallet} грн. Порахуйте витрати.`} />
         <div className="max-w-md mx-auto space-y-3">{data.items.map((it, i) => (
-            <div key={i} className="flex justify-between p-4 bg-pastel-beige rounded-2xl text-2xl font-semibold text-warm-gray"><span>{it.n}</span><span>{it.p} грн</span></div>
+            <div key={i} className="flex justify-between p-4 bg-pastel-beige rounded-2xl text-2xl font-semibold text-warm-gray"><span>{it.n}{it.qty ? ` ×${it.qty}` : ''}</span><span>{it.p} грн{it.qty ? ` / шт` : ''}</span></div>
         ))}
             <div className="pt-4 space-y-3">
                 <div className="flex items-center gap-4"><label className="text-2xl font-bold text-warm-gray w-56">Загальна сума:</label><input type="number" value={inputTotal} onChange={e => setInputTotal(e.target.value)} disabled={checked} className="flex-1 p-5 text-3xl rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400" placeholder="?" /></div>
