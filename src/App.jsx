@@ -182,19 +182,19 @@ function Task2({ onScore, initialData }) {
     const [selected, setSelected] = useState([]);
     const [checked, setChecked] = useState(false);
     const tapStep = (item) => { if (checked || selected.find(s => s.idx === item.idx)) return; const next = [...selected, item]; setSelected(next); if (next.length === 4) { const ok = next.every((s, i) => s.idx === i); setTimeout(() => { setChecked(true); if (ok) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); }, 300); } };
-    const undo = () => { if (checked || selected.length === 0) return; setSelected(selected.slice(0, -1)); };
+    const undoFrom = (fromIndex) => { if (checked || selected.length === 0) return; setSelected(selected.slice(0, fromIndex)); };
     const correct = selected.length === 4 && selected.every((s, i) => s.idx === i);
     return (<Card><TaskHeader icon="📋" title="Відновіть послідовність" desc={data.title} />
         <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Натискайте на кроки у правильному порядку: 1, 2, 3, 4</p>
         {selected.length > 0 && <div className="max-w-lg mx-auto mb-4 space-y-2">
             <p className="text-sm font-bold text-warm-gray">Ваш порядок:</p>
             {selected.map((s, i) => (
-                <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl ${checked ? (s.idx === i ? 'bg-green-100 border-2 border-green-400' : 'bg-red-100 border-2 border-red-400') : 'bg-pastel-green-light border-2 border-pastel-green'}`}>
+                <div key={i} onClick={() => !checked && undoFrom(i)} className={`flex items-center gap-3 p-3 rounded-2xl ${checked ? (s.idx === i ? 'bg-green-100 border-2 border-green-400' : 'bg-red-100 border-2 border-red-400') : 'bg-pastel-green-light border-2 border-pastel-green cursor-pointer hover:bg-red-50 hover:border-red-300 active:scale-[0.98] transition-all'}`}>
                     <span className="w-10 h-10 flex items-center justify-center rounded-full bg-pastel-green text-white font-bold text-2xl">{i + 1}</span>
                     <span className="text-2xl font-semibold text-warm-gray">{s.text}</span>
+                    {!checked && <span className="ml-auto text-warm-gray-light text-lg">✕</span>}
                 </div>
             ))}
-            {!checked && <button onClick={undo} className="text-sm text-warm-gray-light underline mt-1">↩ Скасувати останній</button>}
         </div>}
         <div className="space-y-3 max-w-lg mx-auto">
             {shuffled.map((item, i) => {
