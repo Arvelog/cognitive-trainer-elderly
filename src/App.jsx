@@ -153,6 +153,13 @@ const VERB_DATA = [
     { title: 'Парк', context: 'Що відбувається на цій сцені?', correct: ['Люди гуляють алеєю', 'На лавці сидить пара', 'Дерева зеленіють'], wrong: ['Хтось їде на лижах', 'Кухар готує обід', 'Машина їде дорогою'] },
 ];
 
+const WHATCHANGED_DATA = [
+    { items: ['🍎','🐱','🌸','📚','🎵','🏠','⭐','🌈','🎂'], changes: [{ idx: 1, to: '🐶' }, { idx: 4, to: '🎨' }, { idx: 7, to: '🌧️' }] },
+    { items: ['🚗','🌻','🧸','🎈','🍰','🐟','📱','🕐','🎁'], changes: [{ idx: 0, to: '🚌' }, { idx: 3, to: '🎯' }, { idx: 6, to: '📺' }] },
+    { items: ['🍕','🌳','🐦','💡','🧤','🎶','🏀','🍇','🔔'], changes: [{ idx: 2, to: '🐸' }, { idx: 5, to: '🎹' }, { idx: 8, to: '🔑' }] },
+    { items: ['☕','🌺','🐈','📖','🎩','🍋','🧲','🏡','🎀'], changes: [{ idx: 0, to: '🍵' }, { idx: 3, to: '📰' }, { idx: 7, to: '🏰' }] },
+];
+
 const VOWELS_UK = ['А', 'Е', 'И', 'І', 'Ї', 'О', 'У', 'Ю', 'Я', 'Є'];
 const removeVowels = (w) => w.split('').map(c => VOWELS_UK.includes(c.toUpperCase()) ? '_' : c).join('');
 
@@ -679,10 +686,72 @@ function Task10({ onScore, initialData, imageUrl }) {
     </Card>);
 }
 
+// 11. Що змінилось? (Visual memory)
+function Task11({ onScore, initialData }) {
+    const [data] = useState(() => initialData || pick(WHATCHANGED_DATA));
+    const changedGrid = useState(() => {
+        const g = [...data.items];
+        data.changes.forEach(c => { g[c.idx] = c.to; });
+        return g;
+    })[0];
+    const changedIndices = useState(() => new Set(data.changes.map(c => c.idx)))[0];
+    const [phase, setPhase] = useState('memorize'); // memorize | find
+    const [timer, setTimer] = useState(8);
+    const [selected, setSelected] = useState(new Set());
+    const [checked, setChecked] = useState(false);
+
+    useEffect(() => {
+        if (phase !== 'memorize') return;
+        if (timer <= 0) { setPhase('find'); return; }
+        const id = setTimeout(() => setTimer(t => t - 1), 1000);
+        return () => clearTimeout(id);
+    }, [phase, timer]);
+
+    const toggle = (i) => {
+        if (phase !== 'find' || checked) return;
+        const n = new Set(selected);
+        n.has(i) ? n.delete(i) : (n.size < 3 && n.add(i));
+        setSelected(n);
+    };
+
+    const correct = selected.size === 3 && [...selected].every(i => changedIndices.has(i));
+    const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
+
+    const grid = phase === 'memorize' ? data.items : changedGrid;
+
+    return (<Card><TaskHeader icon="👀" title="Що змінилось?" desc={phase === 'memorize' ? `Запам'ятайте картинки! Залишилось ${timer} сек.` : 'Знайдіть 3 предмети, які змінились'} />
+        <div className="max-w-md mx-auto">
+            {phase === 'memorize' && (
+                <div className="text-center mb-4">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pastel-yellow text-3xl font-extrabold text-warm-gray">{timer}</div>
+                </div>
+            )}
+            <div className="grid grid-cols-3 gap-3">
+                {grid.map((item, i) => {
+                    const isSel = selected.has(i);
+                    const isChanged = changedIndices.has(i);
+                    return (
+                        <button key={i} onClick={() => toggle(i)}
+                            className={`aspect-square text-5xl md:text-6xl rounded-2xl border-3 transition-all duration-200 flex items-center justify-center
+                                ${phase === 'memorize' ? 'bg-white border-pastel-beige-dark cursor-default'
+                                : checked ? (isChanged ? (isSel ? 'bg-green-100 border-green-400' : 'bg-yellow-100 border-yellow-400') : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200')
+                                : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light hover:scale-105 active:scale-95 cursor-pointer'}`}
+                        >{item}</button>
+                    );
+                })}
+            </div>
+            {phase === 'find' && !checked && selected.size === 3 && (
+                <div className="text-center mt-6"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>
+            )}
+            {checked && <Result correct={correct} msg={correct ? 'Чудова пам\'ять! Ви знайшли всі зміни!' : `Змінились: позиції ${[...changedIndices].map(i => i + 1).join(', ')}`} />}
+        </div>
+    </Card>);
+}
+
 // ═══════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════
-const TOTAL_TASKS = 10;
+const TOTAL_TASKS = 11;
 const SLIDES = TOTAL_TASKS + 2; // intro + 10 tasks + outro
 
 export default function App() {
@@ -745,6 +814,7 @@ export default function App() {
         <Task9 key={taskKeys[8]} onScore={addScore} initialData={aiData?.vowels} />,
         <Task7 key={taskKeys[6]} onScore={addScore} initialData={aiData?.trueFalse} />,
         <Task10 key={`${taskKeys[9]}-${verbQuestions ? 'v' : 'f'}`} onScore={addScore} initialData={verbQuestions?.correct ? verbQuestions : null} imageUrl={verbImage} />,
+        <Task11 key={taskKeys[10]} onScore={addScore} initialData={aiData?.whatChanged} />,
     ];
 
     return (
@@ -771,7 +841,7 @@ export default function App() {
                             <div className="text-7xl mb-6">🧠</div>
                             <h1 className="text-3xl md:text-4xl font-extrabold text-warm-gray mb-4">Вітаємо!</h1>
                             <p className="text-xl text-warm-gray-light mb-2">Цей тренажер допоможе вам тренувати пам'ять та увагу.</p>
-                            <p className="text-lg text-warm-gray-light mb-8">10 цікавих завдань чекають на вас. Не поспішайте і отримуйте задоволення!</p>
+                            <p className="text-lg text-warm-gray-light mb-8">11 цікавих завдань чекають на вас. Не поспішайте і отримуйте задоволення!</p>
                             {generating ? (
                                 <div className="flex flex-col items-center gap-4">
                                     <Loader2 className="w-14 h-14 text-pastel-green animate-spin" />
