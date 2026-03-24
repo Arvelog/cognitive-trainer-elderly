@@ -29,7 +29,7 @@ export default async function handler(req) {
   "antonyms": { "sentences": [{"s": "Речення з пропуском (замість антоніма пиши ...)", "a": "антонім"}, {"s": "Ще речення...", "a": "антонім"}, {"s": "І ще...", "a": "антонім"}, {"s": "Четверте...", "a": "антонім"}] },
   "vowels": { "words": [{"full": "СЛОВО", "hint": "Підказка"}, {"full": "ДРУГЕ", "hint": "Підказка"}, {"full": "ТРЕТЄ", "hint": "Підказка"}] },
   "verbs": { "scene": "Short English description of a cozy everyday scene for image generation, e.g. A grandmother watering tomatoes in a sunny garden with a cat nearby" },
-  "whatChanged": { "items": ["emoji1","emoji2","emoji3","emoji4","emoji5","emoji6","emoji7","emoji8","emoji9"], "changes": [{"idx":2,"to":"новий_emoji"},{"idx":5,"to":"новий_emoji"},{"idx":7,"to":"новий_emoji"}] }
+  "whatChanged": { "items": ["emoji1","emoji2","emoji3","emoji4","emoji5","emoji6"], "changes": [{"idx":1,"to":"новий_emoji"},{"idx":4,"to":"новий_emoji"}] }
 }
 
 ВАЖЛИВО:
@@ -45,7 +45,7 @@ export default async function handler(req) {
 - "vowels.words[].full" — ВЕЛИКИМИ ЛІТЕРАМИ
 - Уникай ейджизму, сумних тем, стереотипів про старість чи хвороби. Завдання мають бути життєрадісними та поважними до літніх людей.
 - Для "antonyms" речення ПОВИННІ мати життєвий та логічний сенс (наприклад: "Чай гарячий, а лід... [холодний]"). КАТЕГОРИЧНО НЕ генеруй абсурдні твердження або негативні стереотипи (НЕ пиши, що літні люди "стомлені", "повільні" чи "хворі"). Тільки позитивні або нейтральні факти.
-- Для "whatChanged": 9 різних побутових emoji (фрукти, тварини, предмети). "changes" — рівно 3 об'єкти, кожен з "idx" (0-8) та "to" (новий emoji, що відрізняється від оригіналу). Заміни мають бути з тієї ж теми але іншим предметом (яблуко→груша, кіт→собака)
+- Для "whatChanged": 6 різних побутових emoji (фрукти, тварини, предмети). "changes" — рівно 2 об'єкти, кожен з "idx" (0-5) та "to" (новий emoji, що відрізняється від оригіналу). Заміни мають бути з тієї ж теми але іншим предметом (яблуко→груша, кіт→собака)
 - Для "verbs.scene": напиши КОРОТКИЙ опис побутової сцени АНГЛІЙСЬКОЮ мовою для генерації картинки (DALL-E). Сцена має бути побутова, зрозуміла, позитивна, з кількома чіткими діями та предметами. Теми: кухня, город, парк, ринок, свято, прибирання тощо. Приклад: "A grandmother watering tomatoes in a sunny garden, a cat sleeping on the bench, garden tools leaning against a fence"
 - Відповідай ТІЛЬКИ JSON, без markdown, без коментарів
 

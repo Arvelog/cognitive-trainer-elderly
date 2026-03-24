@@ -154,10 +154,10 @@ const VERB_DATA = [
 ];
 
 const WHATCHANGED_DATA = [
-    { items: ['🍎','🐱','🌸','📚','🎵','🏠','⭐','🌈','🎂'], changes: [{ idx: 1, to: '🐶' }, { idx: 4, to: '🎨' }, { idx: 7, to: '🌧️' }] },
-    { items: ['🚗','🌻','🧸','🎈','🍰','🐟','📱','🕐','🎁'], changes: [{ idx: 0, to: '🚌' }, { idx: 3, to: '🎯' }, { idx: 6, to: '📺' }] },
-    { items: ['🍕','🌳','🐦','💡','🧤','🎶','🏀','🍇','🔔'], changes: [{ idx: 2, to: '🐸' }, { idx: 5, to: '🎹' }, { idx: 8, to: '🔑' }] },
-    { items: ['☕','🌺','🐈','📖','🎩','🍋','🧲','🏡','🎀'], changes: [{ idx: 0, to: '🍵' }, { idx: 3, to: '📰' }, { idx: 7, to: '🏰' }] },
+    { items: ['🍎','🐱','🌸','📚','🎵','🏠'], changes: [{ idx: 1, to: '🐶' }, { idx: 4, to: '🎨' }] },
+    { items: ['🚗','🌻','🧸','🎈','🍰','🐟'], changes: [{ idx: 0, to: '🚌' }, { idx: 3, to: '🎯' }] },
+    { items: ['🍕','🌳','🐦','💡','🧤','🎶'], changes: [{ idx: 2, to: '🐸' }, { idx: 5, to: '🎹' }] },
+    { items: ['☕','🌺','🐈','📖','🎩','🍋'], changes: [{ idx: 0, to: '🍵' }, { idx: 3, to: '📰' }] },
 ];
 
 const VOWELS_UK = ['А', 'Е', 'И', 'І', 'Ї', 'О', 'У', 'Ю', 'Я', 'Є'];
@@ -696,9 +696,10 @@ function Task11({ onScore, initialData }) {
     })[0];
     const changedIndices = useState(() => new Set(data.changes.map(c => c.idx)))[0];
     const [phase, setPhase] = useState('memorize'); // memorize | find
-    const [timer, setTimer] = useState(8);
+    const [timer, setTimer] = useState(12);
     const [selected, setSelected] = useState(new Set());
     const [checked, setChecked] = useState(false);
+    const numChanges = data.changes.length;
 
     useEffect(() => {
         if (phase !== 'memorize') return;
@@ -710,16 +711,16 @@ function Task11({ onScore, initialData }) {
     const toggle = (i) => {
         if (phase !== 'find' || checked) return;
         const n = new Set(selected);
-        n.has(i) ? n.delete(i) : (n.size < 3 && n.add(i));
+        n.has(i) ? n.delete(i) : (n.size < numChanges && n.add(i));
         setSelected(n);
     };
 
-    const correct = selected.size === 3 && [...selected].every(i => changedIndices.has(i));
+    const correct = selected.size === numChanges && [...selected].every(i => changedIndices.has(i));
     const check = () => { setChecked(true); if (correct) { playCorrect(); fireConfetti(); onScore(); } else playWrong(); };
 
     const grid = phase === 'memorize' ? data.items : changedGrid;
 
-    return (<Card><TaskHeader icon="👀" title="Що змінилось?" desc={phase === 'memorize' ? `Запам'ятайте картинки! Залишилось ${timer} сек.` : 'Знайдіть 3 предмети, які змінились'} />
+    return (<Card><TaskHeader icon="👀" title="Що змінилось?" desc={phase === 'memorize' ? `Запам'ятайте картинки! Залишилось ${timer} сек.` : `Знайдіть ${numChanges} предмети, які змінились`} />
         <div className="max-w-md mx-auto">
             {phase === 'memorize' && (
                 <div className="text-center mb-4">
@@ -740,7 +741,7 @@ function Task11({ onScore, initialData }) {
                     );
                 })}
             </div>
-            {phase === 'find' && !checked && selected.size === 3 && (
+            {phase === 'find' && !checked && selected.size === numChanges && (
                 <div className="text-center mt-6"><BigBtn onClick={check} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>
             )}
             {checked && <Result correct={correct} msg={correct ? 'Чудова пам\'ять! Ви знайшли всі зміни!' : `Змінились: позиції ${[...changedIndices].map(i => i + 1).join(', ')}`} />}
