@@ -546,11 +546,11 @@ export function Task8({ onScore, initialData }) {
     };
     const getHintText = (s, level) => {
         const u = s.a.toUpperCase();
-        if (level === 1) return `Перша літера: "${u[0]}"`;
-        if (level === 2) return `"${u[0]}${'_'.repeat(u.length - 2)}${u[u.length - 1]}" (${u.length} літер)`;
+        if (level === 1) return `1 літера: ${u[0]}`;
+        if (level === 2) return `${u[0]}${'_'.repeat(u.length - 2)}${u[u.length - 1]}`;
         if (level === 3) {
-            if (u.length <= 4) return `"${u}"`;
-            return `"${u[0]}${u[1]}${'_'.repeat(u.length - 4)}${u[u.length - 2]}${u[u.length - 1]}" (${u.length} літер)`;
+            if (u.length <= 4) return u;
+            return `${u[0]}${u[1]}${'_'.repeat(u.length - 4)}${u[u.length - 2]}${u[u.length - 1]}`;
         }
         return '';
     };
@@ -564,17 +564,17 @@ export function Task8({ onScore, initialData }) {
     };
     return (
         <Card>
-            <TaskHeader icon="↔️" title="Протилежності" desc="Допишіть слово-антонім" />
-            <div className="max-w-lg mx-auto space-y-4">
+            <TaskHeader icon="↔️" title="Протилежності" desc="Коротке слово" />
+            <div className="max-w-2xl mx-auto space-y-5">
                 {data.sentences.map((s, i) => (
-                    <div key={i} className={`p-4 rounded-2xl border-2 ${checked ? (answers[i].trim().toLowerCase() === s.a.toLowerCase() ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-white border-pastel-beige-dark'}`}>
-                        <p className="text-2xl font-semibold text-warm-gray mb-3">{s.s.replace(new RegExp(s.a, 'gi'), '...').replace(/\.\.\.\.\.\./g, '...')}</p>
-                        <div className="flex gap-3">
-                            <input type="text" value={answers[i]} onChange={(e) => setAns(i, e.target.value)} disabled={checked} placeholder="..." className="flex-1 p-4 text-3xl rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400" />
-                            {!checked && hintLevel[i] < 3 && <button onClick={() => addHint(i)} className="px-5 py-3 text-xl bg-pastel-yellow rounded-2xl text-warm-gray font-semibold flex items-center gap-1 hover:bg-yellow-200 active:scale-95 transition-all">💡{hintLevel[i] === 0 ? '' : ' ще'}</button>}
+                    <div key={i} className={`p-5 md:p-6 rounded-3xl border-2 ${checked ? (answers[i].trim().toLowerCase() === s.a.toLowerCase() ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-white border-pastel-beige-dark'}`}>
+                        <p className="text-3xl md:text-4xl font-extrabold text-warm-gray mb-4 leading-tight">{s.s.replace(new RegExp(s.a, 'gi'), '...').replace(/\.\.\.\.\.\./g, '...')}</p>
+                        <div className="flex gap-3 items-stretch">
+                            <input type="text" value={answers[i]} onChange={(e) => setAns(i, e.target.value)} disabled={checked} placeholder="..." className="flex-1 min-w-0 p-4 md:p-5 text-4xl md:text-5xl rounded-3xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center tracking-wide" />
+                            {!checked && hintLevel[i] < 3 && <button onClick={() => addHint(i)} className="px-4 md:px-5 py-3 md:py-4 text-lg md:text-2xl bg-pastel-yellow rounded-3xl text-warm-gray font-semibold flex items-center gap-1 hover:bg-yellow-200 active:scale-95 transition-all">💡{hintLevel[i] === 0 ? '' : ' ще'}</button>}
                         </div>
-                        {hintLevel[i] > 0 && !checked && <p className="text-sm mt-2 px-3 py-1.5 bg-yellow-50 rounded-xl text-warm-gray italic">💡 {getHintText(s, hintLevel[i])}</p>}
-                        {checked && answers[i].trim().toLowerCase() !== s.a.toLowerCase() && <p className="text-sm text-red-500 mt-1">Відповідь: {s.a}</p>}
+                        {hintLevel[i] > 0 && !checked && <p className="mt-3 inline-flex text-lg md:text-xl px-4 py-2 bg-yellow-50 rounded-2xl text-warm-gray font-semibold">💡 {getHintText(s, hintLevel[i])}</p>}
+                        {checked && answers[i].trim().toLowerCase() !== s.a.toLowerCase() && <p className="text-base md:text-lg text-red-500 mt-2 font-semibold">Відповідь: {s.a}</p>}
                     </div>
                 ))}
             </div>
