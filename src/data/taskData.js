@@ -1,4 +1,4 @@
-export const MATCH_WORD_DATA = [
+export const MATCH_ACTION_DATA = [
   { prompt: 'Книга', options: ['читати', 'мити', 'копати', 'смажити'], correct: 0 },
   { prompt: 'Ключ', options: ['відкривати', 'прати', 'плавати', 'малювати'], correct: 0 },
   { prompt: 'Суп', options: ['їсти', 'лагодити', 'сіяти', 'рахувати'], correct: 0 },
@@ -6,9 +6,13 @@ export const MATCH_WORD_DATA = [
   { prompt: 'Одяг', options: ['прасувати', 'ловити', 'будувати', 'дзвонити'], correct: 0 },
   { prompt: 'Риба', options: ['ловити', 'кричати', 'сміятися', 'малювати'], correct: 0 },
   { prompt: 'Мило', options: ['мити', 'пасти', 'копати', 'кроїти'], correct: 0 },
+  { prompt: 'Хліб', options: ['їсти', 'фарбувати', 'їздити', 'літати'], correct: 0 },
+  { prompt: 'Двері', options: ['відчиняти', 'поливати', 'міряти', 'сіяти'], correct: 0 },
+  { prompt: 'Посуд', options: ['мити', 'різати', 'ловити', 'будувати'], correct: 0 },
 ];
 
-export const FIND_ODD_DATA = MATCH_WORD_DATA;
+export const MATCH_WORD_DATA = MATCH_ACTION_DATA;
+export const FIND_ODD_DATA = MATCH_ACTION_DATA;
 
 export const SEQUENCE_DATA = [
   { title: 'Рецепт борщу', steps: ['Почистити буряк', 'Нарізати овочі', 'Зварити бульйон', 'Додати овочі у каструлю'] },

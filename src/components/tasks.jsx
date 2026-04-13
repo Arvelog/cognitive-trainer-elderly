@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { Card, BigBtn, TaskHeader, Result } from './common';
 import { playCorrect, playWrong, fireConfetti, shuffle, pick } from '../lib/audio';
 import {
-    MATCH_WORD_DATA,
+    MATCH_ACTION_DATA,
     FIND_ODD_DATA,
     SEQUENCE_DATA,
     BUDGET_DATA,
@@ -26,7 +26,7 @@ export function Task1({ onScore, initialData }) {
         if (initialData?.word && Array.isArray(initialData.options) && typeof initialData.correct === 'number') {
             return { prompt: initialData.word, options: initialData.options, correct: initialData.correct, hint: initialData.hint };
         }
-        return pick(MATCH_WORD_DATA.length ? MATCH_WORD_DATA : FIND_ODD_DATA);
+        return pick(MATCH_ACTION_DATA.length ? MATCH_ACTION_DATA : FIND_ODD_DATA);
     });
     const [selected, setSelected] = useState(null);
     const [checked, setChecked] = useState(false);
@@ -50,15 +50,12 @@ export function Task1({ onScore, initialData }) {
     };
     return (
         <Card>
-            <TaskHeader icon="🔍" title="Що підходить до слова?" desc="Оберіть пов'язане слово, а не повтор підказки." />
+            <TaskHeader icon="🔍" title="Що з цим роблять?" desc="Оберіть дію, яка підходить до слова." />
             <div className="max-w-2xl mx-auto mb-6 text-center">
                 <div className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-pastel-green-light text-warm-gray font-extrabold text-4xl md:text-5xl">
                     {data.prompt}
                 </div>
             </div>
-            {data.hint && !done && (
-                <p className="text-center text-2xl md:text-3xl font-semibold text-pastel-green mb-6">{data.hint}</p>
-            )}
             <div className="grid grid-cols-2 gap-4 md:gap-6 max-w-2xl mx-auto">
                 {data.options.map((it, i) => (
                     <button
