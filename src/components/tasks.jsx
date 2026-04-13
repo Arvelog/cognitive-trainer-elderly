@@ -9,7 +9,7 @@ import {
     BUDGET_DATA,
     SENTENCE_DATA,
     ASSOC_DATA,
-    CATEGORY_DATA,
+    CATEGORY_SORT_DATA,
     TRUEFALSE_DATA,
     ANTONYM_DATA,
     VOWELS_DATA,
@@ -423,17 +423,16 @@ export function Task5({ onScore, initialData }) {
 }
 
 export function Task6({ onScore, initialData }) {
-    const [data] = useState(() => initialData || pick(CATEGORY_DATA));
-    const [items] = useState(() => shuffle([...data.correct, ...data.wrong]));
-    const [sel, setSel] = useState(new Set());
+    const [data] = useState(() => initialData || pick(CATEGORY_SORT_DATA));
+    const [items] = useState(() => shuffle(data.items));
+    const [sel, setSel] = useState({});
     const [checked, setChecked] = useState(false);
-    const toggle = (it) => {
+    const assign = (idx, group) => {
         if (checked) return;
-        const n = new Set(sel);
-        n.has(it) ? n.delete(it) : n.add(it);
-        setSel(n);
+        setSel((prev) => ({ ...prev, [idx]: group }));
     };
-    const correct = data.correct.every((c) => sel.has(c)) && [...sel].every((s) => data.correct.includes(s));
+    const chosenCount = Object.keys(sel).length;
+    const correct = items.length > 0 && items.every((item, idx) => sel[idx] === item.group);
     const check = () => {
         setChecked(true);
         if (correct) {
@@ -444,27 +443,45 @@ export function Task6({ onScore, initialData }) {
     };
     return (
         <Card>
-            <TaskHeader icon="📦" title="Категорії" desc={data.q} />
-            <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть усі правильні варіанти</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+            <TaskHeader icon="📦" title="Розкладіть по групах" desc={`${data.leftLabel} або ${data.rightLabel}`} />
+            <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Для кожної речі виберіть, куди її покласти.</p>
+            <p className="text-center text-2xl md:text-3xl font-semibold text-pastel-green mb-6">Розкладено: {chosenCount} з {items.length}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto">
                 {items.map((it, i) => {
-                    const isSel = sel.has(it);
-                    const isCorr = data.correct.includes(it);
+                    const isLeft = sel[i] === 'left';
+                    const isRight = sel[i] === 'right';
+                    const isCorr = checked && sel[i] === it.group;
                     return (
-                        <button key={i} onClick={() => toggle(it)} className={`p-3 md:p-5 text-2xl md:text-3xl font-bold rounded-2xl border-2 transition-all break-words whitespace-normal leading-tight ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>
-                            {it}
-                        </button>
+                        <div key={i} className={`p-4 md:p-5 rounded-2xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400') : sel[i] ? 'bg-pastel-green-light border-pastel-green' : 'bg-white border-pastel-beige-dark'}`}>
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1 text-2xl md:text-3xl font-bold text-warm-gray">{it.text}</div>
+                                <button
+                                    onClick={() => assign(i, 'left')}
+                                    disabled={checked}
+                                    className={`px-4 py-3 rounded-xl font-bold text-lg transition-all ${isLeft ? 'bg-pastel-green text-white' : 'bg-pastel-beige text-warm-gray hover:bg-pastel-green-light'}`}
+                                >
+                                    {data.leftLabel}
+                                </button>
+                                <button
+                                    onClick={() => assign(i, 'right')}
+                                    disabled={checked}
+                                    className={`px-4 py-3 rounded-xl font-bold text-lg transition-all ${isRight ? 'bg-pastel-green text-white' : 'bg-pastel-beige text-warm-gray hover:bg-pastel-green-light'}`}
+                                >
+                                    {data.rightLabel}
+                                </button>
+                            </div>
+                        </div>
                     );
                 })}
             </div>
-            {!checked && sel.size > 0 && (
+            {!checked && chosenCount === items.length && (
                 <div className="text-center mt-4">
                     <BigBtn onClick={check} className="bg-pastel-green text-warm-gray">
                         Перевірити
                     </BigBtn>
                 </div>
             )}
-            {checked && <Result correct={correct} msg={correct ? 'Все вірно! Чудова логіка!' : `Правильні: ${data.correct.join(', ')}`} />}
+            {checked && <Result correct={correct} msg={correct ? 'Все вірно! Чудово розкладено.' : `Потрібно було розкласти на ${data.leftLabel} і ${data.rightLabel}.`} />}
         </Card>
     );
 }

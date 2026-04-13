@@ -81,6 +81,26 @@ export async function generateAllTasks() {
       return null;
     }
 
+    const categories = data.categories;
+    const categoryItems = Array.isArray(categories?.items) ? categories.items : [];
+    const leftCount = categoryItems.filter((item) => item?.group === 'left').length;
+    const rightCount = categoryItems.filter((item) => item?.group === 'right').length;
+    if (
+      !categories ||
+      typeof categories.leftLabel !== 'string' ||
+      typeof categories.rightLabel !== 'string' ||
+      !categories.leftLabel.trim() ||
+      !categories.rightLabel.trim() ||
+      categories.leftLabel.trim().toLowerCase() === categories.rightLabel.trim().toLowerCase() ||
+      categoryItems.length !== 6 ||
+      categoryItems.some((item) => typeof item?.text !== 'string' || !item.text.trim() || !['left', 'right'].includes(item.group)) ||
+      leftCount !== 3 ||
+      rightCount !== 3
+    ) {
+      console.warn('App: categories data is malformed, using fallback to prevent UI breakage');
+      return null;
+    }
+
     const matchWord = data.matchWord || data.findOdd;
     const normalizedPrompt = String(matchWord?.word || '').trim().toLowerCase();
     const normalizedOptions = Array.isArray(matchWord?.options)

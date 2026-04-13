@@ -48,11 +48,58 @@ export const ASSOC_DATA = [
   { q: 'Що потрібно для риболовлі?', correct: ['🎣 Вудка', '🪱 Наживка', '🪣 Відро'], wrong: ['📚 Книга', '🎨 Фарби', '🧹 Мітла'] },
 ];
 
-export const CATEGORY_DATA = [
-  { q: 'Що ми кладемо в холодильник?', correct: ['🥛 Молоко', '🧀 Сир', '🥩 М\'ясо'], wrong: ['📖 Книга', '🧹 Мітла', '🔑 Ключі'] },
-  { q: 'Що можна побачити на клумбі?', correct: ['🌷 Тюльпан', '🌻 Соняшник', '🌹 Троянда'], wrong: ['🐟 Риба', '📺 Телевізор', '🧊 Лід'] },
-  { q: 'Що можна знайти в лісі?', correct: ['🍄 Гриби', '🌲 Ялинка', '🐿️ Білка'], wrong: ['🚗 Машина', '📱 Телефон', '🛋️ Диван'] },
+export const CATEGORY_SORT_DATA = [
+  {
+    leftLabel: 'Кухня',
+    rightLabel: 'Сад',
+    items: [
+      { text: 'Ложка', group: 'left' },
+      { text: 'Чашка', group: 'left' },
+      { text: 'Каструля', group: 'left' },
+      { text: 'Лопата', group: 'right' },
+      { text: 'Лійка', group: 'right' },
+      { text: 'Граблі', group: 'right' },
+    ],
+  },
+  {
+    leftLabel: 'Дім',
+    rightLabel: 'Двір',
+    items: [
+      { text: 'Подушка', group: 'left' },
+      { text: 'Ковдра', group: 'left' },
+      { text: 'Тарілка', group: 'left' },
+      { text: 'Мітла', group: 'right' },
+      { text: 'Відро', group: 'right' },
+      { text: 'Ліхтар', group: 'right' },
+    ],
+  },
+  {
+    leftLabel: 'Літо',
+    rightLabel: 'Зима',
+    items: [
+      { text: 'Сонце', group: 'left' },
+      { text: 'Босоніжки', group: 'left' },
+      { text: 'Морозиво', group: 'left' },
+      { text: 'Сніг', group: 'right' },
+      { text: 'Рукавички', group: 'right' },
+      { text: 'Шапка', group: 'right' },
+    ],
+  },
+  {
+    leftLabel: 'Ринок',
+    rightLabel: 'Аптека',
+    items: [
+      { text: 'Яблуко', group: 'left' },
+      { text: 'Хліб', group: 'left' },
+      { text: 'Сир', group: 'left' },
+      { text: 'Пігулки', group: 'right' },
+      { text: 'Сироп', group: 'right' },
+      { text: 'Пластир', group: 'right' },
+    ],
+  },
 ];
+
+export const CATEGORY_DATA = CATEGORY_SORT_DATA;
 
 export const TRUEFALSE_DATA = [
   { statements: [{ text: 'Взимку ведмеді сплять у барлозі', answer: true }, { text: 'Кішки вміють гавкати', answer: false }, { text: 'Мед роблять бджоли', answer: true }] },
