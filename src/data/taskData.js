@@ -1,18 +1,18 @@
-export const MATCH_ACTION_DATA = [
-  { prompt: 'Книга', options: ['читати', 'мити', 'копати', 'смажити'], correct: 0 },
-  { prompt: 'Ключ', options: ['відкривати', 'прати', 'плавати', 'малювати'], correct: 0 },
-  { prompt: 'Суп', options: ['їсти', 'лагодити', 'сіяти', 'рахувати'], correct: 0 },
-  { prompt: 'Квіти', options: ['поливати', 'шити', 'крутити', 'міряти'], correct: 0 },
-  { prompt: 'Одяг', options: ['прасувати', 'ловити', 'будувати', 'дзвонити'], correct: 0 },
-  { prompt: 'Риба', options: ['ловити', 'кричати', 'сміятися', 'малювати'], correct: 0 },
-  { prompt: 'Мило', options: ['мити', 'пасти', 'копати', 'кроїти'], correct: 0 },
-  { prompt: 'Хліб', options: ['їсти', 'фарбувати', 'їздити', 'літати'], correct: 0 },
-  { prompt: 'Двері', options: ['відчиняти', 'поливати', 'міряти', 'сіяти'], correct: 0 },
-  { prompt: 'Посуд', options: ['мити', 'різати', 'ловити', 'будувати'], correct: 0 },
+export const MATCH_NEED_DATA = [
+  { prompt: 'Прання', options: ['порошок', 'олівець', 'тарілка', 'м\'яч'], correct: 0 },
+  { prompt: 'Читання', options: ['книга', 'відро', 'лопата', 'суп'], correct: 0 },
+  { prompt: 'Риболовля', options: ['вудка', 'шкарпетки', 'ножиці', 'цукор'], correct: 0 },
+  { prompt: 'Чай', options: ['чашка', 'молоток', 'пилка', 'каска'], correct: 0 },
+  { prompt: 'Шиття', options: ['нитки', 'пісок', 'яблуко', 'мило'], correct: 0 },
+  { prompt: 'Прибирання', options: ['мітла', 'ложка', 'лижі', 'фарба'], correct: 0 },
+  { prompt: 'Прання', options: ['порошок', 'кнопка', 'книжка', 'цвях'], correct: 0 },
+  { prompt: 'Поливання', options: ['лійка', 'ключ', 'миска', 'олівець'], correct: 0 },
+  { prompt: 'Ремонт', options: ['молоток', 'гребінець', 'чашка', 'груша'], correct: 0 },
+  { prompt: 'Сніданок', options: ['ложка', 'пилка', 'шапка', 'цвях'], correct: 0 },
 ];
 
-export const MATCH_WORD_DATA = MATCH_ACTION_DATA;
-export const FIND_ODD_DATA = MATCH_ACTION_DATA;
+export const MATCH_WORD_DATA = MATCH_NEED_DATA;
+export const FIND_ODD_DATA = MATCH_NEED_DATA;
 
 export const SEQUENCE_DATA = [
   { title: 'Рецепт борщу', steps: ['Почистити буряк', 'Нарізати овочі', 'Зварити бульйон', 'Додати овочі у каструлю'] },

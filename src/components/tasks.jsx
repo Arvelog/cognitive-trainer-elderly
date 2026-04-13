@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { Card, BigBtn, TaskHeader, Result } from './common';
 import { playCorrect, playWrong, fireConfetti, shuffle, pick } from '../lib/audio';
 import {
-    MATCH_ACTION_DATA,
+    MATCH_NEED_DATA,
     FIND_ODD_DATA,
     SEQUENCE_DATA,
     BUDGET_DATA,
@@ -26,7 +26,7 @@ export function Task1({ onScore, initialData }) {
         if (initialData?.word && Array.isArray(initialData.options) && typeof initialData.correct === 'number') {
             return { prompt: initialData.word, options: initialData.options, correct: initialData.correct, hint: initialData.hint };
         }
-        return pick(MATCH_ACTION_DATA.length ? MATCH_ACTION_DATA : FIND_ODD_DATA);
+        return pick(MATCH_NEED_DATA.length ? MATCH_NEED_DATA : FIND_ODD_DATA);
     });
     const [selected, setSelected] = useState(null);
     const [checked, setChecked] = useState(false);
@@ -50,7 +50,7 @@ export function Task1({ onScore, initialData }) {
     };
     return (
         <Card>
-            <TaskHeader icon="🔍" title="Що з цим роблять?" desc="Оберіть дію, яка підходить до слова." />
+            <TaskHeader icon="🔍" title="Що потрібно для цього?" desc="Оберіть річ, без якої це не вийде." />
             <div className="max-w-2xl mx-auto mb-6 text-center">
                 <div className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-pastel-green-light text-warm-gray font-extrabold text-4xl md:text-5xl">
                     {data.prompt}
@@ -75,7 +75,7 @@ export function Task1({ onScore, initialData }) {
                     </button>
                 ))}
             </div>
-            {checked && <Result correct={correct} msg={correct ? 'Чудово! Це підходить.' : `Підійшло: ${data.options[data.correct]}`} />}
+            {checked && <Result correct={correct} msg={correct ? 'Чудово! Це потрібно.' : `Потрібно: ${data.options[data.correct]}`} />}
             {wrong && (
                 <div className="flex justify-center mt-6">
                     <button
