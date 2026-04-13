@@ -3,6 +3,7 @@ import { ANTONYM_DATA } from '../data/taskData';
 const SAFE_ANTONYM_WORDS = new Set([
   'холодна',
   'холодне',
+  'велика',
   'мала',
   'темно',
   'поруч',
