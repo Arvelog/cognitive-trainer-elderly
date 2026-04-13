@@ -425,14 +425,24 @@ export function Task5({ onScore, initialData }) {
 export function Task6({ onScore, initialData }) {
     const [data] = useState(() => initialData || pick(CATEGORY_SORT_DATA));
     const [items] = useState(() => shuffle(data.items));
-    const [sel, setSel] = useState({});
+    const [placements, setPlacements] = useState({});
+    const [selectedItem, setSelectedItem] = useState(null);
     const [checked, setChecked] = useState(false);
     const assign = (idx, group) => {
         if (checked) return;
-        setSel((prev) => ({ ...prev, [idx]: group }));
+        setPlacements((prev) => ({ ...prev, [idx]: group }));
+        setSelectedItem(null);
     };
-    const chosenCount = Object.keys(sel).length;
-    const correct = items.length > 0 && items.every((item, idx) => sel[idx] === item.group);
+    const unassign = (idx) => {
+        if (checked) return;
+        setPlacements((prev) => {
+            const next = { ...prev };
+            delete next[idx];
+            return next;
+        });
+    };
+    const chosenCount = Object.keys(placements).length;
+    const correct = items.length > 0 && items.every((item, idx) => placements[idx] === item.group);
     const check = () => {
         setChecked(true);
         if (correct) {
@@ -444,33 +454,71 @@ export function Task6({ onScore, initialData }) {
     return (
         <Card>
             <TaskHeader icon="📦" title="Розкладіть по 3 кошиках" desc={data.groupLabels.join(' · ')} />
-            <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Для кожної речі виберіть, куди її покласти.</p>
+            <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-4">Спочатку виберіть предмет знизу, потім натисніть кошик зверху.</p>
             <p className="text-center text-2xl md:text-3xl font-semibold text-pastel-green mb-6">Розкладено: {chosenCount} з {items.length}</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto">
-                {items.map((it, i) => {
-                    const selectedGroup = sel[i];
-                    const isCorr = checked && sel[i] === it.group;
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-6xl mx-auto mb-8">
+                {data.groupLabels.map((label, groupIdx) => {
+                    const assignedItems = items.filter((item, idx) => placements[idx] === groupIdx);
                     return (
-                        <div key={i} className={`p-4 md:p-5 rounded-2xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400') : selectedGroup !== undefined ? 'bg-pastel-green-light border-pastel-green' : 'bg-white border-pastel-beige-dark'}`}>
-                            <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                                <div className="flex-1 text-2xl md:text-3xl font-bold text-warm-gray">{it.text}</div>
-                                <div className="flex flex-wrap gap-2">
-                                    {data.groupLabels.map((label, groupIdx) => {
-                                        const active = sel[i] === groupIdx;
-                                        return (
-                                            <button
-                                                key={label}
-                                                onClick={() => assign(i, groupIdx)}
-                                                disabled={checked}
-                                                className={`px-4 py-3 rounded-xl font-bold text-lg transition-all ${active ? 'bg-pastel-green text-white' : 'bg-pastel-beige text-warm-gray hover:bg-pastel-green-light'}`}
-                                            >
-                                                {label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                        <button
+                            key={label}
+                            onClick={() => selectedItem !== null && assign(selectedItem, groupIdx)}
+                            disabled={checked}
+                            className="min-h-[180px] rounded-3xl border-4 border-dashed border-pastel-beige-dark bg-pastel-beige/40 p-4 md:p-6 text-left transition-all hover:bg-pastel-green-light hover:border-pastel-green active:scale-[0.99]"
+                        >
+                            <div className="text-7xl mb-3">🧺</div>
+                            <div className="text-3xl md:text-4xl font-extrabold text-warm-gray mb-2">{label}</div>
+                            <div className="text-lg md:text-xl font-semibold text-warm-gray-light">Предметів: {assignedItems.length}</div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                {assignedItems.map((item, idx) => (
+                                    <span key={`${groupIdx}-${idx}`} className="inline-flex items-center px-3 py-2 rounded-full bg-white text-warm-gray font-bold text-lg shadow-sm">
+                                        {item.text}
+                                    </span>
+                                ))}
                             </div>
-                        </div>
+                        </button>
+                    );
+                })}
+            </div>
+            <div className="max-w-4xl mx-auto mb-6 text-center">
+                <div className="inline-flex items-center gap-3 px-5 py-3 rounded-full bg-white shadow-sm text-warm-gray font-bold text-xl md:text-2xl">
+                    {selectedItem !== null ? `Вибрано: ${items[selectedItem].text}` : 'Виберіть предмет знизу'}
+                </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+                {items.map((it, i) => {
+                    const placed = placements[i] !== undefined;
+                    const isCorrectPlace = checked && placements[i] === it.group;
+                    const isWrongPlace = checked && placements[i] !== undefined && placements[i] !== it.group;
+                    const isSelected = selectedItem === i;
+                    return (
+                        <button
+                            key={i}
+                            onClick={() => {
+                                if (checked) return;
+                                if (placed) {
+                                    unassign(i);
+                                    if (selectedItem === i) setSelectedItem(null);
+                                } else {
+                                    setSelectedItem((prev) => (prev === i ? null : i));
+                                }
+                            }}
+                            className={`p-4 md:p-5 rounded-2xl border-2 transition-all text-2xl md:text-3xl font-bold ${
+                                checked
+                                    ? isCorrectPlace
+                                        ? 'bg-green-100 border-green-400'
+                                        : isWrongPlace
+                                            ? 'bg-red-100 border-red-400'
+                                            : 'bg-gray-50 border-gray-200'
+                                    : placed
+                                        ? 'bg-pastel-green-light border-pastel-green'
+                                        : isSelected
+                                            ? 'bg-pastel-blue border-blue-400 scale-[1.02]'
+                                            : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light'
+                            }`}
+                        >
+                            {it.text}
+                        </button>
                     );
                 })}
             </div>
