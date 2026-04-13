@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Card, BigBtn, TaskHeader, Result } from './common';
 import { playCorrect, playWrong, fireConfetti, shuffle, pick } from '../lib/audio';
@@ -779,17 +779,32 @@ export function Task9({ onScore, initialData }) {
     );
 }
 
-export function Task10({ onScore, initialData, imageUrl, scenePrompt }) {
-    const [data] = useState(() => initialData || pick(VERB_DATA));
-    const [options] = useState(() => shuffle([...data.correct, ...data.wrong]));
+export function Task10({ onScore, initialData, imageUrl, scenePrompt, loading }) {
+    const baseDataRef = useRef(initialData || pick(VERB_DATA));
+    const [data, setData] = useState(() => baseDataRef.current);
+    const [options, setOptions] = useState(() => {
+        return shuffle([...baseDataRef.current.correct, ...baseDataRef.current.wrong]);
+    });
     const [sel, setSel] = useState(new Set());
     const [checked, setChecked] = useState(false);
     const [imgLoaded, setImgLoaded] = useState(false);
     const [imgError, setImgError] = useState(false);
+    const imgRef = useRef(null);
+
+    useEffect(() => {
+        if (!initialData) return;
+        setData(initialData);
+        setOptions(shuffle([...initialData.correct, ...initialData.wrong]));
+        setSel(new Set());
+        setChecked(false);
+    }, [initialData]);
 
     useEffect(() => {
         setImgLoaded(false);
         setImgError(false);
+        if (imgRef.current?.complete) {
+            setImgLoaded(true);
+        }
     }, [imageUrl]);
 
     const toggle = (opt) => {
@@ -810,18 +825,40 @@ export function Task10({ onScore, initialData, imageUrl, scenePrompt }) {
 
     const showImage = imageUrl && !imgError;
 
+    if (loading && !imageUrl) {
+        return (
+            <Card>
+                <TaskHeader icon="🖼️" title="Що відбувається?" desc="Зачекайте, ми готуємо картинку та відповіді." />
+                <div className="max-w-4xl mx-auto">
+                    <div className="h-72 rounded-3xl bg-pastel-beige animate-pulse flex items-center justify-center">
+                        <Loader2 className="w-12 h-12 text-pastel-green animate-spin" />
+                    </div>
+                </div>
+            </Card>
+        );
+    }
+
     return (
         <Card>
             <TaskHeader icon="🖼️" title="Що відбувається?" desc={data.context || 'Подивіться на сцену та оберіть, що на ній відбувається'} />
             <div className="max-w-4xl mx-auto text-center">
                 {showImage ? (
                     <div className="mb-4 md:mb-6 flex justify-center">
-                        {!imgLoaded && (
-                            <div className="w-full max-w-md h-56 rounded-3xl bg-pastel-beige animate-pulse flex items-center justify-center">
-                                <Loader2 className="w-10 h-10 text-pastel-green animate-spin" />
-                            </div>
-                        )}
-                        <img src={imageUrl} alt={data.title} onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} className={`w-full max-w-md rounded-3xl shadow-lg object-cover ${imgLoaded ? '' : 'hidden'}`} />
+                        <div className="relative w-full max-w-md h-56">
+                            {!imgLoaded && (
+                                <div className="absolute inset-0 rounded-3xl bg-pastel-beige animate-pulse flex items-center justify-center">
+                                    <Loader2 className="w-10 h-10 text-pastel-green animate-spin" />
+                                </div>
+                            )}
+                            <img
+                                ref={imgRef}
+                                src={imageUrl}
+                                alt={data.title}
+                                onLoad={() => setImgLoaded(true)}
+                                onError={() => setImgError(true)}
+                                className={`w-full h-56 rounded-3xl shadow-lg object-cover transition-opacity duration-200 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                            />
+                        </div>
                     </div>
                 ) : (
                     <div className="mb-4 md:mb-6 p-6 bg-pastel-beige rounded-3xl">

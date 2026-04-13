@@ -18,6 +18,7 @@ export default function App() {
     const [verbImage, setVerbImage] = useState(null);
     const [verbQuestions, setVerbQuestions] = useState(null);
     const [verbScene, setVerbScene] = useState(null);
+    const [verbLoading, setVerbLoading] = useState(false);
     const addScore = useCallback(() => setScore((s) => s + 1), []);
     const next = () => setSlide((s) => Math.min(s + 1, SLIDES - 1));
     const prev = () => setSlide((s) => Math.max(s - 1, 0));
@@ -59,6 +60,7 @@ export default function App() {
         setVerbImage(null);
         setVerbQuestions(null);
         setVerbScene(null);
+        setVerbLoading(false);
         const data = await generateAllTasks();
         setGenerating(false);
         if (data && data._rateLimited) {
@@ -69,19 +71,32 @@ export default function App() {
             const scene = typeof data.verbs?.scene === 'string' && data.verbs.scene.trim().length >= 24
                 ? data.verbs.scene
                 : pick(VERB_DATA).scene;
+            setVerbLoading(true);
             setVerbScene(scene);
-            generateImage(scene).then((ok) => {
-                if (!ok) {
-                    const fallback = pick(VERB_DATA).scene;
-                    setVerbScene(fallback);
-                    generateImage(fallback);
+            (async () => {
+                try {
+                    const ok = await generateImage(scene);
+                    if (!ok) {
+                        const fallback = pick(VERB_DATA).scene;
+                        setVerbScene(fallback);
+                        await generateImage(fallback);
+                    }
+                } finally {
+                    setVerbLoading(false);
                 }
-            });
+            })();
         } else {
             setGenError(true);
             const fallback = pick(VERB_DATA).scene;
+            setVerbLoading(true);
             setVerbScene(fallback);
-            generateImage(fallback);
+            (async () => {
+                try {
+                    await generateImage(fallback);
+                } finally {
+                    setVerbLoading(false);
+                }
+            })();
         }
         setStarted(true);
         next();
@@ -105,7 +120,7 @@ export default function App() {
         <Task6 key={taskKeys[5]} onScore={addScore} initialData={aiData?.categories} />,
         <Task9 key={taskKeys[8]} onScore={addScore} initialData={aiData?.vowels} />,
         <Task7 key={taskKeys[6]} onScore={addScore} initialData={aiData?.trueFalse} />,
-        <Task10 key={`${taskKeys[9]}-${verbQuestions ? 'v' : 'f'}`} onScore={addScore} initialData={verbQuestions?.correct ? verbQuestions : null} imageUrl={verbImage} scenePrompt={verbScene} />,
+        <Task10 key={taskKeys[9]} onScore={addScore} initialData={verbQuestions?.correct ? verbQuestions : null} imageUrl={verbImage} scenePrompt={verbScene} loading={verbLoading} />,
         <Task11 key={taskKeys[10]} onScore={addScore} initialData={aiData?.whatChanged} />,
     ];
 
