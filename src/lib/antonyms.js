@@ -1,13 +1,13 @@
 import { ANTONYM_DATA } from '../data/taskData';
 
 const SAFE_ANTONYM_WORDS = new Set([
-  'холодний',
-  'маленька',
+  'холодна',
+  'мала',
   'темно',
-  'близький',
+  'поруч',
   'пізній',
   'брудна',
-  'порожня',
+  'пуста',
   'вузька',
   'мокрий',
   'гучна',
@@ -15,14 +15,16 @@ const SAFE_ANTONYM_WORDS = new Set([
   'легка',
   'новий',
   'низький',
-  'короткий',
-  'повільний',
+  'коротка',
+  'млявий',
   'гострий',
   'темна',
   'сумний',
   'нерівне',
   'важка',
 ]);
+
+const normalizedLength = (word) => word.replace(/[\s'’\-]/g, '').length;
 
 export const isSafeAntonymBlock = (antonyms) => {
   const sentences = antonyms?.sentences;
@@ -33,6 +35,7 @@ export const isSafeAntonymBlock = (antonyms) => {
     const answer = typeof item?.a === 'string' ? item.a.trim().toLowerCase() : '';
     if (!sentence || !answer) return false;
     if (!SAFE_ANTONYM_WORDS.has(answer)) return false;
+    if (normalizedLength(answer) > 7) return false;
     return sentence.includes(answer);
   });
 };
