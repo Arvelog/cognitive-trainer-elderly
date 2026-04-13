@@ -77,7 +77,7 @@ export default function App() {
     }, [slide]);
 
     const tasks = [
-        <Task1 key={taskKeys[0]} onScore={addScore} initialData={aiData?.findOdd} />,
+        <Task1 key={taskKeys[0]} onScore={addScore} initialData={aiData?.matchWord} />,
         <Task2 key={taskKeys[1]} onScore={addScore} initialData={aiData?.sequence} />,
         <Task8 key={taskKeys[7]} onScore={addScore} initialData={aiData?.antonyms} />,
         <Task3 key={taskKeys[2]} onScore={addScore} initialData={aiData?.budget} />,

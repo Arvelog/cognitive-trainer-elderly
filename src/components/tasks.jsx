@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { Card, BigBtn, TaskHeader, Result } from './common';
 import { playCorrect, playWrong, fireConfetti, shuffle, pick } from '../lib/audio';
 import {
+    MATCH_WORD_DATA,
     FIND_ODD_DATA,
     SEQUENCE_DATA,
     BUDGET_DATA,
@@ -18,33 +19,54 @@ import {
 } from '../data/taskData';
 
 export function Task1({ onScore, initialData }) {
-    const [data] = useState(() => initialData || pick(FIND_ODD_DATA));
+    const [data] = useState(() => {
+        if (initialData?.prompt && Array.isArray(initialData.options) && typeof initialData.correct === 'number') {
+            return initialData;
+        }
+        if (initialData?.word && Array.isArray(initialData.options) && typeof initialData.correct === 'number') {
+            return { prompt: initialData.word, options: initialData.options, correct: initialData.correct, hint: initialData.hint };
+        }
+        return pick(MATCH_WORD_DATA.length ? MATCH_WORD_DATA : FIND_ODD_DATA);
+    });
     const [selected, setSelected] = useState(null);
-    const [hintShown, setHintShown] = useState(false);
-    const done = selected !== null;
-    const correct = selected === data.odd;
+    const [checked, setChecked] = useState(false);
+    const [wrong, setWrong] = useState(false);
+    const done = checked && selected !== null;
+    const correct = selected === data.correct;
     const handleClick = (i) => {
-        if (done) return;
+        if (checked) return;
         setSelected(i);
-        if (i === data.odd) {
+        if (i === data.correct) {
             playCorrect();
             fireConfetti();
             onScore();
-        } else playWrong();
+            setChecked(true);
+            setWrong(false);
+        } else {
+            playWrong();
+            setChecked(true);
+            setWrong(true);
+        }
     };
     return (
         <Card>
-            <TaskHeader icon="🔍" title="Знайди зайве" desc="Подивіться на всі предмети й натисніть той, що не підходить." />
-            <p className="text-center text-2xl md:text-3xl font-medium text-warm-gray-light mb-6">Тут 5 предметів. Один з них не з цієї групи.</p>
-            {hintShown && !done && <p className="text-center text-2xl md:text-3xl font-semibold text-pastel-green mb-6">Підказка: усі інші належать до {data.cat.toLowerCase()}.</p>}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 max-w-3xl mx-auto">
-                {data.items.map((it, i) => (
+            <TaskHeader icon="🔍" title="Що підходить до слова?" desc="Оберіть слово, яке найкраще поєднується з підказкою." />
+            <div className="max-w-2xl mx-auto mb-6 text-center">
+                <div className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-pastel-green-light text-warm-gray font-extrabold text-4xl md:text-5xl">
+                    {data.prompt}
+                </div>
+            </div>
+            {data.hint && !done && (
+                <p className="text-center text-2xl md:text-3xl font-semibold text-pastel-green mb-6">{data.hint}</p>
+            )}
+            <div className="grid grid-cols-2 gap-4 md:gap-6 max-w-2xl mx-auto">
+                {data.options.map((it, i) => (
                     <button
                         key={i}
                         onClick={() => handleClick(i)}
-                        className={`p-4 md:p-6 text-3xl md:text-5xl font-bold rounded-2xl border-3 transition-all duration-200 ${
-                            done
-                                ? i === data.odd
+                        className={`min-h-[88px] flex items-center justify-center p-4 md:p-6 text-2xl md:text-3xl font-bold text-center leading-tight rounded-2xl border-3 transition-all duration-200 ${
+                            checked
+                                ? i === data.correct
                                     ? 'bg-green-100 border-green-400'
                                     : i === selected
                                         ? 'bg-red-100 border-red-400'
@@ -56,17 +78,21 @@ export function Task1({ onScore, initialData }) {
                     </button>
                 ))}
             </div>
-            {!done && !hintShown && (
+            {checked && <Result correct={correct} msg={correct ? 'Чудово! Це підходить.' : `Підійшло: ${data.options[data.correct]}`} />}
+            {wrong && (
                 <div className="flex justify-center mt-6">
                     <button
-                        onClick={() => setHintShown(true)}
+                        onClick={() => {
+                            setSelected(null);
+                            setChecked(false);
+                            setWrong(false);
+                        }}
                         className="px-6 py-3 rounded-full bg-pastel-beige text-warm-gray font-semibold text-lg hover:bg-pastel-beige-dark transition-colors"
                     >
-                        Показати підказку
+                        Спробувати ще раз
                     </button>
                 </div>
             )}
-            {done && <Result correct={correct} msg={correct ? 'Чудово! Ви знайшли зайве!' : `Зайве було: ${data.items[data.odd]}`} />}
         </Card>
     );
 }

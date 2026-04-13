@@ -40,7 +40,7 @@ export async function generateAllTasks() {
 
     if (
       !data ||
-      !data.findOdd ||
+      (!data.matchWord && !data.findOdd) ||
       !data.sequence ||
       !data.budget ||
       !data.sentence ||
@@ -55,10 +55,21 @@ export async function generateAllTasks() {
       return null;
     }
 
-    if (!Array.isArray(data.findOdd.items) || data.findOdd.items.length !== 5) {
-      console.warn('App: findOdd data is malformed (not exactly 5 items), using fallback to prevent UI breakage');
+    const matchWord = data.matchWord || data.findOdd;
+    if (
+      !matchWord ||
+      typeof matchWord.word !== 'string' ||
+      !Array.isArray(matchWord.options) ||
+      matchWord.options.length !== 4 ||
+      !Number.isInteger(matchWord.correct) ||
+      matchWord.correct < 0 ||
+      matchWord.correct > 3
+    ) {
+      console.warn('App: matchWord data is malformed, using fallback to prevent UI breakage');
       return null;
     }
+
+    data.matchWord = matchWord;
 
     if (!isSafeAntonymBlock(data.antonyms)) {
       console.warn('App: antonyms data is too similar or unsafe, using fallback block');
