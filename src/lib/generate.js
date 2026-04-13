@@ -1,3 +1,5 @@
+import { isSafeAntonymBlock, fallbackAntonymBlock } from './antonyms';
+
 export async function generateAllTasks() {
   try {
     const response = await fetch('/api/generate', { method: 'POST' });
@@ -56,6 +58,11 @@ export async function generateAllTasks() {
     if (!Array.isArray(data.findOdd.items) || data.findOdd.items.length !== 4) {
       console.warn('App: findOdd data is malformed (not exactly 4 items), using fallback to prevent UI breakage');
       return null;
+    }
+
+    if (!isSafeAntonymBlock(data.antonyms)) {
+      console.warn('App: antonyms data is too similar or unsafe, using fallback block');
+      data.antonyms = fallbackAntonymBlock();
     }
 
     return data;
