@@ -50,7 +50,7 @@ export function Task1({ onScore, initialData }) {
     };
     return (
         <Card>
-            <TaskHeader icon="🔍" title="Що підходить до слова?" desc="Оберіть слово, яке найкраще поєднується з підказкою." />
+            <TaskHeader icon="🔍" title="Що підходить до слова?" desc="Оберіть пов'язане слово, а не повтор підказки." />
             <div className="max-w-2xl mx-auto mb-6 text-center">
                 <div className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-pastel-green-light text-warm-gray font-extrabold text-4xl md:text-5xl">
                     {data.prompt}

@@ -5,6 +5,7 @@ export const MATCH_WORD_DATA = [
   { prompt: 'Квіти', options: ['поливати', 'шити', 'крутити', 'міряти'], correct: 0 },
   { prompt: 'Одяг', options: ['прасувати', 'ловити', 'будувати', 'дзвонити'], correct: 0 },
   { prompt: 'Риба', options: ['ловити', 'кричати', 'сміятися', 'малювати'], correct: 0 },
+  { prompt: 'Мило', options: ['мити', 'пасти', 'копати', 'кроїти'], correct: 0 },
 ];
 
 export const FIND_ODD_DATA = MATCH_WORD_DATA;

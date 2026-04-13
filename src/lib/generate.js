@@ -56,6 +56,10 @@ export async function generateAllTasks() {
     }
 
     const matchWord = data.matchWord || data.findOdd;
+    const normalizedPrompt = String(matchWord?.word || '').trim().toLowerCase();
+    const normalizedOptions = Array.isArray(matchWord?.options)
+      ? matchWord.options.map((option) => String(option || '').trim().toLowerCase())
+      : [];
     if (
       !matchWord ||
       typeof matchWord.word !== 'string' ||
@@ -63,7 +67,11 @@ export async function generateAllTasks() {
       matchWord.options.length !== 4 ||
       !Number.isInteger(matchWord.correct) ||
       matchWord.correct < 0 ||
-      matchWord.correct > 3
+      matchWord.correct > 3 ||
+      !normalizedPrompt ||
+      normalizedOptions.some((option) => !option) ||
+      new Set(normalizedOptions).size !== 4 ||
+      normalizedOptions.includes(normalizedPrompt)
     ) {
       console.warn('App: matchWord data is malformed, using fallback to prevent UI breakage');
       return null;
