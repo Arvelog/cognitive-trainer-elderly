@@ -28,7 +28,7 @@ export default async function handler(req) {
   "trueFalse": { "statements": [{"text": "Твердження 1", "answer": true}, {"text": "Твердження 2", "answer": false}, {"text": "Твердження 3", "answer": true}] },
   "antonyms": { "sentences": [{"s": "Речення з пропуском (замість антоніма пиши ...)", "a": "антонім"}, {"s": "Ще речення...", "a": "антонім"}, {"s": "І ще...", "a": "антонім"}, {"s": "Четверте...", "a": "антонім"}] },
   "vowels": { "words": [{"full": "СЛОВО", "hint": "Підказка"}, {"full": "ДРУГЕ", "hint": "Підказка"}, {"full": "ТРЕТЄ", "hint": "Підказка"}] },
-  "verbs": { "scene": "Short English description of a cozy everyday scene for image generation, e.g. A grandmother watering tomatoes in a sunny garden with a cat nearby" },
+  "verbs": { "scene": "One short English sentence describing a clear everyday scene for image generation, e.g. A woman cooking soup in a bright kitchen with vegetables on the table and a pot on the stove" },
   "whatChanged": { "items": ["emoji1","emoji2","emoji3","emoji4","emoji5","emoji6"], "changes": [{"idx":1,"to":"новий_emoji"},{"idx":4,"to":"новий_emoji"}] }
 }
 
@@ -57,7 +57,7 @@ export default async function handler(req) {
 - Зберігай різноманітність: у блоці "antonyms" міксуй різні прості теми (температура, розмір, час, чистота, повнота, ширина, звук, м'якість, новизна, довжина, яскравість, вага, дистанція), але не ускладнюй слова.
 - Для "categories" роби 6 предметів і 3 чіткі групи, наприклад ["Кухня", "Двір", "Аптека"]. Додай ще "groupIcons" — 3 прості emoji для цих кошиків. Кожен предмет має поле "group" з індексом 0, 1 або 2; у кожній групі має бути по 2 предмети
 - Для "whatChanged": 6 різних побутових emoji (фрукти, тварини, предмети). "changes" — рівно 2 об'єкти, кожен з "idx" (0-5) та "to" (новий emoji, що відрізняється від оригіналу). Заміни мають бути з тієї ж теми але іншим предметом (яблуко→груша, кіт→собака)
-- Для "verbs.scene": напиши КОРОТКИЙ опис побутової сцени АНГЛІЙСЬКОЮ мовою для генерації картинки (DALL-E). Сцена має бути побутова, зрозуміла, позитивна, з кількома чіткими діями та предметами. ОБОВ'ЯЗКОВО чергуй РІЗНІ теми — НЕ повторюй бабусю, город чи яблука! Обирай одну з тем: базар/ринок, кухня з кількома людьми, дитячий майданчик, рибалка на озері, пікнік у парку, майстерня, свято/день народження, прибирання двору, зимові розваги. Приклад: "A family having a birthday picnic in a park, children playing with balloons, a dog running nearby, a cake on the table"
+- Для "verbs.scene": напиши ОДНЕ коротке англійське речення про чітку побутову сцену для картинки. Формула: хто + що робить + де + 1-2 видимі предмети. Пиши 12-22 слова, без абстракцій, без тексту на зображенні, без складних деталей. ОБОВ'ЯЗКОВО чергуй теми — не повторюй бабусю, город чи яблука. Обирай одну з тем: ринок, кухня, дитячий майданчик, рибалка, пікнік, майстерня, свято, прибирання, зима. Приклад: "A woman cooking soup in a bright kitchen with vegetables on the table and a pot on the stove"
 - Відповідай ТІЛЬКИ JSON, без markdown, без коментарів
 
 УВАГА: Це новий користувацький запит. Згенеруй АБСОЛЮТНО НОВІ варіанти, не використовуй ті ж самі слова, що і минулого разу.

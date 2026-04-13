@@ -27,7 +27,7 @@ export default async function handler(req) {
             },
             body: JSON.stringify({
                 model: 'dall-e-3',
-                prompt: `${prompt}. Style: friendly cartoon illustration, bright warm colors, no text, no letters, no words anywhere in the image. The scene should clearly show specific actions and objects.`,
+                prompt: `${prompt}. Friendly cartoon illustration, bright warm colors, one clear everyday action, 1-2 people max, 2-4 visible objects, no text, no labels, no collage, no split scenes.`,
                 n: 1,
                 size: '1024x1024',
                 quality: 'standard'
