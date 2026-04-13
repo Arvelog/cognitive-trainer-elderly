@@ -55,8 +55,8 @@ export async function generateAllTasks() {
       return null;
     }
 
-    if (!Array.isArray(data.findOdd.items) || data.findOdd.items.length !== 4) {
-      console.warn('App: findOdd data is malformed (not exactly 4 items), using fallback to prevent UI breakage');
+    if (!Array.isArray(data.findOdd.items) || data.findOdd.items.length !== 5) {
+      console.warn('App: findOdd data is malformed (not exactly 5 items), using fallback to prevent UI breakage');
       return null;
     }
 

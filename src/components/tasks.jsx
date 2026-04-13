@@ -20,6 +20,7 @@ import {
 export function Task1({ onScore, initialData }) {
     const [data] = useState(() => initialData || pick(FIND_ODD_DATA));
     const [selected, setSelected] = useState(null);
+    const [hintShown, setHintShown] = useState(false);
     const done = selected !== null;
     const correct = selected === data.odd;
     const handleClick = (i) => {
@@ -33,8 +34,10 @@ export function Task1({ onScore, initialData }) {
     };
     return (
         <Card>
-            <TaskHeader icon="🔍" title="Знайди зайве" desc={`Категорія: ${data.cat}. Один предмет не підходить!`} />
-            <div className="grid grid-cols-2 gap-6 max-w-2xl mx-auto">
+            <TaskHeader icon="🔍" title="Знайди зайве" desc="Подивіться на всі предмети й натисніть той, що не підходить." />
+            <p className="text-center text-2xl md:text-3xl font-medium text-warm-gray-light mb-6">Тут 5 предметів. Один з них не з цієї групи.</p>
+            {hintShown && !done && <p className="text-center text-2xl md:text-3xl font-semibold text-pastel-green mb-6">Підказка: усі інші належать до {data.cat.toLowerCase()}.</p>}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 max-w-3xl mx-auto">
                 {data.items.map((it, i) => (
                     <button
                         key={i}
@@ -53,6 +56,16 @@ export function Task1({ onScore, initialData }) {
                     </button>
                 ))}
             </div>
+            {!done && !hintShown && (
+                <div className="flex justify-center mt-6">
+                    <button
+                        onClick={() => setHintShown(true)}
+                        className="px-6 py-3 rounded-full bg-pastel-beige text-warm-gray font-semibold text-lg hover:bg-pastel-beige-dark transition-colors"
+                    >
+                        Показати підказку
+                    </button>
+                </div>
+            )}
             {done && <Result correct={correct} msg={correct ? 'Чудово! Ви знайшли зайве!' : `Зайве було: ${data.items[data.odd]}`} />}
         </Card>
     );
