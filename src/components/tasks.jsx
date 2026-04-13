@@ -20,42 +20,46 @@ import {
 
 export function Task1({ onScore, initialData }) {
     const [data] = useState(() => {
-        if (initialData?.prompt && Array.isArray(initialData.options) && typeof initialData.correct === 'number') {
+        if (initialData?.prompt && Array.isArray(initialData.options) && Array.isArray(initialData.correct)) {
             return initialData;
         }
-        if (initialData?.word && Array.isArray(initialData.options) && typeof initialData.correct === 'number') {
+        if (initialData?.word && Array.isArray(initialData.options) && Array.isArray(initialData.correct)) {
             return { prompt: initialData.word, options: initialData.options, correct: initialData.correct, hint: initialData.hint };
         }
         return pick(MATCH_NEED_DATA.length ? MATCH_NEED_DATA : FIND_ODD_DATA);
     });
-    const [selected, setSelected] = useState(null);
+    const [selected, setSelected] = useState([]);
     const [checked, setChecked] = useState(false);
     const [wrong, setWrong] = useState(false);
-    const done = checked && selected !== null;
-    const correct = selected === data.correct;
+    const done = checked && selected.length === data.correct.length;
+    const selectedSet = new Set(selected);
+    const correct = data.correct.every((idx) => selectedSet.has(idx)) && selected.length === data.correct.length;
     const handleClick = (i) => {
-        if (checked) return;
-        setSelected(i);
-        if (i === data.correct) {
+        if (checked || selected.includes(i)) return;
+        const next = [...selected, i];
+        setSelected(next);
+        if (next.length !== data.correct.length) return;
+        const ok = next.length === data.correct.length && data.correct.every((idx) => next.includes(idx));
+        setChecked(true);
+        if (ok) {
             playCorrect();
             fireConfetti();
             onScore();
-            setChecked(true);
             setWrong(false);
         } else {
             playWrong();
-            setChecked(true);
             setWrong(true);
         }
     };
     return (
         <Card>
-            <TaskHeader icon="🔍" title="Що потрібно для цього?" desc="Оберіть річ, без якої це не вийде." />
+            <TaskHeader icon="🔍" title="Що потрібно для цього?" desc="Оберіть 2 речі, без яких це не вийде." />
             <div className="max-w-2xl mx-auto mb-6 text-center">
                 <div className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-pastel-green-light text-warm-gray font-extrabold text-4xl md:text-5xl">
                     {data.prompt}
                 </div>
             </div>
+            <p className="text-center text-2xl md:text-3xl font-medium text-warm-gray-light mb-6">Потрібно вибрати 2 предмети.</p>
             <div className="grid grid-cols-2 gap-4 md:gap-6 max-w-2xl mx-auto">
                 {data.options.map((it, i) => (
                     <button
@@ -63,11 +67,15 @@ export function Task1({ onScore, initialData }) {
                         onClick={() => handleClick(i)}
                         className={`min-h-[88px] flex items-center justify-center p-4 md:p-6 text-2xl md:text-3xl font-bold text-center leading-tight rounded-2xl border-3 transition-all duration-200 ${
                             checked
-                                ? i === data.correct
-                                    ? 'bg-green-100 border-green-400'
-                                    : i === selected
-                                        ? 'bg-red-100 border-red-400'
+                                ? selectedSet.has(i)
+                                    ? data.correct.includes(i)
+                                        ? 'bg-green-100 border-green-400'
+                                        : 'bg-red-100 border-red-400'
+                                    : data.correct.includes(i)
+                                        ? 'bg-green-100 border-green-400'
                                         : 'bg-gray-50 border-gray-200'
+                                : selected.includes(i)
+                                    ? 'bg-pastel-green-light border-pastel-green scale-[1.02]'
                                 : 'bg-white border-pastel-green hover:bg-pastel-green-light hover:scale-105 active:scale-95'
                         }`}
                     >
@@ -75,12 +83,12 @@ export function Task1({ onScore, initialData }) {
                     </button>
                 ))}
             </div>
-            {checked && <Result correct={correct} msg={correct ? 'Чудово! Це потрібно.' : `Потрібно: ${data.options[data.correct]}`} />}
+            {checked && <Result correct={correct} msg={correct ? 'Чудово! Ви вибрали все потрібне.' : `Потрібно: ${data.correct.map((idx) => data.options[idx]).join(' + ')}`} />}
             {wrong && (
                 <div className="flex justify-center mt-6">
                     <button
                         onClick={() => {
-                            setSelected(null);
+                            setSelected([]);
                             setChecked(false);
                             setWrong(false);
                         }}

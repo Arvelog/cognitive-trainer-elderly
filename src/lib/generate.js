@@ -60,17 +60,19 @@ export async function generateAllTasks() {
     const normalizedOptions = Array.isArray(matchWord?.options)
       ? matchWord.options.map((option) => String(option || '').trim().toLowerCase())
       : [];
+    const normalizedCorrect = Array.isArray(matchWord?.correct) ? matchWord.correct : [];
     if (
       !matchWord ||
       typeof matchWord.word !== 'string' ||
       !Array.isArray(matchWord.options) ||
-      matchWord.options.length !== 4 ||
-      !Number.isInteger(matchWord.correct) ||
-      matchWord.correct < 0 ||
-      matchWord.correct > 3 ||
+      matchWord.options.length !== 5 ||
+      !Array.isArray(matchWord.correct) ||
+      normalizedCorrect.length !== 2 ||
+      !normalizedCorrect.every((idx) => Number.isInteger(idx) && idx >= 0 && idx < 5) ||
+      new Set(normalizedCorrect).size !== 2 ||
       !normalizedPrompt ||
       normalizedOptions.some((option) => !option) ||
-      new Set(normalizedOptions).size !== 4 ||
+      new Set(normalizedOptions).size !== 5 ||
       normalizedOptions.includes(normalizedPrompt)
     ) {
       console.warn('App: matchWord data is malformed, using fallback to prevent UI breakage');
