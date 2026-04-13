@@ -565,16 +565,16 @@ export function Task8({ onScore, initialData }) {
     return (
         <Card>
             <TaskHeader icon="↔️" title="Протилежності" desc="Коротке слово" />
-            <div className="max-w-2xl mx-auto space-y-5">
+            <div className="max-w-xl mx-auto space-y-4">
                 {data.sentences.map((s, i) => (
-                    <div key={i} className={`p-5 md:p-6 rounded-3xl border-2 ${checked ? (answers[i].trim().toLowerCase() === s.a.toLowerCase() ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-white border-pastel-beige-dark'}`}>
-                        <p className="text-3xl md:text-4xl font-extrabold text-warm-gray mb-4 leading-tight">{s.s.replace(new RegExp(s.a, 'gi'), '...').replace(/\.\.\.\.\.\./g, '...')}</p>
-                        <div className="flex gap-3 items-stretch">
-                            <input type="text" value={answers[i]} onChange={(e) => setAns(i, e.target.value)} disabled={checked} placeholder="..." className="flex-1 min-w-0 p-4 md:p-5 text-4xl md:text-5xl rounded-3xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center tracking-wide" />
-                            {!checked && hintLevel[i] < 3 && <button onClick={() => addHint(i)} className="px-4 md:px-5 py-3 md:py-4 text-lg md:text-2xl bg-pastel-yellow rounded-3xl text-warm-gray font-semibold flex items-center gap-1 hover:bg-yellow-200 active:scale-95 transition-all">💡{hintLevel[i] === 0 ? '' : ' ще'}</button>}
+                    <div key={i} className={`p-4 md:p-5 rounded-3xl border-2 ${checked ? (answers[i].trim().toLowerCase() === s.a.toLowerCase() ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-white border-pastel-beige-dark'}`}>
+                        <p className="text-2xl md:text-3xl font-extrabold text-warm-gray mb-3 leading-tight">{s.s.replace(new RegExp(s.a, 'gi'), '...').replace(/\.\.\.\.\.\./g, '...')}</p>
+                        <div className="flex gap-2 md:gap-3 items-stretch">
+                            <input type="text" value={answers[i]} onChange={(e) => setAns(i, e.target.value)} disabled={checked} placeholder="..." className="flex-1 min-w-0 p-3 md:p-4 text-3xl md:text-4xl rounded-3xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center tracking-wide" />
+                            {!checked && hintLevel[i] < 3 && <button onClick={() => addHint(i)} className="px-3 md:px-4 py-3 md:py-4 text-base md:text-lg bg-pastel-yellow rounded-3xl text-warm-gray font-semibold flex items-center gap-1 hover:bg-yellow-200 active:scale-95 transition-all">💡{hintLevel[i] === 0 ? '' : ' ще'}</button>}
                         </div>
-                        {hintLevel[i] > 0 && !checked && <p className="mt-3 inline-flex text-lg md:text-xl px-4 py-2 bg-yellow-50 rounded-2xl text-warm-gray font-semibold">💡 {getHintText(s, hintLevel[i])}</p>}
-                        {checked && answers[i].trim().toLowerCase() !== s.a.toLowerCase() && <p className="text-base md:text-lg text-red-500 mt-2 font-semibold">Відповідь: {s.a}</p>}
+                        {hintLevel[i] > 0 && !checked && <p className="mt-2 inline-flex text-sm md:text-base px-3 py-2 bg-yellow-50 rounded-2xl text-warm-gray font-semibold">💡 {getHintText(s, hintLevel[i])}</p>}
+                        {checked && answers[i].trim().toLowerCase() !== s.a.toLowerCase() && <p className="text-sm md:text-base text-red-500 mt-2 font-semibold">Відповідь: {s.a}</p>}
                     </div>
                 ))}
             </div>
