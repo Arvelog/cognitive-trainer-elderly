@@ -51,6 +51,7 @@ export const ASSOC_DATA = [
 export const CATEGORY_SORT_DATA = [
   {
     groupLabels: ['Їжа', 'Одяг', 'Дім'],
+    groupIcons: ['🍎', '👕', '🏠'],
     items: [
       { text: 'Яблуко', group: 0 },
       { text: 'Хліб', group: 0 },
@@ -62,6 +63,7 @@ export const CATEGORY_SORT_DATA = [
   },
   {
     groupLabels: ['Кухня', 'Двір', 'Аптека'],
+    groupIcons: ['🍲', '🧹', '💊'],
     items: [
       { text: 'Ложка', group: 0 },
       { text: 'Чашка', group: 0 },
@@ -73,6 +75,7 @@ export const CATEGORY_SORT_DATA = [
   },
   {
     groupLabels: ['Літо', 'Зима', 'Весна'],
+    groupIcons: ['☀️', '❄️', '🌷'],
     items: [
       { text: 'Сонце', group: 0 },
       { text: 'Морозиво', group: 0 },
@@ -84,6 +87,7 @@ export const CATEGORY_SORT_DATA = [
   },
   {
     groupLabels: ['Ринок', 'Дім', 'Сад'],
+    groupIcons: ['🛒', '🛋️', '🌱'],
     items: [
       { text: 'Яблуко', group: 0 },
       { text: 'Сир', group: 0 },

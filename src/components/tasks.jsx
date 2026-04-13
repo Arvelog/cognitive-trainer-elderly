@@ -459,14 +459,26 @@ export function Task6({ onScore, initialData }) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-6xl mx-auto mb-8">
                 {data.groupLabels.map((label, groupIdx) => {
                     const assignedItems = items.filter((item, idx) => placements[idx] === groupIdx);
+                    const basketStyles = [
+                        'border-rose-300 bg-rose-50/80 hover:bg-rose-100',
+                        'border-amber-300 bg-amber-50/80 hover:bg-amber-100',
+                        'border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100',
+                    ];
+                    const iconRing = [
+                        'bg-rose-200 text-rose-700',
+                        'bg-amber-200 text-amber-700',
+                        'bg-emerald-200 text-emerald-700',
+                    ];
                     return (
                         <button
                             key={label}
                             onClick={() => selectedItem !== null && assign(selectedItem, groupIdx)}
                             disabled={checked}
-                            className="min-h-[180px] rounded-3xl border-4 border-dashed border-pastel-beige-dark bg-pastel-beige/40 p-4 md:p-6 text-left transition-all hover:bg-pastel-green-light hover:border-pastel-green active:scale-[0.99]"
+                            className={`min-h-[180px] rounded-3xl border-4 border-dashed p-4 md:p-6 text-left transition-all active:scale-[0.99] ${basketStyles[groupIdx % basketStyles.length]}`}
                         >
-                            <div className="text-7xl mb-3">🧺</div>
+                            <div className={`inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full text-5xl md:text-6xl mb-3 ${iconRing[groupIdx % iconRing.length]}`}>
+                                {data.groupIcons?.[groupIdx] || '🧺'}
+                            </div>
                             <div className="text-3xl md:text-4xl font-extrabold text-warm-gray mb-2">{label}</div>
                             <div className="text-lg md:text-xl font-semibold text-warm-gray-light">Предметів: {assignedItems.length}</div>
                             <div className="mt-3 flex flex-wrap gap-2">

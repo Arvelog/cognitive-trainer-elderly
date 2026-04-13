@@ -90,6 +90,9 @@ export async function generateAllTasks() {
       categories.groupLabels.length !== 3 ||
       categories.groupLabels.some((label) => typeof label !== 'string' || !label.trim()) ||
       new Set(categories.groupLabels.map((label) => label.trim().toLowerCase())).size !== 3 ||
+      !Array.isArray(categories.groupIcons) ||
+      categories.groupIcons.length !== 3 ||
+      categories.groupIcons.some((icon) => typeof icon !== 'string' || !icon.trim()) ||
       categoryItems.length !== 6 ||
       categoryItems.some((item) => typeof item?.text !== 'string' || !item.text.trim() || !Number.isInteger(item.group) || item.group < 0 || item.group > 2) ||
       groupCounts.some((count) => count !== 2)
