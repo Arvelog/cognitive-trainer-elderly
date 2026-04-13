@@ -2,6 +2,7 @@ import { ANTONYM_DATA } from '../data/taskData';
 
 const SAFE_ANTONYM_WORDS = new Set([
   'холодна',
+  'холодне',
   'мала',
   'темно',
   'поруч',
@@ -25,6 +26,12 @@ const SAFE_ANTONYM_WORDS = new Set([
 ]);
 
 const normalizedLength = (word) => word.replace(/[\s'’\-]/g, '').length;
+const compactWordCount = (sentence) =>
+  sentence
+    .replace(/[()".,!?…:;—-]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .length;
 
 export const isSafeAntonymBlock = (antonyms) => {
   const sentences = antonyms?.sentences;
@@ -36,6 +43,7 @@ export const isSafeAntonymBlock = (antonyms) => {
     if (!sentence || !answer) return false;
     if (!SAFE_ANTONYM_WORDS.has(answer)) return false;
     if (normalizedLength(answer) > 7) return false;
+    if (compactWordCount(sentence) > 5) return false;
     return sentence.includes(answer);
   });
 };
