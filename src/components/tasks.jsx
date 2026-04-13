@@ -763,11 +763,33 @@ export function Task11({ onScore, initialData }) {
     };
 
     const grid = phase === 'memorize' ? data.items : changedGrid;
+    const selectedCount = selected.size;
+    const phaseTitle = phase === 'memorize' ? 'Крок 1: Запам\'ятайте' : 'Крок 2: Знайдіть зміни';
+    const phaseDesc =
+        phase === 'memorize'
+            ? `Подивіться на 6 карток. Через ${timer} сек. вони зміняться.`
+            : `Торкніться ${numChanges} карток, які стали іншими.`;
 
     return (
         <Card>
-            <TaskHeader icon="👀" title="Що змінилось?" desc={phase === 'memorize' ? `Запам'ятайте картинки! Залишилось ${timer} сек.` : `Знайдіть ${numChanges} предмети, які змінились`} />
+            <TaskHeader icon="👀" title="Що змінилось?" desc={phaseDesc} />
             <div className="max-w-md mx-auto">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                    <div className={`px-3 py-1.5 rounded-full text-sm font-bold ${phase === 'memorize' ? 'bg-pastel-yellow text-warm-gray' : 'bg-gray-100 text-warm-gray-light'}`}>
+                        1
+                    </div>
+                    <div className={`px-3 py-1.5 rounded-full text-sm font-bold ${phase === 'find' ? 'bg-pastel-green text-white' : 'bg-gray-100 text-warm-gray-light'}`}>
+                        2
+                    </div>
+                </div>
+                <div className="mb-4 p-4 rounded-2xl bg-white/70 border border-pastel-beige-dark text-center">
+                    <p className="text-xl md:text-2xl font-extrabold text-warm-gray">{phaseTitle}</p>
+                    <p className="text-sm md:text-base text-warm-gray-light mt-1">
+                        {phase === 'memorize'
+                            ? 'Просто дивіться і запамʼятовуйте.'
+                            : `Знайдено ${selectedCount} з ${numChanges}.`}
+                    </p>
+                </div>
                 {phase === 'memorize' && (
                     <div className="text-center mb-4">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pastel-yellow text-3xl font-extrabold text-warm-gray">{timer}</div>
@@ -794,6 +816,11 @@ export function Task11({ onScore, initialData }) {
                             Перевірити
                         </BigBtn>
                     </div>
+                )}
+                {phase === 'find' && !checked && selected.size < numChanges && (
+                    <p className="text-center text-sm md:text-base text-warm-gray-light mt-4">
+                        Залишилось вибрати: {numChanges - selected.size}
+                    </p>
                 )}
                 {checked && <Result correct={correct} msg={correct ? 'Чудова пам\'ять! Ви знайшли всі зміни!' : `Змінились: позиції ${[...changedIndices].map((i) => i + 1).join(', ')}`} />}
             </div>
