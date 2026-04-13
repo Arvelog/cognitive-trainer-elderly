@@ -24,3 +24,14 @@ body {
   background-color: var(--color-pastel-beige);
   min-height: 100vh;
 }
+
+@keyframes basket-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.05) rotate(-1deg); }
+  70% { transform: scale(0.99) rotate(1deg); }
+  100% { transform: scale(1); }
+}
+
+.animate-basket-pop {
+  animation: basket-pop 420ms ease-out;
+}

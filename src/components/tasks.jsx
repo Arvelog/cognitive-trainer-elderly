@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Card, BigBtn, TaskHeader, Result } from './common';
 import { playCorrect, playWrong, fireConfetti, shuffle, pick } from '../lib/audio';
@@ -427,10 +427,17 @@ export function Task6({ onScore, initialData }) {
     const [items] = useState(() => shuffle(data.items));
     const [placements, setPlacements] = useState({});
     const [selectedItem, setSelectedItem] = useState(null);
+    const [dropCue, setDropCue] = useState(null);
     const [checked, setChecked] = useState(false);
+    useEffect(() => {
+        if (!dropCue) return;
+        const timer = setTimeout(() => setDropCue(null), 420);
+        return () => clearTimeout(timer);
+    }, [dropCue]);
     const assign = (idx, group) => {
         if (checked) return;
         setPlacements((prev) => ({ ...prev, [idx]: group }));
+        setDropCue({ itemIdx: idx, groupIdx: group });
         setSelectedItem(null);
     };
     const unassign = (idx) => {
@@ -474,7 +481,7 @@ export function Task6({ onScore, initialData }) {
                             key={label}
                             onClick={() => selectedItem !== null && assign(selectedItem, groupIdx)}
                             disabled={checked}
-                            className={`min-h-[180px] rounded-3xl border-4 border-dashed p-4 md:p-6 text-left transition-all active:scale-[0.99] ${basketStyles[groupIdx % basketStyles.length]}`}
+                            className={`min-h-[180px] rounded-3xl border-4 border-dashed p-4 md:p-6 text-left transition-all active:scale-[0.99] ${basketStyles[groupIdx % basketStyles.length]} ${dropCue?.groupIdx === groupIdx ? 'animate-basket-pop' : ''}`}
                         >
                             <div className={`inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full text-5xl md:text-6xl mb-3 ${iconRing[groupIdx % iconRing.length]}`}>
                                 {data.groupIcons?.[groupIdx] || '🧺'}
@@ -503,6 +510,7 @@ export function Task6({ onScore, initialData }) {
                     const isCorrectPlace = checked && placements[i] === it.group;
                     const isWrongPlace = checked && placements[i] !== undefined && placements[i] !== it.group;
                     const isSelected = selectedItem === i;
+                    const justDropped = dropCue?.itemIdx === i;
                     return (
                         <button
                             key={i}
@@ -523,7 +531,7 @@ export function Task6({ onScore, initialData }) {
                                             ? 'bg-red-100 border-red-400'
                                             : 'bg-gray-50 border-gray-200'
                                     : placed
-                                        ? 'bg-pastel-green-light border-pastel-green'
+                                        ? `bg-pastel-green-light border-pastel-green ${justDropped ? 'animate-basket-pop' : ''}`
                                         : isSelected
                                             ? 'bg-pastel-blue border-blue-400 scale-[1.02]'
                                             : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light'
