@@ -83,19 +83,16 @@ export async function generateAllTasks() {
 
     const categories = data.categories;
     const categoryItems = Array.isArray(categories?.items) ? categories.items : [];
-    const leftCount = categoryItems.filter((item) => item?.group === 'left').length;
-    const rightCount = categoryItems.filter((item) => item?.group === 'right').length;
+    const groupCounts = [0, 1, 2].map((group) => categoryItems.filter((item) => item?.group === group).length);
     if (
       !categories ||
-      typeof categories.leftLabel !== 'string' ||
-      typeof categories.rightLabel !== 'string' ||
-      !categories.leftLabel.trim() ||
-      !categories.rightLabel.trim() ||
-      categories.leftLabel.trim().toLowerCase() === categories.rightLabel.trim().toLowerCase() ||
+      !Array.isArray(categories.groupLabels) ||
+      categories.groupLabels.length !== 3 ||
+      categories.groupLabels.some((label) => typeof label !== 'string' || !label.trim()) ||
+      new Set(categories.groupLabels.map((label) => label.trim().toLowerCase())).size !== 3 ||
       categoryItems.length !== 6 ||
-      categoryItems.some((item) => typeof item?.text !== 'string' || !item.text.trim() || !['left', 'right'].includes(item.group)) ||
-      leftCount !== 3 ||
-      rightCount !== 3
+      categoryItems.some((item) => typeof item?.text !== 'string' || !item.text.trim() || !Number.isInteger(item.group) || item.group < 0 || item.group > 2) ||
+      groupCounts.some((count) => count !== 2)
     ) {
       console.warn('App: categories data is malformed, using fallback to prevent UI breakage');
       return null;

@@ -443,32 +443,32 @@ export function Task6({ onScore, initialData }) {
     };
     return (
         <Card>
-            <TaskHeader icon="📦" title="Розкладіть по групах" desc={`${data.leftLabel} або ${data.rightLabel}`} />
+            <TaskHeader icon="📦" title="Розкладіть по 3 кошиках" desc={data.groupLabels.join(' · ')} />
             <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Для кожної речі виберіть, куди її покласти.</p>
             <p className="text-center text-2xl md:text-3xl font-semibold text-pastel-green mb-6">Розкладено: {chosenCount} з {items.length}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto">
                 {items.map((it, i) => {
-                    const isLeft = sel[i] === 'left';
-                    const isRight = sel[i] === 'right';
+                    const selectedGroup = sel[i];
                     const isCorr = checked && sel[i] === it.group;
                     return (
-                        <div key={i} className={`p-4 md:p-5 rounded-2xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400') : sel[i] ? 'bg-pastel-green-light border-pastel-green' : 'bg-white border-pastel-beige-dark'}`}>
-                            <div className="flex items-center gap-3">
+                        <div key={i} className={`p-4 md:p-5 rounded-2xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400') : selectedGroup !== undefined ? 'bg-pastel-green-light border-pastel-green' : 'bg-white border-pastel-beige-dark'}`}>
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center">
                                 <div className="flex-1 text-2xl md:text-3xl font-bold text-warm-gray">{it.text}</div>
-                                <button
-                                    onClick={() => assign(i, 'left')}
-                                    disabled={checked}
-                                    className={`px-4 py-3 rounded-xl font-bold text-lg transition-all ${isLeft ? 'bg-pastel-green text-white' : 'bg-pastel-beige text-warm-gray hover:bg-pastel-green-light'}`}
-                                >
-                                    {data.leftLabel}
-                                </button>
-                                <button
-                                    onClick={() => assign(i, 'right')}
-                                    disabled={checked}
-                                    className={`px-4 py-3 rounded-xl font-bold text-lg transition-all ${isRight ? 'bg-pastel-green text-white' : 'bg-pastel-beige text-warm-gray hover:bg-pastel-green-light'}`}
-                                >
-                                    {data.rightLabel}
-                                </button>
+                                <div className="flex flex-wrap gap-2">
+                                    {data.groupLabels.map((label, groupIdx) => {
+                                        const active = sel[i] === groupIdx;
+                                        return (
+                                            <button
+                                                key={label}
+                                                onClick={() => assign(i, groupIdx)}
+                                                disabled={checked}
+                                                className={`px-4 py-3 rounded-xl font-bold text-lg transition-all ${active ? 'bg-pastel-green text-white' : 'bg-pastel-beige text-warm-gray hover:bg-pastel-green-light'}`}
+                                            >
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     );
@@ -481,7 +481,7 @@ export function Task6({ onScore, initialData }) {
                     </BigBtn>
                 </div>
             )}
-            {checked && <Result correct={correct} msg={correct ? 'Все вірно! Чудово розкладено.' : `Потрібно було розкласти на ${data.leftLabel} і ${data.rightLabel}.`} />}
+            {checked && <Result correct={correct} msg={correct ? 'Все вірно! Чудово розкладено.' : `Потрібно було розкласти на: ${data.groupLabels.join(', ')}.`} />}
         </Card>
     );
 }
