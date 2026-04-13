@@ -23,6 +23,7 @@ const SAFE_ANTONYM_WORDS = new Set([
   'сумний',
   'нерівне',
   'важка',
+  'ситна',
 ]);
 
 const normalizedLength = (word) => word.replace(/[\s'’\-]/g, '').length;
