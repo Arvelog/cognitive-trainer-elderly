@@ -1,4 +1,30 @@
 import { isSafeAntonymBlock, fallbackAntonymBlock } from './antonyms';
+import { SEQUENCE_DATA } from '../data/taskData';
+import { pick } from './audio';
+
+const SEQUENCE_REPEAT_KEY = 'cognitive_trainer_last_sequence_title';
+
+const getLastSequenceTitle = () => {
+  try {
+    return window.localStorage.getItem(SEQUENCE_REPEAT_KEY) || '';
+  } catch {
+    return '';
+  }
+};
+
+const setLastSequenceTitle = (title) => {
+  try {
+    window.localStorage.setItem(SEQUENCE_REPEAT_KEY, title);
+  } catch {
+    // Ignore storage failures.
+  }
+};
+
+const pickSequenceFallback = (excludeTitle = '') => {
+  const title = String(excludeTitle || '').trim().toLowerCase();
+  const choices = SEQUENCE_DATA.filter((item) => item.title.toLowerCase() !== title);
+  return pick(choices.length > 0 ? choices : SEQUENCE_DATA);
+};
 
 export async function generateAllTasks() {
   try {
@@ -84,6 +110,17 @@ export async function generateAllTasks() {
     if (!isSafeAntonymBlock(data.antonyms)) {
       console.warn('App: antonyms data is too similar or unsafe, using fallback block');
       data.antonyms = fallbackAntonymBlock();
+    }
+
+    const sequenceTitle = String(data.sequence?.title || '').trim().toLowerCase();
+    const lastSequenceTitle = getLastSequenceTitle();
+    if (!sequenceTitle || sequenceTitle.includes('компот') || sequenceTitle === lastSequenceTitle) {
+      console.warn('App: sequence data is repetitive, using fallback block');
+      data.sequence = pickSequenceFallback(lastSequenceTitle);
+    }
+
+    if (data.sequence?.title) {
+      setLastSequenceTitle(data.sequence.title);
     }
 
     return data;
