@@ -11,7 +11,7 @@ const SAFE_ANTONYM_WORDS = new Set([
   'пуста',
   'вузька',
   'мокрий',
-  'гучна',
+  'шумна',
   "м'яка",
   'легка',
   'новий',
@@ -24,6 +24,7 @@ const SAFE_ANTONYM_WORDS = new Set([
   'нерівне',
   'важка',
   'ситна',
+  'холодне',
 ]);
 
 const normalizedLength = (word) => word.replace(/[\s'’\-]/g, '').length;
