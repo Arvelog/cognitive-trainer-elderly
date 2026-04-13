@@ -18,6 +18,22 @@ export default async function handler(req) {
             return new Response(JSON.stringify({ error: 'Missing prompt' }), { status: 400 });
         }
 
+        const toDataUrl = async (url) => {
+            const imageResponse = await fetch(url);
+            if (!imageResponse.ok) {
+                throw new Error(`Failed to fetch generated image: ${imageResponse.status}`);
+            }
+
+            const contentType = imageResponse.headers.get('content-type') || 'image/png';
+            const bytes = new Uint8Array(await imageResponse.arrayBuffer());
+            let binary = '';
+            const chunkSize = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+            }
+            return `data:${contentType};base64,${btoa(binary)}`;
+        };
+
         // Step 1: Generate image with DALL-E
         const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
             method: 'POST',
@@ -45,6 +61,13 @@ export default async function handler(req) {
 
         if (!imageUrl) {
             return new Response(JSON.stringify({ error: 'No image URL in response' }), { status: 500 });
+        }
+
+        let finalImageUrl = imageUrl;
+        try {
+            finalImageUrl = await toDataUrl(imageUrl);
+        } catch (e) {
+            console.error('Failed to convert generated image to data URL:', e);
         }
 
         // Step 2: Analyze image with GPT Vision to generate matching questions
@@ -109,7 +132,7 @@ export default async function handler(req) {
             console.error('Vision API error:', await visionResponse.text());
         }
 
-        return new Response(JSON.stringify({ url: imageUrl, questions }), {
+        return new Response(JSON.stringify({ url: finalImageUrl, questions }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });
