@@ -3,14 +3,15 @@ import { ANTONYM_DATA } from '../data/taskData';
 const SAFE_ANTONYM_WORDS = new Set([
   'холодна',
   'холодне',
+  'брудний',
+  'вузький',
+  'далекий',
   'велика',
   'мала',
   'темно',
   'поруч',
   'пізній',
-  'брудна',
   'пуста',
-  'вузька',
   'мокрий',
   'шумна',
   "м'яка",
@@ -26,7 +27,7 @@ const SAFE_ANTONYM_WORDS = new Set([
   'нерівне',
   'важка',
   'ситна',
-  'холодне',
+  'тихий',
 ]);
 
 const normalizedLength = (word) => word.replace(/[\s'’\-]/g, '').length;
