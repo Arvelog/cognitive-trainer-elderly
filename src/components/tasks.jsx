@@ -733,6 +733,11 @@ export function Task11({ onScore, initialData }) {
     const [selected, setSelected] = useState(new Set());
     const [checked, setChecked] = useState(false);
     const numChanges = data.changes.length;
+    const resetAttempt = () => {
+        setRevealed(false);
+        setSelected(new Set());
+        setChecked(false);
+    };
 
     const toggle = (i) => {
         if (!revealed || checked) return;
@@ -804,6 +809,13 @@ export function Task11({ onScore, initialData }) {
                     </p>
                 )}
                 {checked && <Result correct={correct} msg={correct ? 'Чудова пам\'ять! Ви знайшли всі зміни!' : `Змінились: позиції ${[...changedIndices].map((i) => i + 1).join(', ')}`} />}
+                {checked && !correct && (
+                    <div className="text-center mt-4">
+                        <BigBtn onClick={resetAttempt} className="bg-pastel-beige-dark text-warm-gray">
+                            Спробувати ще раз
+                        </BigBtn>
+                    </div>
+                )}
             </div>
         </Card>
     );
