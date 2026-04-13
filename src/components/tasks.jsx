@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Card, BigBtn, TaskHeader, Result } from './common';
 import { playCorrect, playWrong, fireConfetti, shuffle, pick } from '../lib/audio';
@@ -729,24 +729,13 @@ export function Task11({ onScore, initialData }) {
         return g;
     })[0];
     const changedIndices = useState(() => new Set(data.changes.map((c) => c.idx)))[0];
-    const [phase, setPhase] = useState('memorize');
-    const [timer, setTimer] = useState(12);
+    const [revealed, setRevealed] = useState(false);
     const [selected, setSelected] = useState(new Set());
     const [checked, setChecked] = useState(false);
     const numChanges = data.changes.length;
 
-    useEffect(() => {
-        if (phase !== 'memorize') return;
-        if (timer <= 0) {
-            setPhase('find');
-            return;
-        }
-        const id = setTimeout(() => setTimer((t) => t - 1), 1000);
-        return () => clearTimeout(id);
-    }, [phase, timer]);
-
     const toggle = (i) => {
-        if (phase !== 'find' || checked) return;
+        if (!revealed || checked) return;
         const n = new Set(selected);
         n.has(i) ? n.delete(i) : (n.size < numChanges && n.add(i));
         setSelected(n);
@@ -762,39 +751,23 @@ export function Task11({ onScore, initialData }) {
         } else playWrong();
     };
 
-    const grid = phase === 'memorize' ? data.items : changedGrid;
+    const grid = revealed ? changedGrid : data.items;
     const selectedCount = selected.size;
-    const phaseTitle = phase === 'memorize' ? 'Крок 1: Запам\'ятайте' : 'Крок 2: Знайдіть зміни';
-    const phaseDesc =
-        phase === 'memorize'
-            ? `Подивіться на 6 карток. Через ${timer} сек. вони зміняться.`
-            : `Торкніться ${numChanges} карток, які стали іншими.`;
 
     return (
         <Card>
-            <TaskHeader icon="👀" title="Що змінилось?" desc={phaseDesc} />
+            <TaskHeader
+                icon="👀"
+                title="Що змінилось?"
+                desc={revealed ? `Тепер знайдіть ${numChanges} змінені картки.` : 'Спочатку запам\'ятайте 6 карток, потім натисніть кнопку.'}
+            />
             <div className="max-w-md mx-auto">
-                <div className="flex items-center justify-center gap-3 mb-4">
-                    <div className={`px-3 py-1.5 rounded-full text-sm font-bold ${phase === 'memorize' ? 'bg-pastel-yellow text-warm-gray' : 'bg-gray-100 text-warm-gray-light'}`}>
-                        1
-                    </div>
-                    <div className={`px-3 py-1.5 rounded-full text-sm font-bold ${phase === 'find' ? 'bg-pastel-green text-white' : 'bg-gray-100 text-warm-gray-light'}`}>
-                        2
-                    </div>
-                </div>
                 <div className="mb-4 p-4 rounded-2xl bg-white/70 border border-pastel-beige-dark text-center">
-                    <p className="text-xl md:text-2xl font-extrabold text-warm-gray">{phaseTitle}</p>
+                    <p className="text-xl md:text-2xl font-extrabold text-warm-gray">{revealed ? 'Крок 2: Знайдіть зміни' : 'Крок 1: Запам\'ятайте'}</p>
                     <p className="text-sm md:text-base text-warm-gray-light mt-1">
-                        {phase === 'memorize'
-                            ? 'Просто дивіться і запамʼятовуйте.'
-                            : `Знайдено ${selectedCount} з ${numChanges}.`}
+                        {revealed ? `Знайдено ${selectedCount} з ${numChanges}.` : 'Просто дивіться і запамʼятовуйте.'}
                     </p>
                 </div>
-                {phase === 'memorize' && (
-                    <div className="text-center mb-4">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pastel-yellow text-3xl font-extrabold text-warm-gray">{timer}</div>
-                    </div>
-                )}
                 <div className="grid grid-cols-3 gap-3">
                     {grid.map((item, i) => {
                         const isSel = selected.has(i);
@@ -803,21 +776,29 @@ export function Task11({ onScore, initialData }) {
                             <button
                                 key={i}
                                 onClick={() => toggle(i)}
-                                className={`aspect-square text-5xl md:text-6xl rounded-2xl border-3 transition-all duration-200 flex items-center justify-center ${phase === 'memorize' ? 'bg-white border-pastel-beige-dark cursor-default' : checked ? (isChanged ? (isSel ? 'bg-green-100 border-green-400' : 'bg-yellow-100 border-yellow-400') : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light hover:scale-105 active:scale-95 cursor-pointer'}`}
+                                disabled={!revealed}
+                                className={`aspect-square text-5xl md:text-6xl rounded-2xl border-3 transition-all duration-200 flex items-center justify-center ${!revealed ? 'bg-white border-pastel-beige-dark cursor-default' : checked ? (isChanged ? (isSel ? 'bg-green-100 border-green-400' : 'bg-yellow-100 border-yellow-400') : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light hover:scale-105 active:scale-95 cursor-pointer'}`}
                             >
                                 {item}
                             </button>
                         );
                     })}
                 </div>
-                {phase === 'find' && !checked && selected.size === numChanges && (
+                {!revealed && (
+                    <div className="text-center mt-6">
+                        <BigBtn onClick={() => setRevealed(true)} className="bg-pastel-green text-warm-gray">
+                            Показати зміни
+                        </BigBtn>
+                    </div>
+                )}
+                {revealed && !checked && selected.size === numChanges && (
                     <div className="text-center mt-6">
                         <BigBtn onClick={check} className="bg-pastel-green text-warm-gray">
                             Перевірити
                         </BigBtn>
                     </div>
                 )}
-                {phase === 'find' && !checked && selected.size < numChanges && (
+                {revealed && !checked && selected.size < numChanges && (
                     <p className="text-center text-sm md:text-base text-warm-gray-light mt-4">
                         Залишилось вибрати: {numChanges - selected.size}
                     </p>
