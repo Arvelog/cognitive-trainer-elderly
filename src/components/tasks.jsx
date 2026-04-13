@@ -779,13 +779,18 @@ export function Task9({ onScore, initialData }) {
     );
 }
 
-export function Task10({ onScore, initialData, imageUrl }) {
+export function Task10({ onScore, initialData, imageUrl, scenePrompt }) {
     const [data] = useState(() => initialData || pick(VERB_DATA));
     const [options] = useState(() => shuffle([...data.correct, ...data.wrong]));
     const [sel, setSel] = useState(new Set());
     const [checked, setChecked] = useState(false);
     const [imgLoaded, setImgLoaded] = useState(false);
     const [imgError, setImgError] = useState(false);
+
+    useEffect(() => {
+        setImgLoaded(false);
+        setImgError(false);
+    }, [imageUrl]);
 
     const toggle = (opt) => {
         if (checked) return;
@@ -820,7 +825,8 @@ export function Task10({ onScore, initialData, imageUrl }) {
                     </div>
                 ) : (
                     <div className="mb-4 md:mb-6 p-6 bg-pastel-beige rounded-3xl">
-                        <p className="text-4xl font-bold text-warm-gray">🖼️ {data.title}</p>
+                        <p className="text-4xl font-bold text-warm-gray mb-2">🖼️ {data.title}</p>
+                        {scenePrompt && <p className="text-lg md:text-xl text-warm-gray-light leading-snug">{scenePrompt}</p>}
                     </div>
                 )}
                 <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть 3 правильні відповіді</p>

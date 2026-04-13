@@ -1,5 +1,5 @@
 import { isSafeAntonymBlock, fallbackAntonymBlock } from './antonyms';
-import { SEQUENCE_DATA } from '../data/taskData';
+import { SEQUENCE_DATA, VERB_DATA } from '../data/taskData';
 import { pick } from './audio';
 
 const SEQUENCE_REPEAT_KEY = 'cognitive_trainer_last_sequence_title';
@@ -25,6 +25,13 @@ const pickSequenceFallback = (excludeTitle = '') => {
   const choices = SEQUENCE_DATA.filter((item) => item.title.toLowerCase() !== title);
   return pick(choices.length > 0 ? choices : SEQUENCE_DATA);
 };
+
+const isValidScenePrompt = (scene) => {
+  const text = String(scene || '').trim();
+  return text.length >= 24 && /[A-Za-z]/.test(text) && /[a-z]/i.test(text);
+};
+
+const pickSceneFallback = () => pick(VERB_DATA).scene;
 
 export async function generateAllTasks() {
   try {
@@ -130,6 +137,12 @@ export async function generateAllTasks() {
     if (!isSafeAntonymBlock(data.antonyms)) {
       console.warn('App: antonyms data is too similar or unsafe, using fallback block');
       data.antonyms = fallbackAntonymBlock();
+    }
+
+    const scenePrompt = data.verbs?.scene;
+    if (!isValidScenePrompt(scenePrompt)) {
+      console.warn('App: scene prompt is missing or too weak, using fallback scene');
+      data.verbs = { ...(data.verbs || {}), scene: pickSceneFallback() };
     }
 
     const sequenceTitle = String(data.sequence?.title || '').trim().toLowerCase();

@@ -2,8 +2,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Brain, Star, RefreshCw, Loader2, Heart, Sparkles, Volume2 } from 'lucide-react';
 import { Card, BigBtn } from './components/common';
 import { generateAllTasks } from './lib/generate';
-import { playVictory, fireConfetti } from './lib/audio';
-import { TOTAL_TASKS, SLIDES } from './data/taskData';
+import { playVictory, fireConfetti, pick } from './lib/audio';
+import { TOTAL_TASKS, SLIDES, VERB_DATA } from './data/taskData';
 import { Task1, Task2, Task3, Task4, Task5, Task6, Task7, Task8, Task9, Task10, Task11 } from './components/tasks';
 
 export default function App() {
@@ -17,6 +17,7 @@ export default function App() {
     const [started, setStarted] = useState(false);
     const [verbImage, setVerbImage] = useState(null);
     const [verbQuestions, setVerbQuestions] = useState(null);
+    const [verbScene, setVerbScene] = useState(null);
     const addScore = useCallback(() => setScore((s) => s + 1), []);
     const next = () => setSlide((s) => Math.min(s + 1, SLIDES - 1));
     const prev = () => setSlide((s) => Math.max(s - 1, 0));
@@ -29,6 +30,7 @@ export default function App() {
         setStarted(false);
         setVerbImage(null);
         setVerbQuestions(null);
+        setVerbScene(null);
         setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random()));
     };
 
@@ -39,12 +41,14 @@ export default function App() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: scene }),
             });
-            if (!res.ok) return;
+            if (!res.ok) return false;
             const { url, questions } = await res.json();
             if (url) setVerbImage(url);
             if (questions) setVerbQuestions(questions);
+            return Boolean(url);
         } catch {
             // Silently fail; Task10 falls back to the emoji version.
+            return false;
         }
     };
 
@@ -53,6 +57,8 @@ export default function App() {
         setGenError(false);
         setRateLimitError(false);
         setVerbImage(null);
+        setVerbQuestions(null);
+        setVerbScene(null);
         const data = await generateAllTasks();
         setGenerating(false);
         if (data && data._rateLimited) {
@@ -60,9 +66,22 @@ export default function App() {
             setAiData(null);
         } else if (data) {
             setAiData(data);
-            if (data.verbs?.scene) generateImage(data.verbs.scene);
+            const scene = typeof data.verbs?.scene === 'string' && data.verbs.scene.trim().length >= 24
+                ? data.verbs.scene
+                : pick(VERB_DATA).scene;
+            setVerbScene(scene);
+            generateImage(scene).then((ok) => {
+                if (!ok) {
+                    const fallback = pick(VERB_DATA).scene;
+                    setVerbScene(fallback);
+                    generateImage(fallback);
+                }
+            });
         } else {
             setGenError(true);
+            const fallback = pick(VERB_DATA).scene;
+            setVerbScene(fallback);
+            generateImage(fallback);
         }
         setStarted(true);
         next();
@@ -86,7 +105,7 @@ export default function App() {
         <Task6 key={taskKeys[5]} onScore={addScore} initialData={aiData?.categories} />,
         <Task9 key={taskKeys[8]} onScore={addScore} initialData={aiData?.vowels} />,
         <Task7 key={taskKeys[6]} onScore={addScore} initialData={aiData?.trueFalse} />,
-        <Task10 key={`${taskKeys[9]}-${verbQuestions ? 'v' : 'f'}`} onScore={addScore} initialData={verbQuestions?.correct ? verbQuestions : null} imageUrl={verbImage} />,
+        <Task10 key={`${taskKeys[9]}-${verbQuestions ? 'v' : 'f'}`} onScore={addScore} initialData={verbQuestions?.correct ? verbQuestions : null} imageUrl={verbImage} scenePrompt={verbScene} />,
         <Task11 key={taskKeys[10]} onScore={addScore} initialData={aiData?.whatChanged} />,
     ];
 

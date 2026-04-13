@@ -165,9 +165,10 @@ export const VOWELS_DATA = [
 ];
 
 export const VERB_DATA = [
-  { title: 'Кухня', context: 'Що відбувається на цій сцені?', correct: ['Жінка варить борщ', 'На плиті кипить каструля', 'На столі лежать овочі'], wrong: ['Хтось грає на гітарі', 'Діти будують сніговика', 'Чоловік миє машину'] },
-  { title: 'Город', context: 'Що відбувається на цій сцені?', correct: ['Бабуся поливає грядки', 'Ростуть помідори', 'Сонце світить над городом'], wrong: ['Іде сильний дощ', 'Хтось читає книгу', 'Діти грають у м\'яча'] },
-  { title: 'Парк', context: 'Що відбувається на цій сцені?', correct: ['Люди гуляють алеєю', 'На лавці сидить пара', 'Дерева зеленіють'], wrong: ['Хтось їде на лижах', 'Кухар готує обід', 'Машина їде дорогою'] },
+  { title: 'Кухня', scene: 'A woman cooking soup in a cozy kitchen with vegetables on the table and a pot on the stove', context: 'Що відбувається на цій сцені?', correct: ['Жінка варить борщ', 'На плиті кипить каструля', 'На столі лежать овочі'], wrong: ['Хтось грає на гітарі', 'Діти будують сніговика', 'Чоловік миє машину'] },
+  { title: 'Город', scene: 'A grandmother watering tomato plants in a sunny garden with a watering can and a small basket nearby', context: 'Що відбувається на цій сцені?', correct: ['Бабуся поливає грядки', 'Ростуть помідори', 'Сонце світить над городом'], wrong: ['Іде сильний дощ', 'Хтось читає книгу', 'Діти грають у м\'яча'] },
+  { title: 'Парк', scene: 'People walking along a park path with green trees, a bench, and a couple sitting together', context: 'Що відбувається на цій сцені?', correct: ['Люди гуляють алеєю', 'На лавці сидить пара', 'Дерева зеленіють'], wrong: ['Хтось їде на лижах', 'Кухар готує обід', 'Машина їде дорогою'] },
+  { title: 'Ринок', scene: 'A family buying fresh vegetables at a market, baskets on the table and smiling sellers nearby', context: 'Що відбувається на цій сцені?', correct: ['Люди купують овочі', 'На прилавку лежать кошики', 'Покупці розмовляють з продавцем'], wrong: ['Хтось малює картину', 'Діти сплять у ліжку', 'Літак летить у небі'] },
 ];
 
 export const WHATCHANGED_DATA = [
