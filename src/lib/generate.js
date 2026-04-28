@@ -1,5 +1,5 @@
 import { isSafeAntonymBlock, fallbackAntonymBlock } from './antonyms';
-import { SEQUENCE_DATA, VERB_DATA } from '../data/taskData';
+import { MATCH_NEED_DATA, SEQUENCE_DATA, VERB_DATA } from '../data/taskData';
 import { pick } from './audio';
 
 const SEQUENCE_REPEAT_KEY = 'cognitive_trainer_last_sequence_title';
@@ -32,6 +32,40 @@ const isValidScenePrompt = (scene) => {
 };
 
 const pickSceneFallback = () => pick(VERB_DATA).scene;
+
+const normalizeMatchText = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[’`]/g, "'");
+
+const pickMatchNeedFallback = (excludePrompt = '') => {
+  const prompt = normalizeMatchText(excludePrompt);
+  const choices = MATCH_NEED_DATA.filter((item) => normalizeMatchText(item.prompt) !== prompt);
+  return pick(choices.length > 0 ? choices : MATCH_NEED_DATA);
+};
+
+const toTrustedMatchNeedBlock = (matchWord) => {
+  const prompt = normalizeMatchText(matchWord?.word || matchWord?.prompt);
+  const options = Array.isArray(matchWord?.options) ? matchWord.options.map(normalizeMatchText) : [];
+  const correctIndexes = Array.isArray(matchWord?.correct) ? matchWord.correct : [];
+  const correctOptions = new Set(
+    correctIndexes
+      .filter((idx) => Number.isInteger(idx) && idx >= 0 && idx < options.length)
+      .map((idx) => options[idx]),
+  );
+
+  const trusted = MATCH_NEED_DATA.find((item) => {
+    if (normalizeMatchText(item.prompt) !== prompt) return false;
+
+    const expectedCorrect = new Set(item.correct.map((idx) => normalizeMatchText(item.options[idx])));
+    if (expectedCorrect.size !== correctOptions.size) return false;
+
+    return [...expectedCorrect].every((option) => correctOptions.has(option));
+  });
+
+  return trusted ? { ...trusted } : null;
+};
 
 export async function generateAllTasks() {
   try {
@@ -132,7 +166,13 @@ export async function generateAllTasks() {
       return null;
     }
 
-    data.matchWord = matchWord;
+    const trustedMatchWord = toTrustedMatchNeedBlock(matchWord);
+    if (!trustedMatchWord) {
+      console.warn('App: matchWord semantic quality is not trusted, using fallback block');
+      data.matchWord = pickMatchNeedFallback(matchWord.word || matchWord.prompt);
+    } else {
+      data.matchWord = trustedMatchWord;
+    }
 
     if (!isSafeAntonymBlock(data.antonyms)) {
       console.warn('App: antonyms data is too similar or unsafe, using fallback block');
