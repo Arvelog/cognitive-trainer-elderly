@@ -47,22 +47,7 @@ const pickMatchNeedFallback = (excludePrompt = '') => {
 
 const toTrustedMatchNeedBlock = (matchWord) => {
   const prompt = normalizeMatchText(matchWord?.word || matchWord?.prompt);
-  const options = Array.isArray(matchWord?.options) ? matchWord.options.map(normalizeMatchText) : [];
-  const correctIndexes = Array.isArray(matchWord?.correct) ? matchWord.correct : [];
-  const correctOptions = new Set(
-    correctIndexes
-      .filter((idx) => Number.isInteger(idx) && idx >= 0 && idx < options.length)
-      .map((idx) => options[idx]),
-  );
-
-  const trusted = MATCH_NEED_DATA.find((item) => {
-    if (normalizeMatchText(item.prompt) !== prompt) return false;
-
-    const expectedCorrect = new Set(item.correct.map((idx) => normalizeMatchText(item.options[idx])));
-    if (expectedCorrect.size !== correctOptions.size) return false;
-
-    return [...expectedCorrect].every((option) => correctOptions.has(option));
-  });
+  const trusted = MATCH_NEED_DATA.find((item) => normalizeMatchText(item.prompt) === prompt);
 
   return trusted ? { ...trusted } : null;
 };
@@ -143,33 +128,10 @@ export async function generateAllTasks() {
     }
 
     const matchWord = data.matchWord || data.findOdd;
-    const normalizedPrompt = String(matchWord?.word || '').trim().toLowerCase();
-    const normalizedOptions = Array.isArray(matchWord?.options)
-      ? matchWord.options.map((option) => String(option || '').trim().toLowerCase())
-      : [];
-    const normalizedCorrect = Array.isArray(matchWord?.correct) ? matchWord.correct : [];
-    if (
-      !matchWord ||
-      typeof matchWord.word !== 'string' ||
-      !Array.isArray(matchWord.options) ||
-      matchWord.options.length !== 5 ||
-      !Array.isArray(matchWord.correct) ||
-      normalizedCorrect.length !== 2 ||
-      !normalizedCorrect.every((idx) => Number.isInteger(idx) && idx >= 0 && idx < 5) ||
-      new Set(normalizedCorrect).size !== 2 ||
-      !normalizedPrompt ||
-      normalizedOptions.some((option) => !option) ||
-      new Set(normalizedOptions).size !== 5 ||
-      normalizedOptions.includes(normalizedPrompt)
-    ) {
-      console.warn('App: matchWord data is malformed, using fallback to prevent UI breakage');
-      return null;
-    }
-
     const trustedMatchWord = toTrustedMatchNeedBlock(matchWord);
     if (!trustedMatchWord) {
       console.warn('App: matchWord semantic quality is not trusted, using fallback block');
-      data.matchWord = pickMatchNeedFallback(matchWord.word || matchWord.prompt);
+      data.matchWord = pickMatchNeedFallback(matchWord?.word || matchWord?.prompt);
     } else {
       data.matchWord = trustedMatchWord;
     }
