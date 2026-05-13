@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2 } from 'lucide-react';
-import { Card, BigBtn, TaskHeader, Result } from './common';
+import { Check, Eye, Lightbulb, Loader2, RotateCcw } from 'lucide-react';
+import { Card, BigBtn, ChoiceButton, MiniBtn, TaskHeader, Result } from './common';
 import { playCorrect, playWrong, fireConfetti, shuffle, pick } from '../lib/audio';
+import { isRecentValue, pickExcludingRecent, rememberRecentValue } from '../lib/recentTasks';
+import { useTaskImages } from '../lib/taskImages';
 import {
     MATCH_NEED_DATA,
     FIND_ODD_DATA,
@@ -18,15 +20,75 @@ import {
     removeVowels,
 } from '../data/taskData';
 
+const MATCH_REPEAT_KEY = 'cognitive_trainer_recent_match_prompts';
+const SEQUENCE_REPEAT_KEY = 'cognitive_trainer_last_sequence_title';
+const BUDGET_REPEAT_KEY = 'cognitive_trainer_recent_budget_labels';
+const ANTONYM_REPEAT_KEY = 'cognitive_trainer_recent_antonym_blocks';
+
+const antonymBlockKey = (block) =>
+    (block?.sentences || [])
+        .map((item) => String(item?.a || '').trim().toLowerCase().replace(/[’`]/g, "'"))
+        .filter(Boolean)
+        .join('|');
+
+function VisualTile({ visual, imageUrl, compact = false, large = false, hideLabel = false }) {
+    const item = visual || { label: '', fallback: '', emoji: '' };
+    const fallback = item.emoji || item.fallback || item.label || '';
+    const fallbackText = fallback.length <= 4 ? fallback : item.label?.slice(0, 1);
+    const imageSize = large
+        ? 'h-44 w-full max-w-[220px] md:h-56 md:max-w-[280px]'
+        : compact
+            ? 'h-14 w-14'
+            : 'h-24 w-24 md:h-28 md:w-28';
+    const fallbackSize = large
+        ? 'text-7xl md:text-8xl'
+        : compact
+            ? 'text-3xl'
+            : 'text-5xl md:text-6xl';
+
+    return (
+        <div className={`flex w-full flex-col items-center justify-center gap-2 ${compact ? 'min-w-0' : ''}`}>
+            <div className={`${imageSize} flex items-center justify-center overflow-hidden rounded-2xl bg-white/80 shadow-inner`}>
+                {imageUrl ? (
+                    <img
+                        src={imageUrl}
+                        alt={item.label}
+                        loading="lazy"
+                        className="h-full w-full object-contain"
+                    />
+                ) : (
+                    <span className={`${fallbackSize} font-extrabold text-warm-gray`}>
+                        {fallbackText}
+                    </span>
+                )}
+            </div>
+            {!hideLabel && (
+                <span className={`${compact ? 'text-sm md:text-base' : 'text-xl md:text-2xl'} max-w-full text-center font-extrabold leading-tight text-warm-gray`}>
+                    {item.label}
+                </span>
+            )}
+        </div>
+    );
+}
+
 export function Task1({ onScore, initialData }) {
     const [data] = useState(() => {
+        const fallbackItems = MATCH_NEED_DATA.length ? MATCH_NEED_DATA : FIND_ODD_DATA;
         if (initialData?.prompt && Array.isArray(initialData.options) && Array.isArray(initialData.correct)) {
+            if (isRecentValue(MATCH_REPEAT_KEY, initialData.prompt, 12)) {
+                return pickExcludingRecent(fallbackItems, MATCH_REPEAT_KEY, (item) => item.prompt, 12) || pick(fallbackItems);
+            }
+            rememberRecentValue(MATCH_REPEAT_KEY, initialData.prompt, 12);
             return initialData;
         }
         if (initialData?.word && Array.isArray(initialData.options) && Array.isArray(initialData.correct)) {
+            if (isRecentValue(MATCH_REPEAT_KEY, initialData.word, 12)) {
+                return pickExcludingRecent(fallbackItems, MATCH_REPEAT_KEY, (item) => item.prompt, 12) || pick(fallbackItems);
+            }
+            rememberRecentValue(MATCH_REPEAT_KEY, initialData.word, 12);
             return { prompt: initialData.word, options: initialData.options, correct: initialData.correct, hint: initialData.hint };
         }
-        return pick(MATCH_NEED_DATA.length ? MATCH_NEED_DATA : FIND_ODD_DATA);
+        return pickExcludingRecent(fallbackItems, MATCH_REPEAT_KEY, (item) => item.prompt, 12) || pick(fallbackItems);
     });
     const [selected, setSelected] = useState([]);
     const [checked, setChecked] = useState(false);
@@ -61,41 +123,42 @@ export function Task1({ onScore, initialData }) {
             </div>
             <p className="text-center text-2xl md:text-3xl font-medium text-warm-gray-light mb-6">Потрібно вибрати 2 предмети.</p>
             <div className="grid grid-cols-2 gap-4 md:gap-6 max-w-2xl mx-auto">
-                {data.options.map((it, i) => (
-                    <button
-                        key={i}
-                        onClick={() => handleClick(i)}
-                        className={`min-h-[88px] flex items-center justify-center p-4 md:p-6 text-2xl md:text-3xl font-bold text-center leading-tight rounded-2xl border-3 transition-all duration-200 ${
-                            checked
-                                ? selectedSet.has(i)
-                                    ? data.correct.includes(i)
-                                        ? 'bg-green-100 border-green-400'
-                                        : 'bg-red-100 border-red-400'
-                                    : data.correct.includes(i)
-                                        ? 'bg-green-100 border-green-400'
-                                        : 'bg-gray-50 border-gray-200'
-                                : selected.includes(i)
-                                    ? 'bg-pastel-green-light border-pastel-green scale-[1.02]'
-                                : 'bg-white border-pastel-green hover:bg-pastel-green-light hover:scale-105 active:scale-95'
-                        }`}
-                    >
-                        {it}
-                    </button>
-                ))}
+                {data.options.map((it, i) => {
+                    const state = checked
+                        ? data.correct.includes(i)
+                            ? 'correct'
+                            : selectedSet.has(i)
+                                ? 'incorrect'
+                                : 'muted'
+                        : selected.includes(i)
+                            ? 'selected'
+                            : 'idle';
+                    return (
+                        <ChoiceButton
+                            key={i}
+                            onClick={() => handleClick(i)}
+                            state={state}
+                            className="min-h-[88px] flex items-center justify-center border-3 p-4 md:p-6 text-2xl md:text-3xl font-bold leading-tight hover:scale-[1.03]"
+                        >
+                            {it}
+                        </ChoiceButton>
+                    );
+                })}
             </div>
             {checked && <Result correct={correct} msg={correct ? 'Чудово! Ви вибрали все потрібне.' : `Потрібно: ${data.correct.map((idx) => data.options[idx]).join(' + ')}`} />}
             {wrong && (
                 <div className="flex justify-center mt-6">
-                    <button
+                    <MiniBtn
                         onClick={() => {
                             setSelected([]);
                             setChecked(false);
                             setWrong(false);
                         }}
-                        className="px-6 py-3 rounded-full bg-pastel-beige text-warm-gray font-semibold text-lg hover:bg-pastel-beige-dark transition-colors"
+                        className="bg-pastel-beige text-warm-gray hover:bg-pastel-beige-dark"
                     >
+                        <RotateCcw className="h-5 w-5" />
                         Спробувати ще раз
-                    </button>
+                    </MiniBtn>
                 </div>
             )}
         </Card>
@@ -103,7 +166,16 @@ export function Task1({ onScore, initialData }) {
 }
 
 export function Task2({ onScore, initialData }) {
-    const [data] = useState(() => initialData || pick(SEQUENCE_DATA));
+    const [data] = useState(() => {
+        if (initialData?.title && Array.isArray(initialData.steps)) {
+            if (isRecentValue(SEQUENCE_REPEAT_KEY, initialData.title, 7)) {
+                return pickExcludingRecent(SEQUENCE_DATA, SEQUENCE_REPEAT_KEY, (item) => item.title, 7) || pick(SEQUENCE_DATA);
+            }
+            rememberRecentValue(SEQUENCE_REPEAT_KEY, initialData.title, 7);
+            return initialData;
+        }
+        return pickExcludingRecent(SEQUENCE_DATA, SEQUENCE_REPEAT_KEY, (item) => item.title, 7) || pick(SEQUENCE_DATA);
+    });
     const [shuffled] = useState(() => shuffle(data.steps.map((s, i) => ({ text: s, idx: i }))));
     const [selected, setSelected] = useState([]);
     const [checked, setChecked] = useState(false);
@@ -136,21 +208,18 @@ export function Task2({ onScore, initialData }) {
                 <div className="max-w-lg mx-auto mb-4 space-y-2">
                     <p className="text-sm font-bold text-warm-gray">Ваш порядок:</p>
                     {selected.map((s, i) => (
-                        <div
+                        <ChoiceButton
                             key={i}
                             onClick={() => !checked && undoFrom(i)}
-                            className={`flex items-center gap-3 p-3 rounded-2xl ${
-                                checked
-                                    ? s.idx === i
-                                        ? 'bg-green-100 border-2 border-green-400'
-                                        : 'bg-red-100 border-2 border-red-400'
-                                    : 'bg-pastel-green-light border-2 border-pastel-green cursor-pointer hover:bg-red-50 hover:border-red-300 active:scale-[0.98] transition-all'
-                            }`}
+                            disabled={checked}
+                            state={checked ? (s.idx === i ? 'correct' : 'incorrect') : 'selected'}
+                            align="left"
+                            className="flex w-full items-center gap-3 p-3"
                         >
                             <span className="w-10 h-10 flex items-center justify-center rounded-full bg-pastel-green text-white font-bold text-2xl">{i + 1}</span>
                             <span className="text-2xl font-semibold text-warm-gray">{s.text}</span>
                             {!checked && <span className="ml-auto text-warm-gray-light text-lg">✕</span>}
-                        </div>
+                        </ChoiceButton>
                     ))}
                 </div>
             )}
@@ -159,14 +228,15 @@ export function Task2({ onScore, initialData }) {
                     const used = selected.find((s) => s.idx === item.idx);
                     if (used) return null;
                     return (
-                        <button
+                        <ChoiceButton
                             key={i}
                             onClick={() => tapStep(item)}
                             disabled={checked}
-                            className="w-full text-left p-4 md:p-5 rounded-2xl border-2 transition-all text-xl md:text-2xl font-semibold bg-white border-pastel-beige-dark hover:bg-pastel-green-light hover:border-pastel-green active:scale-[0.98]"
+                            align="left"
+                            className="w-full p-4 md:p-5 text-xl md:text-2xl font-semibold"
                         >
                             {item.text}
-                        </button>
+                        </ChoiceButton>
                     );
                 })}
             </div>
@@ -176,7 +246,13 @@ export function Task2({ onScore, initialData }) {
 }
 
 export function Task3({ onScore, initialData }) {
-    const [data] = useState(() => initialData || pick(BUDGET_DATA));
+    const [data] = useState(() => {
+        if (initialData?.label && Array.isArray(initialData.items)) {
+            rememberRecentValue(BUDGET_REPEAT_KEY, initialData.label, 4);
+            return initialData;
+        }
+        return pickExcludingRecent(BUDGET_DATA, BUDGET_REPEAT_KEY, (item) => item.label, 4) || pick(BUDGET_DATA);
+    });
     const total = data.items.reduce((s, i) => s + i.p * (i.qty || 1), 0);
     const rest = data.wallet - total;
     const [inputTotal, setInputTotal] = useState('');
@@ -326,17 +402,17 @@ export function Task4({ onScore, initialData }) {
                         <div className={`min-h-[100px] p-5 mb-6 rounded-3xl border-3 transition-all duration-300 flex flex-wrap gap-2 items-center justify-center ${built.length === words.length ? (built.join(' ') === sentence ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-400 animate-pulse') : 'bg-white border-pastel-green border-dashed'}`}>
                             {built.length === 0 && <span className="text-warm-gray-light text-xl italic">Натискайте на слова, щоб скласти речення...</span>}
                             {built.map((w, i) => (
-                                <button key={`b-${i}`} onClick={() => removeWord(w, i)} className="px-5 py-3 bg-pastel-green text-white font-bold rounded-2xl text-2xl shadow-md hover:bg-green-500 active:scale-90 transition-all" style={{ animation: 'snt-word-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' }}>
+                                <ChoiceButton key={`b-${i}`} onClick={() => removeWord(w, i)} state="selected" className="px-5 py-3 text-2xl font-bold shadow-md hover:bg-green-200 active:scale-90" style={{ animation: 'snt-word-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' }}>
                                     {w}
-                                </button>
+                                </ChoiceButton>
                             ))}
                         </div>
 
                         <div className="flex flex-wrap gap-3 justify-center">
                             {pool.map((w, i) => (
-                                <button key={`p-${i}-${w}`} onClick={() => addWord(w, i)} className="px-5 py-3 bg-white border-2 border-pastel-beige-dark text-warm-gray font-bold rounded-2xl text-2xl shadow-sm hover:border-pastel-green hover:bg-pastel-green-light hover:shadow-md active:scale-90 transition-all">
+                                <ChoiceButton key={`p-${i}-${w}`} onClick={() => addWord(w, i)} className="px-5 py-3 text-2xl font-bold shadow-sm hover:shadow-md active:scale-90">
                                     {w}
-                                </button>
+                                </ChoiceButton>
                             ))}
                         </div>
 
@@ -378,6 +454,7 @@ export function Task4({ onScore, initialData }) {
 export function Task5({ onScore, initialData }) {
     const [data] = useState(() => initialData || pick(ASSOC_DATA));
     const [items] = useState(() => shuffle([...data.correct, ...data.wrong]));
+    const { visualItems, images, loading: imagesLoading } = useTaskImages(5, items);
     const [sel, setSel] = useState(new Set());
     const [checked, setChecked] = useState(false);
     const toggle = (it) => {
@@ -399,14 +476,23 @@ export function Task5({ onScore, initialData }) {
         <Card>
             <TaskHeader icon="🔗" title="Асоціації" desc={data.q} />
             <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть 3 правильні відповіді</p>
+            {imagesLoading && (
+                <p className="text-center text-sm md:text-base font-semibold text-warm-gray-light mb-4">Готуємо картинки. Можна відповідати вже зараз.</p>
+            )}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
                 {items.map((it, i) => {
                     const isSel = sel.has(it);
                     const isCorr = data.correct.includes(it);
+                    const visual = visualItems[i];
                     return (
-                        <button key={i} onClick={() => toggle(it)} className={`p-3 md:p-5 text-2xl md:text-3xl font-bold rounded-2xl border-2 transition-all break-words whitespace-normal leading-tight ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-green border-green-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light'}`}>
-                            {it}
-                        </button>
+                        <ChoiceButton
+                            key={i}
+                            onClick={() => toggle(it)}
+                            state={checked ? (isCorr ? 'correct' : isSel ? 'incorrect' : 'muted') : isSel ? 'selected' : 'idle'}
+                            className="min-h-[176px] p-3 md:p-5"
+                        >
+                            <VisualTile visual={visual} imageUrl={visual ? images[visual.cacheKey] : null} />
+                        </ChoiceButton>
                     );
                 })}
             </div>
@@ -425,6 +511,7 @@ export function Task5({ onScore, initialData }) {
 export function Task6({ onScore, initialData }) {
     const [data] = useState(() => initialData || pick(CATEGORY_SORT_DATA));
     const [items] = useState(() => shuffle(data.items));
+    const { visualItems, images, loading: imagesLoading } = useTaskImages(6, items);
     const [placements, setPlacements] = useState({});
     const [selectedItem, setSelectedItem] = useState(null);
     const [dropCue, setDropCue] = useState(null);
@@ -463,9 +550,14 @@ export function Task6({ onScore, initialData }) {
             <TaskHeader icon="📦" title="Розкладіть по 3 кошиках" desc={data.groupLabels.join(' · ')} />
             <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-4">Спочатку виберіть предмет знизу, потім натисніть кошик зверху.</p>
             <p className="text-center text-2xl md:text-3xl font-semibold text-pastel-green mb-6">Розкладено: {chosenCount} з {items.length}</p>
+            {imagesLoading && (
+                <p className="text-center text-sm md:text-base font-semibold text-warm-gray-light mb-4">Картинки завантажуються у фоні.</p>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-6xl mx-auto mb-8">
                 {data.groupLabels.map((label, groupIdx) => {
-                    const assignedItems = items.filter((item, idx) => placements[idx] === groupIdx);
+                    const assignedEntries = items
+                        .map((item, idx) => ({ item, idx }))
+                        .filter(({ idx }) => placements[idx] === groupIdx);
                     const basketStyles = [
                         'border-rose-300 bg-rose-50/80 hover:bg-rose-100',
                         'border-amber-300 bg-amber-50/80 hover:bg-amber-100',
@@ -477,31 +569,38 @@ export function Task6({ onScore, initialData }) {
                         'bg-emerald-200 text-emerald-700',
                     ];
                     return (
-                        <button
+                        <ChoiceButton
                             key={label}
                             onClick={() => selectedItem !== null && assign(selectedItem, groupIdx)}
                             disabled={checked}
+                            align="left"
                             className={`min-h-[180px] rounded-3xl border-4 border-dashed p-4 md:p-6 text-left transition-all active:scale-[0.99] ${basketStyles[groupIdx % basketStyles.length]} ${dropCue?.groupIdx === groupIdx ? 'animate-basket-pop' : ''}`}
                         >
                             <div className={`inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full text-5xl md:text-6xl mb-3 ${iconRing[groupIdx % iconRing.length]}`}>
                                 {data.groupIcons?.[groupIdx] || '🧺'}
                             </div>
                             <div className="text-3xl md:text-4xl font-extrabold text-warm-gray mb-2">{label}</div>
-                            <div className="text-lg md:text-xl font-semibold text-warm-gray-light">Предметів: {assignedItems.length}</div>
+                            <div className="text-lg md:text-xl font-semibold text-warm-gray-light">Предметів: {assignedEntries.length}</div>
                             <div className="mt-3 flex flex-wrap gap-2">
-                                {assignedItems.map((item, idx) => (
-                                    <span key={`${groupIdx}-${idx}`} className="inline-flex items-center px-3 py-2 rounded-full bg-white text-warm-gray font-bold text-lg shadow-sm">
-                                        {item.text}
-                                    </span>
-                                ))}
+                                {assignedEntries.map(({ idx }) => {
+                                    const visual = visualItems[idx];
+                                    return (
+                                        <span key={`${groupIdx}-${idx}`} className="inline-flex max-w-full items-center gap-2 px-3 py-2 rounded-full bg-white text-warm-gray font-bold text-lg shadow-sm">
+                                            {visual && images[visual.cacheKey] && (
+                                                <img src={images[visual.cacheKey]} alt="" className="h-12 w-12 rounded-xl object-cover" />
+                                            )}
+                                            <span className="truncate">{visual?.label || ''}</span>
+                                        </span>
+                                    );
+                                })}
                             </div>
-                        </button>
+                        </ChoiceButton>
                     );
                 })}
             </div>
             <div className="max-w-4xl mx-auto mb-6 text-center">
                 <div className="inline-flex items-center gap-3 px-5 py-3 rounded-full bg-white shadow-sm text-warm-gray font-bold text-xl md:text-2xl">
-                    {selectedItem !== null ? `Вибрано: ${items[selectedItem].text}` : 'Виберіть предмет знизу'}
+                    {selectedItem !== null ? `Вибрано: ${visualItems[selectedItem]?.label || items[selectedItem].text}` : 'Виберіть предмет знизу'}
                 </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
@@ -511,8 +610,9 @@ export function Task6({ onScore, initialData }) {
                     const isWrongPlace = checked && placements[i] !== undefined && placements[i] !== it.group;
                     const isSelected = selectedItem === i;
                     const justDropped = dropCue?.itemIdx === i;
+                    const visual = visualItems[i];
                     return (
-                        <button
+                        <ChoiceButton
                             key={i}
                             onClick={() => {
                                 if (checked) return;
@@ -523,22 +623,11 @@ export function Task6({ onScore, initialData }) {
                                     setSelectedItem((prev) => (prev === i ? null : i));
                                 }
                             }}
-                            className={`p-4 md:p-5 rounded-2xl border-2 transition-all text-2xl md:text-3xl font-bold ${
-                                checked
-                                    ? isCorrectPlace
-                                        ? 'bg-green-100 border-green-400'
-                                        : isWrongPlace
-                                            ? 'bg-red-100 border-red-400'
-                                            : 'bg-gray-50 border-gray-200'
-                                    : placed
-                                        ? `bg-pastel-green-light border-pastel-green ${justDropped ? 'animate-basket-pop' : ''}`
-                                        : isSelected
-                                            ? 'bg-pastel-blue border-blue-400 scale-[1.02]'
-                                            : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light'
-                            }`}
+                            state={checked ? (isCorrectPlace ? 'correct' : isWrongPlace ? 'incorrect' : 'muted') : placed ? 'selected' : isSelected ? 'selectedBlue' : 'idle'}
+                            className={`min-h-[310px] p-4 md:min-h-[390px] md:p-6 ${justDropped ? 'animate-basket-pop' : ''}`}
                         >
-                            {it.text}
-                        </button>
+                            <VisualTile visual={visual} imageUrl={visual ? images[visual.cacheKey] : null} large />
+                        </ChoiceButton>
                     );
                 })}
             </div>
@@ -625,8 +714,12 @@ export function Task7({ onScore, initialData }) {
                         </div>
                         {!answered && (
                             <div className="flex gap-4 justify-center">
-                                <button onClick={() => handle(true)} className="flex-1 py-8 text-4xl font-extrabold rounded-3xl border-3 transition-all bg-white border-pastel-green hover:bg-pastel-green-light active:scale-95">✅ Правда</button>
-                                <button onClick={() => handle(false)} className="flex-1 py-8 text-4xl font-extrabold rounded-3xl border-3 transition-all bg-white border-pastel-pink hover:bg-red-50 active:scale-95">❌ Ні</button>
+                                <ChoiceButton onClick={() => handle(true)} className="flex-1 rounded-3xl border-3 border-pastel-green py-8 text-4xl font-extrabold">
+                                    ✅ Правда
+                                </ChoiceButton>
+                                <ChoiceButton onClick={() => handle(false)} className="flex-1 rounded-3xl border-3 border-pastel-pink py-8 text-4xl font-extrabold hover:bg-red-50 hover:border-pastel-pink">
+                                    ❌ Ні
+                                </ChoiceButton>
                             </div>
                         )}
                     </div>
@@ -658,7 +751,17 @@ export function Task7({ onScore, initialData }) {
 }
 
 export function Task8({ onScore, initialData }) {
-    const [data] = useState(() => initialData || pick(ANTONYM_DATA));
+    const [data] = useState(() => {
+        if (initialData?.sentences) {
+            const key = antonymBlockKey(initialData);
+            if (isRecentValue(ANTONYM_REPEAT_KEY, key, 5)) {
+                return pickExcludingRecent(ANTONYM_DATA, ANTONYM_REPEAT_KEY, antonymBlockKey, 5) || pick(ANTONYM_DATA);
+            }
+            rememberRecentValue(ANTONYM_REPEAT_KEY, key, 5);
+            return initialData;
+        }
+        return pickExcludingRecent(ANTONYM_DATA, ANTONYM_REPEAT_KEY, antonymBlockKey, 5) || pick(ANTONYM_DATA);
+    });
     const [answers, setAnswers] = useState(data.sentences.map(() => ''));
     const [checked, setChecked] = useState(false);
     const [hintLevel, setHintLevel] = useState(data.sentences.map(() => 0));
@@ -700,7 +803,12 @@ export function Task8({ onScore, initialData }) {
                         <p className="text-2xl md:text-3xl font-extrabold text-warm-gray mb-3 leading-tight">{s.s.replace(new RegExp(s.a, 'gi'), '...').replace(/\.\.\.\.\.\./g, '...')}</p>
                         <div className="flex gap-2 md:gap-3 items-stretch">
                             <input type="text" value={answers[i]} onChange={(e) => setAns(i, e.target.value)} disabled={checked} placeholder="..." className="flex-1 min-w-0 p-3 md:p-4 text-3xl md:text-4xl rounded-3xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center tracking-wide" />
-                            {!checked && hintLevel[i] < 3 && <button onClick={() => addHint(i)} className="px-3 md:px-4 py-3 md:py-4 text-base md:text-lg bg-pastel-yellow rounded-3xl text-warm-gray font-semibold flex items-center gap-1 hover:bg-yellow-200 active:scale-95 transition-all">💡{hintLevel[i] === 0 ? '' : ' ще'}</button>}
+                            {!checked && hintLevel[i] < 3 && (
+                                <MiniBtn onClick={() => addHint(i)} className="bg-pastel-yellow text-warm-gray hover:bg-yellow-200">
+                                    <Lightbulb className="h-5 w-5" />
+                                    {hintLevel[i] === 0 ? 'Підказка' : 'Ще'}
+                                </MiniBtn>
+                            )}
                         </div>
                         {hintLevel[i] > 0 && !checked && <p className="mt-2 inline-flex text-sm md:text-base px-3 py-2 bg-yellow-50 rounded-2xl text-warm-gray font-semibold">💡 {getHintText(s, hintLevel[i])}</p>}
                         {checked && answers[i].trim().toLowerCase() !== s.a.toLowerCase() && <p className="text-sm md:text-base text-red-500 mt-2 font-semibold">Відповідь: {s.a}</p>}
@@ -762,9 +870,14 @@ export function Task9({ onScore, initialData }) {
                             <input type="text" value={answers[i]} onChange={(e) => setAns(i, e.target.value)} disabled={checked[i]} placeholder="Слово..." className="flex-1 w-full min-w-0 p-2 md:p-3 text-2xl md:text-3xl uppercase rounded-xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center" />
 
                             {!checked[i] ? (
-                                <button onClick={() => checkWord(i)} disabled={!answers[i].trim()} className="px-6 py-2 text-2xl font-bold bg-pastel-green text-warm-gray rounded-xl shadow-md hover:bg-green-400 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center">
-                                    ✓
-                                </button>
+                                <MiniBtn
+                                    onClick={() => checkWord(i)}
+                                    disabled={!answers[i].trim()}
+                                    aria-label="Перевірити слово"
+                                    className="rounded-xl bg-pastel-green px-5 py-2 text-warm-gray hover:bg-green-400"
+                                >
+                                    <Check className="h-7 w-7" />
+                                </MiniBtn>
                             ) : (
                                 <div className="flex items-center justify-center px-4 bg-white/50 rounded-xl">
                                     {isCorrect(w, i) ? <p className="text-2xl text-green-600 font-bold">✅</p> : <p className="text-lg text-red-500 font-bold leading-tight">❌ {w.full}</p>}
@@ -872,9 +985,15 @@ export function Task10({ onScore, initialData, imageUrl, scenePrompt, loading })
                         const isSel = sel.has(opt);
                         const isCorr = data.correct.includes(opt);
                         return (
-                            <button key={i} onClick={() => toggle(opt)} className={`w-full text-left p-4 md:p-5 text-xl md:text-2xl font-semibold rounded-2xl border-2 transition-all ${checked ? (isCorr ? 'bg-green-100 border-green-400' : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400' : 'bg-white border-pastel-beige-dark hover:bg-pastel-blue/30'}`}>
+                            <ChoiceButton
+                                key={i}
+                                onClick={() => toggle(opt)}
+                                state={checked ? (isCorr ? 'correct' : isSel ? 'incorrect' : 'muted') : isSel ? 'selectedBlue' : 'idle'}
+                                align="left"
+                                className="w-full p-4 md:p-5 text-xl md:text-2xl font-semibold"
+                            >
                                 {opt}
-                            </button>
+                            </ChoiceButton>
                         );
                     })}
                 </div>
@@ -900,6 +1019,8 @@ export function Task11({ onScore, initialData }) {
         });
         return g;
     })[0];
+    const allCards = [...data.items, ...changedGrid];
+    const { visualItems, images, loading: imagesLoading } = useTaskImages(11, allCards);
     const changedIndices = useState(() => new Set(data.changes.map((c) => c.idx)))[0];
     const [revealed, setRevealed] = useState(false);
     const [selected, setSelected] = useState(new Set());
@@ -942,28 +1063,47 @@ export function Task11({ onScore, initialData }) {
                 <div className="mb-4 p-4 rounded-2xl bg-white/70 border border-pastel-beige-dark text-center">
                     <p className="text-xl md:text-2xl font-extrabold text-warm-gray">{revealed ? 'Крок 2: Знайдіть зміни' : 'Крок 1: Запам\'ятайте'}</p>
                     <p className="text-sm md:text-base text-warm-gray-light mt-1">
-                        {revealed ? `Знайдено ${selectedCount} з ${numChanges}.` : 'Просто дивіться і запамʼятовуйте.'}
+                        {imagesLoading
+                            ? 'Картинки готуються. Якщо вони не встигнуть, залишаться старі картки.'
+                            : revealed ? `Знайдено ${selectedCount} з ${numChanges}.` : 'Просто дивіться і запамʼятовуйте.'}
                     </p>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                     {grid.map((item, i) => {
                         const isSel = selected.has(i);
                         const isChanged = changedIndices.has(i);
+                        const visualIndex = (revealed ? data.items.length : 0) + i;
+                        const visual = visualItems[visualIndex];
+                        const state = !revealed
+                            ? 'idle'
+                            : checked
+                                ? isChanged
+                                    ? isSel
+                                        ? 'correct'
+                                        : 'warning'
+                                    : isSel
+                                        ? 'incorrect'
+                                        : 'muted'
+                                : isSel
+                                    ? 'selectedBlue'
+                                    : 'idle';
                         return (
-                            <button
+                            <ChoiceButton
                                 key={i}
                                 onClick={() => toggle(i)}
                                 disabled={!revealed}
-                                className={`aspect-square text-5xl md:text-6xl rounded-2xl border-3 transition-all duration-200 flex items-center justify-center ${!revealed ? 'bg-white border-pastel-beige-dark cursor-default' : checked ? (isChanged ? (isSel ? 'bg-green-100 border-green-400' : 'bg-yellow-100 border-yellow-400') : isSel ? 'bg-red-100 border-red-400' : 'bg-gray-50 border-gray-200') : isSel ? 'bg-pastel-blue border-blue-400 scale-105' : 'bg-white border-pastel-beige-dark hover:bg-pastel-green-light hover:scale-105 active:scale-95 cursor-pointer'}`}
+                                state={state}
+                                className={`aspect-square flex items-center justify-center border-3 p-2 ${!revealed ? 'cursor-default opacity-100' : 'hover:scale-[1.03]'}`}
                             >
-                                {item}
-                            </button>
+                                <VisualTile visual={visual} imageUrl={visual ? images[visual.cacheKey] : null} hideLabel />
+                            </ChoiceButton>
                         );
                     })}
                 </div>
                 {!revealed && (
                     <div className="text-center mt-6">
                         <BigBtn onClick={() => setRevealed(true)} className="bg-pastel-green text-warm-gray">
+                            <Eye className="h-5 w-5" />
                             Показати зміни
                         </BigBtn>
                     </div>
@@ -984,6 +1124,7 @@ export function Task11({ onScore, initialData }) {
                 {checked && !correct && (
                     <div className="text-center mt-4">
                         <BigBtn onClick={resetAttempt} className="bg-pastel-beige-dark text-warm-gray">
+                            <RotateCcw className="h-5 w-5" />
                             Спробувати ще раз
                         </BigBtn>
                     </div>

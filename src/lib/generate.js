@@ -1,30 +1,15 @@
 import { isSafeAntonymBlock, fallbackAntonymBlock } from './antonyms';
-import { MATCH_NEED_DATA, SEQUENCE_DATA, VERB_DATA } from '../data/taskData';
+import { ANTONYM_DATA, BUDGET_DATA, MATCH_NEED_DATA, SEQUENCE_DATA, VERB_DATA } from '../data/taskData';
 import { pick } from './audio';
+import { isRecentValue, normalizeRecentValue, selectExcludingRecent } from './recentTasks';
 
 const SEQUENCE_REPEAT_KEY = 'cognitive_trainer_last_sequence_title';
+const MATCH_REPEAT_KEY = 'cognitive_trainer_recent_match_prompts';
+const BUDGET_REPEAT_KEY = 'cognitive_trainer_recent_budget_labels';
+const ANTONYM_REPEAT_KEY = 'cognitive_trainer_recent_antonym_blocks';
 
-const getLastSequenceTitle = () => {
-  try {
-    return window.localStorage.getItem(SEQUENCE_REPEAT_KEY) || '';
-  } catch {
-    return '';
-  }
-};
-
-const setLastSequenceTitle = (title) => {
-  try {
-    window.localStorage.setItem(SEQUENCE_REPEAT_KEY, title);
-  } catch {
-    // Ignore storage failures.
-  }
-};
-
-const pickSequenceFallback = (excludeTitle = '') => {
-  const title = String(excludeTitle || '').trim().toLowerCase();
-  const choices = SEQUENCE_DATA.filter((item) => item.title.toLowerCase() !== title);
-  return pick(choices.length > 0 ? choices : SEQUENCE_DATA);
-};
+const pickSequenceFallback = () =>
+  selectExcludingRecent(SEQUENCE_DATA, SEQUENCE_REPEAT_KEY, (item) => item.title, 7) || pick(SEQUENCE_DATA);
 
 const isValidScenePrompt = (scene) => {
   const text = String(scene || '').trim();
@@ -34,16 +19,22 @@ const isValidScenePrompt = (scene) => {
 const pickSceneFallback = () => pick(VERB_DATA).scene;
 
 const normalizeMatchText = (value) =>
-  String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[’`]/g, "'");
+  normalizeRecentValue(value);
 
-const pickMatchNeedFallback = (excludePrompt = '') => {
-  const prompt = normalizeMatchText(excludePrompt);
-  const choices = MATCH_NEED_DATA.filter((item) => normalizeMatchText(item.prompt) !== prompt);
-  return pick(choices.length > 0 ? choices : MATCH_NEED_DATA);
-};
+const pickMatchNeedFallback = () =>
+  selectExcludingRecent(MATCH_NEED_DATA, MATCH_REPEAT_KEY, (item) => item.prompt, 12) || pick(MATCH_NEED_DATA);
+
+const pickBudgetFallback = () =>
+  selectExcludingRecent(BUDGET_DATA, BUDGET_REPEAT_KEY, (item) => item.label, 4) || pick(BUDGET_DATA);
+
+const antonymBlockKey = (block) =>
+  (block?.sentences || [])
+    .map((item) => normalizeRecentValue(item?.a))
+    .filter(Boolean)
+    .join('|');
+
+const pickAntonymFallback = () =>
+  selectExcludingRecent(ANTONYM_DATA, ANTONYM_REPEAT_KEY, antonymBlockKey, 5) || fallbackAntonymBlock();
 
 const toTrustedMatchNeedBlock = (matchWord) => {
   const prompt = normalizeMatchText(matchWord?.word || matchWord?.prompt);
@@ -128,17 +119,25 @@ export async function generateAllTasks() {
     }
 
     const matchWord = data.matchWord || data.findOdd;
-    const trustedMatchWord = toTrustedMatchNeedBlock(matchWord);
-    if (!trustedMatchWord) {
+    let trustedMatchWord = toTrustedMatchNeedBlock(matchWord);
+    const matchPrompt = normalizeMatchText(trustedMatchWord?.prompt);
+    if (!trustedMatchWord || isRecentValue(MATCH_REPEAT_KEY, matchPrompt, 12)) {
       console.warn('App: matchWord semantic quality is not trusted, using fallback block');
-      data.matchWord = pickMatchNeedFallback(matchWord?.word || matchWord?.prompt);
+      data.matchWord = pickMatchNeedFallback();
     } else {
       data.matchWord = trustedMatchWord;
     }
 
-    if (!isSafeAntonymBlock(data.antonyms)) {
-      console.warn('App: antonyms data is too similar or unsafe, using fallback block');
-      data.antonyms = fallbackAntonymBlock();
+    const antonymKey = antonymBlockKey(data.antonyms);
+    if (!isSafeAntonymBlock(data.antonyms) || isRecentValue(ANTONYM_REPEAT_KEY, antonymKey, 5)) {
+      console.warn('App: antonyms data is too similar, repetitive or unsafe, using fallback block');
+      data.antonyms = pickAntonymFallback();
+    }
+
+    const budgetLabel = normalizeRecentValue(data.budget?.label);
+    if (!budgetLabel || isRecentValue(BUDGET_REPEAT_KEY, budgetLabel, 4)) {
+      console.warn('App: budget data is repetitive, using fallback block');
+      data.budget = pickBudgetFallback();
     }
 
     const scenePrompt = data.verbs?.scene;
@@ -148,14 +147,9 @@ export async function generateAllTasks() {
     }
 
     const sequenceTitle = String(data.sequence?.title || '').trim().toLowerCase();
-    const lastSequenceTitle = getLastSequenceTitle();
-    if (!sequenceTitle || sequenceTitle.includes('компот') || sequenceTitle === lastSequenceTitle) {
+    if (!sequenceTitle || sequenceTitle.includes('компот') || isRecentValue(SEQUENCE_REPEAT_KEY, sequenceTitle, 7)) {
       console.warn('App: sequence data is repetitive, using fallback block');
-      data.sequence = pickSequenceFallback(lastSequenceTitle);
-    }
-
-    if (data.sequence?.title) {
-      setLastSequenceTitle(data.sequence.title);
+      data.sequence = pickSequenceFallback();
     }
 
     return data;

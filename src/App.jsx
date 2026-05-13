@@ -168,7 +168,7 @@ export default function App() {
                             ) : (
                                 <div className="flex flex-col items-center gap-4">
                                     <BigBtn onClick={startSession} className="bg-pastel-green text-warm-gray text-2xl">
-                                        <Sparkles className="inline w-6 h-6 mr-2" />
+                                        <Sparkles className="w-6 h-6" />
                                         Розпочати
                                     </BigBtn>
                                     <p className="text-sm text-warm-gray-light flex items-center gap-1">
@@ -204,7 +204,7 @@ export default function App() {
                                 ))}
                             </div>
                             <BigBtn onClick={restart} className="bg-pastel-green text-warm-gray text-xl mt-4">
-                                <RefreshCw className="inline w-5 h-5 mr-2" />
+                                <RefreshCw className="w-5 h-5" />
                                 Пройти ще раз
                             </BigBtn>
                         </Card>
@@ -215,7 +215,7 @@ export default function App() {
             {(slide > 0 || started) && (
                 <nav className="bg-white/80 backdrop-blur-md shadow-[0_-2px_10px_rgba(0,0,0,0.05)] py-4 px-6 flex justify-between items-center sticky bottom-0 z-10">
                     <BigBtn onClick={prev} className="bg-pastel-beige-dark text-warm-gray" disabled={slide === 0}>
-                        <ChevronLeft className="inline w-5 h-5 mr-1" />
+                        <ChevronLeft className="w-5 h-5" />
                         Назад
                     </BigBtn>
                     <div className="flex gap-1">
@@ -228,7 +228,7 @@ export default function App() {
                     </div>
                     <BigBtn onClick={next} className="bg-pastel-green text-warm-gray" disabled={slide === SLIDES - 1}>
                         Вперед
-                        <ChevronRight className="inline w-5 h-5 ml-1" />
+                        <ChevronRight className="w-5 h-5" />
                     </BigBtn>
                 </nav>
             )}
