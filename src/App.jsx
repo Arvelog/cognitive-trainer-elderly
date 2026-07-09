@@ -188,7 +188,7 @@ export default function App() {
         <Task8 key={taskKeys[7]} onScore={() => addScore(7)} initialData={aiData?.phraseCompletion} />,
         <Task9 key={taskKeys[8]} onScore={() => addScore(8)} initialData={aiData?.writing} />,
         <Task10 key={taskKeys[9]} onScore={() => addScore(9)} initialData={verbQuestions || verbFallbackData} fallbackData={verbFallbackData || VERB_FALLBACK} imageUrl={verbImage} loading={verbLoading} />,
-        <Task11 key={taskKeys[10]} onScore={() => addScore(10)} initialData={aiData?.reading} />,
+        <Task11 key={taskKeys[10]} onScore={() => addScore(10)} />,
     ];
 
     return (
@@ -207,7 +207,7 @@ export default function App() {
                 {slide > 0 && slide < SLIDES - 1 && (
                     <div className="flex items-center gap-2">
                         <Star className="w-6 h-6 text-yellow-500" />
-                        <span className="text-sm md:text-lg font-bold text-warm-gray">Самостійно {score}</span>
+                        <span className="text-sm md:text-lg font-bold text-warm-gray">Вдалося {score}</span>
                     </div>
                 )}
                 {slide > 0 && slide < SLIDES - 1 && (
@@ -265,10 +265,10 @@ export default function App() {
                         <Card className="text-center py-12">
                             <div className="text-7xl mb-4">🌷</div>
                             <h1 className="text-3xl md:text-4xl font-extrabold text-warm-gray mb-4">Заняття завершено!</h1>
-                            <div className="text-3xl md:text-4xl font-extrabold text-pastel-green mb-2">Самостійно: {score} із {TOTAL_TASKS}</div>
+                            <div className="text-3xl md:text-4xl font-extrabold text-pastel-green mb-2">Вдалося: {score} із {TOTAL_TASKS}</div>
                             <p className="text-xl text-warm-gray-light mb-2">
                                 {score >= 8
-                                    ? 'Сьогодні багато вийшло самостійно. Чудова робота!'
+                                    ? 'Сьогодні багато вдалося. Чудова робота!'
                                     : score >= 5
                                         ? 'Гарна робота. Підказки допомагають мозку вчитися.'
                                         : 'Ви завершили все заняття — це вже важливий крок. Підказки можна використовувати.'}

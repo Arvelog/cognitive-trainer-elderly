@@ -4,7 +4,6 @@ import {
   MATCH_NEED_DATA,
   NAMING_DATA,
   PHRASE_COMPLETION_DATA,
-  READING_DATA,
   SENTENCE_DATA,
   SEQUENCE_DATA,
   TRUEFALSE_DATA,
@@ -120,12 +119,6 @@ const isValidWritingBlock = (writing) =>
   writing.words.length === 3 &&
   writing.words.every((item) => isNonEmptyString(item?.word) && isNonEmptyString(item?.emoji) && isNonEmptyString(item?.hint));
 
-const isValidReadingBlock = (reading) =>
-  isObject(reading) &&
-  Array.isArray(reading.phrases) &&
-  reading.phrases.length === 3 &&
-  reading.phrases.every((item) => isNonEmptyString(item?.context) && isNonEmptyString(item?.text));
-
 const isValidVerbBlock = (verbs) =>
   isObject(verbs) &&
   isNonEmptyString(verbs.title) &&
@@ -174,8 +167,6 @@ export async function generateAllTasks() {
     replaceInvalid('trueFalse', isValidTrueFalseBlock(data.trueFalse), TRUEFALSE_DATA);
     replaceInvalid('phraseCompletion', isValidPhraseCompletionBlock(data.phraseCompletion), PHRASE_COMPLETION_DATA);
     replaceInvalid('writing', isValidWritingBlock(data.writing), WRITING_DATA);
-    replaceInvalid('reading', isValidReadingBlock(data.reading), READING_DATA);
-
     const trustedMatchWord = toTrustedMatchNeedBlock(data.matchWord || data.findOdd);
     const matchPrompt = normalizeRecentValue(trustedMatchWord?.prompt);
     if (!trustedMatchWord || isRecentValue(MATCH_REPEAT_KEY, matchPrompt, 10)) {

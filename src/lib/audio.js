@@ -42,14 +42,16 @@ export const fireConfetti = () => {
   confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
 };
 
-export const speakText = (text) => {
+export const speakText = (text, { rate = 0.78, pitch = 1 } = {}) => {
   if (!text || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
 
   window.speechSynthesis.cancel();
   const utterance = new window.SpeechSynthesisUtterance(String(text));
   utterance.lang = 'uk-UA';
-  utterance.rate = 0.78;
-  utterance.pitch = 1;
+  utterance.rate = Math.min(1.2, Math.max(0.5, Number(rate) || 0.78));
+  utterance.pitch = Math.min(1.5, Math.max(0.5, Number(pitch) || 1));
+  const ukrainianVoice = window.speechSynthesis.getVoices().find((voice) => voice.lang?.toLowerCase().startsWith('uk'));
+  if (ukrainianVoice) utterance.voice = ukrainianVoice;
   window.speechSynthesis.speak(utterance);
   return true;
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, EyeOff, Lightbulb, Loader2, RotateCcw, Volume2 } from 'lucide-react';
+import { Check, EyeOff, Lightbulb, Loader2, RotateCcw, Users, Volume2 } from 'lucide-react';
 import { Card, BigBtn, ChoiceButton, MiniBtn, TaskHeader, Result } from './common';
 import { playCorrect, playWrong, fireConfetti, shuffle, pick, speakText } from '../lib/audio';
 import { isRecentValue, pickExcludingRecent, rememberRecentValue } from '../lib/recentTasks';
@@ -16,7 +16,7 @@ import {
     PHRASE_COMPLETION_DATA,
     WRITING_DATA,
     VERB_DATA,
-    READING_DATA,
+    SPEECH_WORD_DATA,
 } from '../data/taskData';
 
 const MATCH_REPEAT_KEY = 'cognitive_trainer_recent_match_prompts';
@@ -1027,46 +1027,123 @@ export function Task10({ onScore, initialData, fallbackData, imageUrl, loading }
     );
 }
 
-export function Task11({ onScore, initialData }) {
-    const [data] = useState(() => initialData || pick(READING_DATA));
-    const [completed, setCompleted] = useState(() => new Set());
-    const done = completed.size === data.phrases.length;
-    const markRead = (index) => {
-        if (completed.has(index)) return;
-        const next = new Set(completed);
-        next.add(index);
-        setCompleted(next);
-        if (next.size === data.phrases.length) {
+const SPEECH_ROTATION_KEY = 'cognitive_trainer_speech_word_group';
+
+const selectSpeechWords = () => {
+    const groups = [
+        [SPEECH_WORD_DATA[0], SPEECH_WORD_DATA[2], SPEECH_WORD_DATA[4], SPEECH_WORD_DATA[6]],
+        [SPEECH_WORD_DATA[1], SPEECH_WORD_DATA[3], SPEECH_WORD_DATA[5], SPEECH_WORD_DATA[7]],
+    ];
+
+    try {
+        const current = Number(window.localStorage.getItem(SPEECH_ROTATION_KEY) || 0) % groups.length;
+        window.localStorage.setItem(SPEECH_ROTATION_KEY, String((current + 1) % groups.length));
+        return groups[current];
+    } catch {
+        return groups[0];
+    }
+};
+
+export function Task11({ onScore }) {
+    const [words] = useState(selectSpeechWords);
+    const [current, setCurrent] = useState(0);
+    const [hintVisible, setHintVisible] = useState(false);
+    const [results, setResults] = useState([]);
+    const finishedRef = useRef(false);
+    const done = results.length === words.length;
+    const item = words[current];
+
+    const markAttempt = (mode) => {
+        if (finishedRef.current) return;
+
+        const nextResults = [...results, mode];
+        setResults(nextResults);
+        setHintVisible(false);
+
+        if (nextResults.length === words.length) {
+            finishedRef.current = true;
             playCorrect();
             fireConfetti();
             onScore();
+            return;
         }
+
+        setCurrent((value) => value + 1);
     };
+
+    const independentCount = results.filter((result) => result === 'independent').length;
 
     return (
         <Card>
-            <TaskHeader icon="📖" title="Читайте вголос" desc="Слухайте, повторюйте і говоріть у своєму темпі" />
-            <div className="max-w-xl mx-auto space-y-4">
-                {data.phrases.map((phrase, index) => {
-                    const isDone = completed.has(index);
-                    return (
-                        <div key={`${phrase.context}-${index}`} className={`rounded-2xl border-2 p-5 ${isDone ? 'border-green-300 bg-green-50' : 'border-pastel-beige-dark bg-white'}`}>
-                            <p className="mb-2 text-base font-bold uppercase text-warm-gray-light">{phrase.context}</p>
-                            <p className="mb-4 text-3xl md:text-4xl font-extrabold leading-snug text-warm-gray">{phrase.text}</p>
-                            <div className="flex flex-wrap gap-2">
-                                <MiniBtn onClick={() => speakText(phrase.text)} className="bg-pastel-blue text-warm-gray">
-                                    <Volume2 className="h-5 w-5" />
-                                    Послухати
-                                </MiniBtn>
-                                <MiniBtn onClick={() => markRead(index)} disabled={isDone} className="bg-pastel-green text-warm-gray">
-                                    <Check className="h-5 w-5" />
-                                    {isDone ? 'Прочитано' : 'Я прочитала'}
-                                </MiniBtn>
+            <TaskHeader
+                icon="🗣️"
+                title="Сильні слова"
+                desc={done ? 'Коротку практику завершено' : `Одне слово за раз · ${current + 1} з ${words.length}`}
+                compact
+            />
+            <div className="mx-auto max-w-xl text-center">
+                {!done ? (
+                    <>
+                        <p className="mb-3 text-xl font-semibold text-warm-gray-light">Послухайте. Потім спробуйте сказати.</p>
+                        <div className="mb-4 rounded-2xl bg-pastel-beige p-4 md:p-5">
+                            <div className="mb-2 text-6xl md:text-7xl" aria-hidden="true">{item.emoji}</div>
+                            <p className="text-5xl font-extrabold uppercase leading-none text-warm-gray md:text-6xl">{item.word}</p>
+                        </div>
+
+                        <div className="mb-5 flex flex-wrap justify-center gap-3">
+                            <BigBtn onClick={() => speakText(item.word, { rate: 0.62 })} className="bg-pastel-blue text-warm-gray">
+                                <Volume2 className="h-6 w-6" />
+                                Почути слово
+                            </BigBtn>
+                            <MiniBtn onClick={() => setHintVisible((value) => !value)} className="bg-pastel-beige-dark text-warm-gray">
+                                <Lightbulb className="h-5 w-5" />
+                                Підказка
+                            </MiniBtn>
+                        </div>
+
+                        {hintVisible && (
+                            <div className="mb-5 rounded-2xl border-2 border-yellow-200 bg-yellow-50 p-4">
+                                <p className="text-xl font-bold text-warm-gray">Початок: <span className="text-3xl">{item.firstSound}...</span></p>
+                                <p className="mt-2 text-3xl font-extrabold text-warm-gray">{item.syllables}</p>
+                            </div>
+                        )}
+
+                        <div className="mb-6 border-y-2 border-pastel-beige-dark py-4">
+                            <p className="mb-2 text-base font-bold text-warm-gray-light">Додатково, не обов'язково</p>
+                            <MiniBtn onClick={() => speakText(item.phrase, { rate: 0.68 })} className="bg-white text-warm-gray shadow-sm">
+                                <Volume2 className="h-5 w-5" />
+                                {item.phrase}
+                            </MiniBtn>
+                        </div>
+
+                        <p className="mb-4 text-xl font-semibold text-warm-gray">Позначте будь-який результат. Обидва варіанти добрі.</p>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <BigBtn onClick={() => markAttempt('independent')} className="w-full bg-pastel-green text-warm-gray">
+                                <Check className="h-6 w-6" />
+                                Сказала сама
+                            </BigBtn>
+                            <BigBtn onClick={() => markAttempt('together')} className="w-full bg-pastel-blue text-warm-gray">
+                                <Users className="h-6 w-6" />
+                                Сказали разом
+                            </BigBtn>
+                        </div>
+                    </>
+                ) : (
+                    <div className="space-y-5">
+                        <Result correct msg={`Ви попрацювали з ${words.length} сильними словами.`} />
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="rounded-2xl bg-pastel-green-light p-4">
+                                <p className="text-4xl font-extrabold text-warm-gray">{independentCount}</p>
+                                <p className="text-lg font-bold text-warm-gray">сказала сама</p>
+                            </div>
+                            <div className="rounded-2xl bg-pastel-blue p-4">
+                                <p className="text-4xl font-extrabold text-warm-gray">{words.length - independentCount}</p>
+                                <p className="text-lg font-bold text-warm-gray">сказали разом</p>
                             </div>
                         </div>
-                    );
-                })}
-                {done && <Result correct msg="Чудово! Ви прочитали всі корисні фрази." />}
+                        <p className="text-lg font-semibold text-warm-gray-light">Слова з підказкою теж зараховуються. Головне — спокійна практика без поспіху.</p>
+                    </div>
+                )}
             </div>
         </Card>
     );

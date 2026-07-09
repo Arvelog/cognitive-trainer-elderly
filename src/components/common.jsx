@@ -79,11 +79,11 @@ export const ErrorBox = ({ msg, onRetry }) => (
   </div>
 );
 
-export const TaskHeader = ({ icon, title, desc }) => (
-  <div className="text-center mb-6 md:mb-8">
-    <div className="text-5xl md:text-6xl mb-3">{icon}</div>
-    <h2 className="text-3xl md:text-5xl font-extrabold text-warm-gray mb-3 md:mb-4">{title}</h2>
-    <p className="text-xl md:text-3xl font-semibold text-warm-gray-light leading-snug">{desc}</p>
+export const TaskHeader = ({ icon, title, desc, compact = false }) => (
+  <div className={`text-center ${compact ? 'mb-4' : 'mb-6 md:mb-8'}`}>
+    <div className={`${compact ? 'text-4xl mb-2' : 'text-5xl md:text-6xl mb-3'}`}>{icon}</div>
+    <h2 className={`${compact ? 'text-3xl md:text-4xl mb-2' : 'text-3xl md:text-5xl mb-3 md:mb-4'} font-extrabold text-warm-gray`}>{title}</h2>
+    <p className={`${compact ? 'text-lg md:text-xl' : 'text-xl md:text-3xl'} font-semibold text-warm-gray-light leading-snug`}>{desc}</p>
   </div>
 );
 

@@ -31,6 +31,8 @@ Do not expose this key through `VITE_*` variables. The frontend calls local `/ap
 
 The "Що відбувається?" exercise first generates one coherent scene plan with Ukrainian answers, then renders that scene through GPT Image as a landscape WebP. A bundled photograph is used only when the image API is unavailable.
 
+The final speech exercise uses a fixed bank of personally successful single words bundled with the app. It rotates four words per session and never sends that vocabulary to an AI route.
+
 ## Production Checks
 
 ```bash

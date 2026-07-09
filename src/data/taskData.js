@@ -132,22 +132,15 @@ export const VERB_DATA = [
   { title: 'Магазин', emoji: '🛒', scene: 'A woman choosing fresh vegetables at a small grocery store with a basket in her hand', context: 'Що відбувається на цій сцені?', correct: ['Жінка купує продукти', 'Вона тримає кошик', 'На прилавку лежать овочі'], wrong: ['Хтось поливає квіти', 'Люди грають у футбол', 'Чоловік читає газету'] },
 ];
 
-export const READING_DATA = [
-  { phrases: [
-    { context: 'Привітання', text: 'Доброго ранку!' },
-    { context: 'Прохання', text: 'Дайте, будь ласка, води.' },
-    { context: 'Телефон', text: 'Я зателефоную пізніше.' },
-  ] },
-  { phrases: [
-    { context: 'Самопочуття', text: 'Я почуваюся добре.' },
-    { context: 'Допомога', text: 'Допоможіть мені, будь ласка.' },
-    { context: 'Подяка', text: 'Дякую вам за допомогу.' },
-  ] },
-  { phrases: [
-    { context: 'Магазин', text: 'Мені, будь ласка, хліб.' },
-    { context: 'Розмова', text: 'Повторіть повільніше, будь ласка.' },
-    { context: 'Прощання', text: 'До побачення! Гарного дня!' },
-  ] },
+export const SPEECH_WORD_DATA = [
+  { word: 'чай', emoji: '☕', firstSound: 'Ч', syllables: 'ЧАЙ', phrase: 'хочу чай' },
+  { word: 'вода', emoji: '💧', firstSound: 'В', syllables: 'ВО-ДА', phrase: 'ось вода' },
+  { word: 'водити', emoji: '🚗', firstSound: 'В', syllables: 'ВО-ДИ-ТИ', phrase: 'водити авто' },
+  { word: 'чистити', emoji: '🪥', firstSound: 'Ч', syllables: 'ЧИ-СТИ-ТИ', phrase: 'чистити зуби' },
+  { word: 'чоботи', emoji: '🥾', firstSound: 'Ч', syllables: 'ЧО-БО-ТИ', phrase: 'мої чоботи' },
+  { word: 'вчасно', emoji: '⏰', firstSound: 'ВЧ', syllables: 'ВЧАС-НО', phrase: 'прийти вчасно' },
+  { word: 'часто', emoji: '🔁', firstSound: 'Ч', syllables: 'ЧА-СТО', phrase: 'дуже часто' },
+  { word: 'чистий', emoji: '✨', firstSound: 'Ч', syllables: 'ЧИ-СТИЙ', phrase: 'чистий рушник' },
 ];
 
 export const TOTAL_TASKS = 11;
