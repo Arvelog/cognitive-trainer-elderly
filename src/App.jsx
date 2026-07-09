@@ -21,6 +21,8 @@ const isValidVerbQuestions = (questions) => {
     return questions.wrong.every((item) => !correct.has(item.trim().toLowerCase()));
 };
 
+const VERB_FALLBACK = VERB_DATA.find((item) => item.imageUrl) || VERB_DATA[0];
+
 export default function App() {
     const [slide, setSlide] = useState(0);
     const [scoredTasks, setScoredTasks] = useState(() => new Set());
@@ -76,23 +78,22 @@ export default function App() {
 
             setVerbImage(url);
             setVerbQuestions(questions);
-            setVerbFallbackData(null);
             return true;
         } catch {
-            // Silently fail; Task10 falls back to the emoji version.
+            // Task10 keeps a bundled scene available when image generation fails.
             return false;
         }
     };
 
     const prepareVerbTask = async (scene) => {
         setVerbLoading(true);
-        setVerbFallbackData(null);
+        setVerbFallbackData(VERB_FALLBACK);
 
         try {
             let ok = await generateImage(scene);
             if (ok) return;
 
-            const fallback = pick(VERB_DATA);
+            const fallback = VERB_FALLBACK;
             ok = await generateImage(fallback.scene);
 
             if (!ok) {
@@ -136,11 +137,16 @@ export default function App() {
             setGenerationSource('fallback');
             setFallbackBlocks(['all']);
             setLocalAnswerBlocks([]);
-            prepareVerbTask(pick(VERB_DATA).scene);
+            prepareVerbTask(VERB_FALLBACK.scene);
         }
         setStarted(true);
         next();
     };
+
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        document.querySelector('main')?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, [slide]);
 
     useEffect(() => {
         if (slide === SLIDES - 1) {
@@ -172,7 +178,7 @@ export default function App() {
         <Task7 key={taskKeys[6]} onScore={() => addScore(6)} initialData={aiData?.trueFalse} />,
         <Task8 key={taskKeys[7]} onScore={() => addScore(7)} initialData={aiData?.phraseCompletion} />,
         <Task9 key={taskKeys[8]} onScore={() => addScore(8)} initialData={aiData?.writing} />,
-        <Task10 key={taskKeys[9]} onScore={() => addScore(9)} initialData={verbQuestions || verbFallbackData} imageUrl={verbImage} loading={verbLoading} />,
+        <Task10 key={taskKeys[9]} onScore={() => addScore(9)} initialData={verbQuestions || verbFallbackData} fallbackData={verbFallbackData || VERB_FALLBACK} imageUrl={verbImage} loading={verbLoading} />,
         <Task11 key={taskKeys[10]} onScore={() => addScore(10)} initialData={aiData?.reading} />,
     ];
 

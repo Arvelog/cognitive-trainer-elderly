@@ -896,8 +896,8 @@ export function Task9({ onScore, initialData }) {
     );
 }
 
-export function Task10({ onScore, initialData, imageUrl, loading }) {
-    const baseDataRef = useRef(initialData || pick(VERB_DATA));
+export function Task10({ onScore, initialData, fallbackData, imageUrl, loading }) {
+    const baseDataRef = useRef(initialData || fallbackData || VERB_DATA.find((item) => item.imageUrl) || pick(VERB_DATA));
     const [data, setData] = useState(() => baseDataRef.current);
     const [options, setOptions] = useState(() => {
         return shuffle([...baseDataRef.current.correct, ...baseDataRef.current.wrong]);
@@ -924,6 +924,16 @@ export function Task10({ onScore, initialData, imageUrl, loading }) {
         }
     }, [imageUrl]);
 
+    const activateFallback = () => {
+        setImgLoaded(false);
+        setImgError(true);
+        if (!fallbackData) return;
+        setData(fallbackData);
+        setOptions(shuffle([...fallbackData.correct, ...fallbackData.wrong]));
+        setSel(new Set());
+        setChecked(false);
+    };
+
     const toggle = (opt) => {
         if (checked) return;
         const n = new Set(sel);
@@ -940,7 +950,10 @@ export function Task10({ onScore, initialData, imageUrl, loading }) {
         } else playWrong();
     };
 
-    const showImage = imageUrl && !imgError;
+    const activeImageUrl = imgError
+        ? fallbackData?.imageUrl
+        : imageUrl || data.imageUrl || fallbackData?.imageUrl;
+    const showImage = Boolean(activeImageUrl);
 
     if (loading && !imageUrl) {
         return (
@@ -961,7 +974,7 @@ export function Task10({ onScore, initialData, imageUrl, loading }) {
             <div className="max-w-4xl mx-auto text-center">
                 {showImage ? (
                     <div className="mb-4 md:mb-6 flex justify-center">
-                        <div className="relative w-full max-w-md h-56">
+                        <div className="relative aspect-[3/2] w-full max-w-2xl">
                             {!imgLoaded && (
                                 <div className="absolute inset-0 rounded-3xl bg-pastel-beige animate-pulse flex items-center justify-center">
                                     <Loader2 className="w-10 h-10 text-pastel-green animate-spin" />
@@ -969,11 +982,11 @@ export function Task10({ onScore, initialData, imageUrl, loading }) {
                             )}
                             <img
                                 ref={imgRef}
-                                src={imageUrl}
-                                alt={data.title}
+                                src={activeImageUrl}
+                                alt={data.title || fallbackData?.title || 'Побутова сцена'}
                                 onLoad={() => setImgLoaded(true)}
-                                onError={() => setImgError(true)}
-                                className={`w-full h-56 rounded-3xl shadow-lg object-cover transition-opacity duration-200 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                                onError={activateFallback}
+                                className={`h-full w-full rounded-3xl object-cover shadow-lg transition-opacity duration-200 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
                             />
                         </div>
                     </div>
