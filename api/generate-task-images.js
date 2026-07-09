@@ -1,11 +1,7 @@
 import { guardAiRequest, jsonResponse, normalizeText, readJsonBody } from '../server/apiSecurity.js';
 
-export const config = {
-    runtime: 'edge',
-};
-
 const MAX_ITEMS = 8;
-const IMAGE_MODEL = 'gpt-image-2';
+const IMAGE_MODEL = process.env.OPENAI_TASK_IMAGE_MODEL || 'gpt-image-1-mini';
 
 const buildPrompt = ({ task, label, prompt }) => {
     const base = normalizeText(prompt) || normalizeText(label);

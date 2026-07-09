@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Brain, Star, RefreshCw, Loader2, Heart, Sparkles, Volume2 } from 'lucide-react';
 import { Card, BigBtn } from './components/common';
 import { generateAllTasks } from './lib/generate';
-import { playVictory, fireConfetti, pick } from './lib/audio';
+import { playVictory, fireConfetti } from './lib/audio';
 import { TOTAL_TASKS, SLIDES, VERB_DATA } from './data/taskData';
 import { Task1, Task2, Task3, Task4, Task5, Task6, Task7, Task8, Task9, Task10, Task11 } from './components/tasks';
 
@@ -12,13 +12,21 @@ const hasThreeUniqueStrings = (value) =>
     value.every((item) => typeof item === 'string' && item.trim()) &&
     new Set(value.map((item) => item.trim().toLowerCase())).size === 3;
 
-const isValidVerbQuestions = (questions) => {
-    if (!questions || !hasThreeUniqueStrings(questions.correct) || !hasThreeUniqueStrings(questions.wrong)) {
+const isValidVerbTask = (task) => {
+    if (
+        !task ||
+        typeof task.title !== 'string' ||
+        typeof task.context !== 'string' ||
+        typeof task.scene !== 'string' ||
+        task.scene.trim().length < 24 ||
+        !hasThreeUniqueStrings(task.correct) ||
+        !hasThreeUniqueStrings(task.wrong)
+    ) {
         return false;
     }
 
-    const correct = new Set(questions.correct.map((item) => item.trim().toLowerCase()));
-    return questions.wrong.every((item) => !correct.has(item.trim().toLowerCase()));
+    const correct = new Set(task.correct.map((item) => item.trim().toLowerCase()));
+    return task.wrong.every((item) => !correct.has(item.trim().toLowerCase()));
 };
 
 const VERB_FALLBACK = VERB_DATA.find((item) => item.imageUrl) || VERB_DATA[0];
@@ -65,19 +73,19 @@ export default function App() {
         setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random()));
     };
 
-    const generateImage = async (scene) => {
+    const generateImage = async (task) => {
         try {
             const res = await fetch('/api/generate-image', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: scene }),
+                body: JSON.stringify({ prompt: task.scene }),
             });
             if (!res.ok) return false;
-            const { url, questions } = await res.json();
-            if (!url || !isValidVerbQuestions(questions)) return false;
+            const { url } = await res.json();
+            if (!url) return false;
 
             setVerbImage(url);
-            setVerbQuestions(questions);
+            setVerbQuestions(task);
             return true;
         } catch {
             // Task10 keeps a bundled scene available when image generation fails.
@@ -85,16 +93,19 @@ export default function App() {
         }
     };
 
-    const prepareVerbTask = async (scene) => {
+    const prepareVerbTask = async (requestedTask) => {
+        const task = isValidVerbTask(requestedTask) ? requestedTask : VERB_FALLBACK;
         setVerbLoading(true);
         setVerbFallbackData(VERB_FALLBACK);
 
         try {
-            let ok = await generateImage(scene);
+            let ok = await generateImage(task);
             if (ok) return;
 
             const fallback = VERB_FALLBACK;
-            ok = await generateImage(fallback.scene);
+            if (task.scene !== fallback.scene) {
+                ok = await generateImage(fallback);
+            }
 
             if (!ok) {
                 setVerbImage(null);
@@ -124,20 +135,18 @@ export default function App() {
             setFallbackBlocks(['all']);
             setLocalAnswerBlocks([]);
             setAiData(null);
+            prepareVerbTask(VERB_FALLBACK);
         } else if (data) {
             setGenerationSource(data._source || 'ai');
             setFallbackBlocks(data._fallbackBlocks || []);
             setLocalAnswerBlocks(data._localAnswerBlocks || []);
             setAiData(data);
-            const scene = typeof data.verbs?.scene === 'string' && data.verbs.scene.trim().length >= 24
-                ? data.verbs.scene
-                : pick(VERB_DATA).scene;
-            prepareVerbTask(scene);
+            prepareVerbTask(data.verbs);
         } else {
             setGenerationSource('fallback');
             setFallbackBlocks(['all']);
             setLocalAnswerBlocks([]);
-            prepareVerbTask(VERB_FALLBACK.scene);
+            prepareVerbTask(VERB_FALLBACK);
         }
         setStarted(true);
         next();

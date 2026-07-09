@@ -126,6 +126,15 @@ const isValidReadingBlock = (reading) =>
   reading.phrases.length === 3 &&
   reading.phrases.every((item) => isNonEmptyString(item?.context) && isNonEmptyString(item?.text));
 
+const isValidVerbBlock = (verbs) =>
+  isObject(verbs) &&
+  isNonEmptyString(verbs.title) &&
+  isNonEmptyString(verbs.context) &&
+  isValidScenePrompt(verbs.scene) &&
+  hasUniqueStrings(verbs.correct, 3) &&
+  hasUniqueStrings(verbs.wrong, 3) &&
+  hasNoOverlap(verbs.correct, verbs.wrong);
+
 export async function generateAllTasks() {
   try {
     const response = await fetch('/api/generate', { method: 'POST' });
@@ -183,9 +192,9 @@ export async function generateAllTasks() {
       data.sequence = pickSequenceFallback();
     }
 
-    if (!isObject(data.verbs) || !isValidScenePrompt(data.verbs.scene)) {
+    if (!isValidVerbBlock(data.verbs)) {
       fallbackBlocks.push('verbs');
-      data.verbs = { scene: pick(VERB_DATA).scene };
+      data.verbs = { ...pick(VERB_DATA) };
     }
 
     data._source = fallbackBlocks.length > 0 ? 'mixed' : 'ai';

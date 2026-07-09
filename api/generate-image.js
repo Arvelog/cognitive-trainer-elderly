@@ -1,8 +1,14 @@
 import { guardAiRequest, jsonResponse, normalizeText, readJsonBody } from '../server/apiSecurity.js';
 
-export const config = {
-    runtime: 'edge',
-};
+const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1.5';
+
+const buildScenePrompt = (scene) => [
+    scene,
+    'Create a realistic, warm, adult-friendly educational scene for language rehabilitation.',
+    'Show one clear everyday action with the person, their hands, and the main objects fully visible.',
+    'Use a simple uncluttered background, natural daylight, clear shapes, and high visual contrast.',
+    'No text, letters, numbers, labels, logos, watermark, collage, split scene, medical setting, or childish cartoon style.',
+].join(' ');
 
 export default async function handler(req) {
     const guardResponse = guardAiRequest(req, {
@@ -30,124 +36,43 @@ export default async function handler(req) {
             return jsonResponse({ error: 'Invalid prompt' }, 400);
         }
 
-        const toDataUrl = async (url) => {
-            const imageResponse = await fetch(url);
-            if (!imageResponse.ok) {
-                throw new Error(`Failed to fetch generated image: ${imageResponse.status}`);
-            }
-
-            const contentType = imageResponse.headers.get('content-type') || 'image/png';
-            const bytes = new Uint8Array(await imageResponse.arrayBuffer());
-            let binary = '';
-            const chunkSize = 0x8000;
-            for (let i = 0; i < bytes.length; i += chunkSize) {
-                binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-            }
-            return `data:${contentType};base64,${btoa(binary)}`;
-        };
-
-        // Step 1: Generate image with DALL-E
         const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${envKey}`
+                'Authorization': `Bearer ${envKey}`,
             },
             body: JSON.stringify({
-                model: 'dall-e-3',
-                prompt: `${prompt}. Friendly cartoon illustration, bright warm colors, one clear everyday action, 1-2 people max, 2-4 visible objects, no text, no labels, no collage, no split scenes.`,
+                model: IMAGE_MODEL,
+                prompt: buildScenePrompt(prompt),
                 n: 1,
-                size: '1024x1024',
-                quality: 'standard'
-            })
+                size: '1536x1024',
+                quality: 'medium',
+                output_format: 'webp',
+                output_compression: 78,
+                background: 'opaque',
+            }),
         });
 
         if (!imageResponse.ok) {
             const errorText = await imageResponse.text();
-            console.error(`DALL-E API error (Status ${imageResponse.status}):`, errorText);
-            return jsonResponse({ error: `DALL-E API fail: ${imageResponse.status}` }, imageResponse.status);
+            console.error(`GPT Image API error (Status ${imageResponse.status}):`, errorText);
+            return jsonResponse({ error: `OpenAI image generation failed: ${imageResponse.status}` }, imageResponse.status);
         }
 
         const imageData = await imageResponse.json();
-        const imageUrl = imageData.data?.[0]?.url;
-
-        if (!imageUrl) {
-            return jsonResponse({ error: 'No image URL in response' }, 500);
+        const base64Image = imageData.data?.[0]?.b64_json;
+        if (!base64Image) {
+            return jsonResponse({ error: 'No generated image in response' }, 500);
         }
 
-        let finalImageUrl = imageUrl;
-        try {
-            finalImageUrl = await toDataUrl(imageUrl);
-        } catch (e) {
-            console.error('Failed to convert generated image to data URL:', e);
-        }
-
-        // Step 2: Analyze image with GPT Vision to generate matching questions
-        const visionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${envKey}`
-            },
-            body: JSON.stringify({
-                model: 'gpt-5.4-mini',
-                messages: [
-                    {
-                        role: 'system',
-                        content: 'You analyze images and generate quiz questions in Ukrainian. Output ONLY valid JSON, no markdown.'
-                    },
-                    {
-                        role: 'user',
-                        content: [
-                            {
-                                type: 'text',
-                                text: `Подивись УВАЖНО на цю картинку і створи завдання для когнітивного тренажера для літніх людей.
-
-Створи JSON:
-{
-  "correct": ["Речення 1", "Речення 2", "Речення 3"],
-  "wrong": ["Речення 1", "Речення 2", "Речення 3"]
-}
-
-ПРАВИЛА:
-- ВСІ речення мають бути СТВЕРДЖУВАЛЬНИМИ (описувати що щось ВІДБУВАЄТЬСЯ або Є)
-- "correct" — 3 речення УКРАЇНСЬКОЮ про НАЙГОЛОВНІШЕ, що видно на картинці. Описуй тільки те, в чому ти впевнений на 100%: головний персонаж, його основна дія, та місце дії. НЕ описуй дрібні деталі чи фонові предмети.
-- "wrong" — 3 речення УКРАЇНСЬКОЮ про ЗОВСІМ ІНШУ СЦЕНУ. Неправильні відповіді повинні описувати дії та місця, які АБСОЛЮТНО не пов'язані з картинкою. Наприклад, якщо на картинці кухня — неправильні варіанти мають бути про вулицю, парк, магазин тощо. Якщо на картинці город — неправильні мають бути про кімнату, пляж, школу.
-- ЗАБОРОНЕНО писати заперечення ("немає", "не видно", "відсутній")
-- Речення мають бути прості, зрозумілі для літніх людей
-- НЕ використовуй російські слова, тільки українську мову
-- Відповідай ТІЛЬКИ JSON`
-                            },
-                            {
-                                type: 'image_url',
-                                image_url: { url: imageUrl }
-                            }
-                        ]
-                    }
-                ],
-                response_format: { type: 'json_object' }
-            })
+        return jsonResponse({
+            url: `data:image/webp;base64,${base64Image}`,
+            source: 'ai',
+            model: IMAGE_MODEL,
         });
-
-        let questions = null;
-        if (visionResponse.ok) {
-            const visionData = await visionResponse.json();
-            const content = visionData.choices?.[0]?.message?.content;
-            if (content) {
-                try {
-                    questions = JSON.parse(content.replace(/^```json/g, '').replace(/```$/g, '').trim());
-                } catch (e) {
-                    console.error('Failed to parse vision response:', e);
-                }
-            }
-        } else {
-            console.error('Vision API error:', await visionResponse.text());
-        }
-
-        return jsonResponse({ url: finalImageUrl, questions });
-
-    } catch (e) {
-        console.error('Image generation error:', e);
-        return jsonResponse({ error: 'Image generation failed', details: e.message }, 500);
+    } catch (error) {
+        console.error('Image generation error:', error);
+        return jsonResponse({ error: 'Image generation failed' }, 500);
     }
 }

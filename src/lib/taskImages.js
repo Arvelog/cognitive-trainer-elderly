@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 const DB_NAME = 'cognitive-trainer-task-images';
 const STORE_NAME = 'images';
-const IMAGE_CACHE_VERSION = 'gpt-image-2-low-webp-v1';
+const IMAGE_CACHE_VERSION = 'gpt-image-1-mini-low-webp-v2';
 
 const memoryCache = new Map();
 let dbPromise = null;

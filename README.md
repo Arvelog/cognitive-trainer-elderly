@@ -23,9 +23,13 @@ Serverless AI routes require:
 
 ```bash
 OPENAI_API_KEY=...
+OPENAI_IMAGE_MODEL=gpt-image-1.5
+OPENAI_TASK_IMAGE_MODEL=gpt-image-1-mini
 ```
 
 Do not expose this key through `VITE_*` variables. The frontend calls local `/api/*` routes, and those routes call OpenAI from the server side.
+
+The "Що відбувається?" exercise first generates one coherent scene plan with Ukrainian answers, then renders that scene through GPT Image as a landscape WebP. A bundled photograph is used only when the image API is unavailable.
 
 ## Production Checks
 

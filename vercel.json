@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/generate-image.js": {
+      "maxDuration": 60
+    },
+    "api/generate-task-images.js": {
+      "maxDuration": 60
+    }
+  }
+}
