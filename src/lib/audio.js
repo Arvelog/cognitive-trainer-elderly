@@ -1,3 +1,5 @@
+import confetti from 'canvas-confetti';
+
 const audioCtx = () => {
   if (!window._actx) window._actx = new (window.AudioContext || window.webkitAudioContext)();
   return window._actx;
@@ -37,15 +39,19 @@ export const playVictory = () => {
 };
 
 export const fireConfetti = () => {
-  if (window.confetti) {
-    window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
-    return;
-  }
+  confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
+};
 
-  const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js';
-  s.onload = () => window.confetti && window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
-  document.head.appendChild(s);
+export const speakText = (text) => {
+  if (!text || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
+
+  window.speechSynthesis.cancel();
+  const utterance = new window.SpeechSynthesisUtterance(String(text));
+  utterance.lang = 'uk-UA';
+  utterance.rate = 0.78;
+  utterance.pitch = 1;
+  window.speechSynthesis.speak(utterance);
+  return true;
 };
 
 export const shuffle = (a) => {

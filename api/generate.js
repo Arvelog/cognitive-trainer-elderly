@@ -1,114 +1,99 @@
+import { guardAiRequest, jsonResponse } from '../server/apiSecurity.js';
+
 export const config = {
     runtime: 'edge',
 };
 
 export default async function handler(req) {
-    if (req.method !== 'POST') {
-        return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
-    }
+    const guardResponse = guardAiRequest(req, {
+        key: 'generate',
+        limit: 8,
+        maxBodyBytes: 1024,
+    });
+    if (guardResponse) return guardResponse;
 
     const envKey = process.env.OPENAI_API_KEY;
-
     if (!envKey) {
-        return new Response(JSON.stringify({ error: 'Missing OPENAI_API_KEY' }), { status: 500 });
+        return jsonResponse({ error: 'Missing OPENAI_API_KEY' }, 500);
     }
 
-    const GENERATION_PROMPT = `Ти генеруєш дані для когнітивного тренажера для літніх людей (українською мовою).
-Створі ОДИН JSON-об'єкт із 11 полями — по одному набору даних для кожного завдання.
-Все має бути про побутові, знайомі літнім людям теми: кулінарія, город, побут, тварини, здоров'я, природа.
+    const generationPrompt = `Ти створюєш домашні мовленнєві вправи українською мовою для дорослої людини з афазією після інсульту.
+Мета: тренувати розуміння, називання, побудову фраз, читання та письмо. Це не тест інтелекту.
 
-Точна структура (додержуйся типів!):
+Поверни ОДИН JSON-об'єкт точно такої структури:
 {
-  "matchWord": { "word": "одна дія з дозволеного списку", "options": ["потрібна річ1", "потрібна річ2", "зайва річ1", "зайва річ2", "зайва річ3"], "correct": [0, 1] },
-  "sequence": { "title": "назва процесу", "steps": ["крок1", "крок2", "крок3", "крок4"] },
-  "budget": { "wallet": 1200, "label": "назва", "items": [{"n":"товар","p":150},{"n":"товар2","p":80,"qty":2},{"n":"товар3","p":100},{"n":"товар4","p":45,"qty":3}] },
-  "sentence": { "sentences": ["Речення 1 мінімум 5-7 слів", "Речення 2 мінімум 5-7 слів", "Речення 3 мінімум 5-7 слів"] },
-  "associations": { "q": "Питання?", "correct": ["emoji правильний1", "emoji правильний2", "emoji правильний3"], "wrong": ["emoji неправильний1", "emoji неправильний2", "emoji неправильний3"] },
-  "categories": { "groupLabels": ["Кухня", "Двір", "Аптека"], "groupIcons": ["🍲", "🧹", "💊"], "items": [{"text":"ложка","group":0}, {"text":"лопата","group":1}, {"text":"пластир","group":2}, {"text":"чашка","group":0}, {"text":"граблі","group":1}, {"text":"сироп","group":2}] },
-  "trueFalse": { "statements": [{"text": "Твердження 1", "answer": true}, {"text": "Твердження 2", "answer": false}, {"text": "Твердження 3", "answer": true}] },
-  "antonyms": { "sentences": [{"s": "Речення з пропуском (замість антоніма пиши ...)", "a": "антонім"}, {"s": "Ще речення...", "a": "антонім"}, {"s": "І ще...", "a": "антонім"}, {"s": "Четверте...", "a": "антонім"}] },
-  "vowels": { "words": [{"full": "СЛОВО", "hint": "Підказка"}, {"full": "ДРУГЕ", "hint": "Підказка"}, {"full": "ТРЕТЄ", "hint": "Підказка"}] },
-  "verbs": { "scene": "One short English sentence describing a clear everyday scene for image generation, e.g. A woman cooking soup in a bright kitchen with vegetables on the table and a pot on the stove" },
-  "whatChanged": { "items": ["emoji1","emoji2","emoji3","emoji4","emoji5","emoji6"], "changes": [{"idx":1,"to":"новий_emoji"},{"idx":4,"to":"новий_emoji"}] }
+  "matchWord": { "word": "одна дозволена побутова дія" },
+  "sequence": { "title": "коротка побутова дія", "steps": ["крок 1", "крок 2", "крок 3", "крок 4"] },
+  "naming": { "word": "чашка", "emoji": "☕", "category": "посуд", "use": "з неї п'ють чай", "place": "на кухні", "firstLetter": "Ч", "syllables": 2 },
+  "sentence": { "sentences": ["Просте речення з 4-7 слів", "Ще одне просте речення", "Третє просте речення"] },
+  "associations": { "q": "Що стосується чашки?", "correct": ["☕ З неї п'ють", "🍽️ Це посуд", "🏠 Вона є на кухні"], "wrong": ["🚗 Нею їздять", "✂️ Нею ріжуть", "👟 Її взувають"] },
+  "categories": { "groupLabels": ["Кухня", "Ванна", "Сад"], "groupIcons": ["🍲", "🛁", "🌱"], "items": [{"text":"🥄 ложка","group":0},{"text":"☕ чашка","group":0},{"text":"🧼 мило","group":1},{"text":"🧺 рушник","group":1},{"text":"🪴 лійка","group":2},{"text":"🪏 лопата","group":2}] },
+  "trueFalse": { "statements": [{"text":"Чай наливають у чашку","answer":true},{"text":"Черевики одягають на руки","answer":false},{"text":"Ключем відчиняють двері","answer":true}] },
+  "phraseCompletion": { "items": [{"text":"Чай наливають у ...","answer":"чашку","options":["чашку","шафу","подушку"]},{"text":"Двері відчиняють ...","answer":"ключем","options":["ключем","ложкою","рушником"]},{"text":"Перед сном я лягаю у ...","answer":"ліжко","options":["ліжко","магазин","автобус"]}] },
+  "writing": { "words": [{"word":"ЧАШКА","emoji":"☕","hint":"З неї п'ють чай"},{"word":"КЛЮЧ","emoji":"🔑","hint":"Ним відчиняють двері"},{"word":"МИЛО","emoji":"🧼","hint":"Ним миють руки"}] },
+  "verbs": { "scene": "A woman cooking soup in a bright kitchen with vegetables and a pot on the stove" },
+  "reading": { "phrases": [{"context":"Привітання","text":"Доброго ранку!"},{"context":"Прохання","text":"Дайте, будь ласка, води."},{"context":"Подяка","text":"Дякую вам за допомогу."}] }
 }
 
-ВАЖЛИВО:
-- МОВА: ВИКЛЮЧНО УКРАЇНСЬКА! НЕ використовуй російські слова! Наприклад: "прогулянка" (НЕ "прогулка"), "городина" (НЕ "овощі"), "кошик" (НЕ "корзина"), "ліжко" (НЕ "кровать"), "праска" (НЕ "утюг"), "холодильник", "каструля". Перевіряй кожне слово — воно має бути саме українською мовою, а не русизмом.
-- Для "vowels": слова мають бути ПРОСТИМИ, ПОВСЯКДЕННИМИ УКРАЇНСЬКИМИ словами, які знає кожна людина (наприклад: КАСТРУЛЯ, ТЕЛЕВІЗОР, КОВДРА, КАПЕЛЮХ, ПІДЛОГА, ДЗЕРКАЛО). НЕ використовуй рідкісні, наукові чи специфічні слова. Голосні літери в українській мові: А, Е, И, І, Ї, О, У, Ю, Я, Є. Перевір, що після видалення голосних маска збігається зі словом.
-- Кожного разу генеруй НОВІ унікальні дані, не повторюй приклади
-- Використовуй emoji де вказано
-- "matchWord.word" — коротка, дуже проста дія ТІЛЬКИ з цього списку: "Прання", "Читання", "Риболовля", "Чай", "Шиття", "Прибирання", "Поливання", "Ремонт", "Сніданок", "Посадка", "Квасити", "Пекти пиріг", "Варити суп", "Варити варення", "Консервування", "Прасування", "Малювання", "В'язання", "Похід на ринок", "Садити квіти"
-- "matchWord.options" — рівно 5 простих предметів: 2 реально потрібні для цієї дії та 3 очевидно зайві. Для цих дій використовуй такі правильні пари: Квасити = огірки + сіль АБО помідори + сіль; Пекти пиріг = борошно + яйця; Варити суп = каструля + овочі; Варити варення = ягоди + цукор; Консервування = банки + кришки; Прасування = праска + дошка; Малювання = фарби + пензлик; В'язання = пряжа + спиці; Похід на ринок = кошик + гроші; Садити квіти = насіння + лійка
-- "matchWord.options" НЕ МОЖУТЬ повторювати саме слово-підказку
-- "matchWord.correct" — масив із 2 індексів правильних відповідей; правильні відповіді ОБОВ'ЯЗКОВО мають бути першими двома предметами, тобто [0, 1]
-- Краще робити відповідь як просту річ: "книга", "вудка", "мітла", "лійка", "молоток", "порошок"
-- Не використовуй занадто загальні дії без зрозумілої пари предметів: "готувати", "робити", "їсти", "пити", "купувати"
-- Не роби варіанти занадто схожими між собою; рівно 2 речі мають підходити логічно, 3 інші мають бути явно зайвими
-- "steps" в sequence — в ПРАВИЛЬНОМУ порядку
-- Для "sequence" чергуй різні побутові теми: ринок, аптека, прибирання, сад, гості, сумка, прання, накриття столу, випікання. Не зациклюйся на компоті, чаї чи борщі.
-- "wallet" — сума в гаманці (має бути більша за суму items з урахуванням qty)
-- У "budget.items" 2 з 4 товарів ПОВИННІ мати поле "qty" (2, 3 або 4). Ціна "p" — ціна за штуку. Загальна вартість = p × qty. Товари без qty купуються 1 штуку
-- "vowels.words[].full" — ВЕЛИКИМИ ЛІТЕРАМИ
-- Уникай ейджизму, сумних тем, стереотипів про старість чи хвороби. Завдання мають бути життєрадісними та поважними до літніх людей.
-- Для "antonyms" речення ПОВИННІ мати життєвий та логічний сенс (наприклад: "Чай гарячий, лід холодний"). КАТЕГОРИЧНО НЕ генеруй абсурдні твердження або негативні стереотипи (НЕ пиши, що літні люди "стомлені", "повільні" чи "хворі"). Тільки позитивні або нейтральні факти.
-- Для "antonyms" використовуй тільки дуже прості, чіткі антоніми з РІЗНИХ коренів. Не утворюй відповідь від того ж слова чи тієї ж основи. Заборонено пари типу "теплий/тепліший", "високий/вищий", "кращий/кращий", "молодий/молодший", "тихий/тихіший". Відповідь має виглядати як окреме просте слово, а не як порівняльна форма, зменшена форма або слово з тим самим коренем. СЛОВО-ВІДПОВІДЬ МАЄ БУТИ НЕ БІЛЬШЕ 7 ЛІТЕР.
-- Речення для "antonyms" мають бути дуже короткі та прості: 3-5 слів, без складних зворотів. Краще один короткий факт і одне слово-відповідь.
-- Не використовуй рідкісні, книжні, діалектні або незвичні слова на кшталт "млявий". Бери лише найзвичніші побутові слова, які легко читаються й добре знайомі кожній людині.
-- Краще робити речення про побутові предмети або речі в домі, а не про людей.
-- Зберігай різноманітність: у блоці "antonyms" міксуй різні прості теми (температура, розмір, час, чистота, повнота, ширина, звук, м'якість, новизна, довжина, яскравість, вага, дистанція), але не ускладнюй слова.
-- Для "categories" роби 6 предметів і 3 чіткі групи, наприклад ["Кухня", "Двір", "Аптека"]. Додай ще "groupIcons" — 3 прості emoji для цих кошиків. Кожен предмет має поле "group" з індексом 0, 1 або 2; у кожній групі має бути по 2 предмети
-- Для "whatChanged": 6 різних побутових emoji (фрукти, тварини, предмети). "changes" — рівно 2 об'єкти, кожен з "idx" (0-5) та "to" (новий emoji, що відрізняється від оригіналу). Заміни мають бути з тієї ж теми але іншим предметом (яблуко→груша, кіт→собака)
-- Для "verbs.scene": напиши ОДНЕ коротке англійське речення про чітку побутову сцену для картинки. Формула: хто + що робить + де + 1-2 видимі предмети. Пиши 12-22 слова, без абстракцій, без тексту на зображенні, без складних деталей. ОБОВ'ЯЗКОВО чергуй теми — не повторюй бабусю, город чи яблука. Обирай одну з тем: ринок, кухня, дитячий майданчик, рибалка, пікнік, майстерня, свято, прибирання, зима. Приклад: "A woman cooking soup in a bright kitchen with vegetables on the table and a pot on the stove"
-- Відповідай ТІЛЬКИ JSON, без markdown, без коментарів
+Правила:
+- Усі поля, крім verbs.scene, пиши тільки правильною українською мовою.
+- Використовуй дуже знайомі побутові слова. Один рядок — одна проста думка.
+- Не використовуй рідкісні слова, жарти з подвійним змістом, абстракції, ейджизм, сумні або лячні теми.
+- Не роби вправи дитячими за тоном. Людина доросла.
+- matchWord.word вибери ТІЛЬКИ з цього списку: "Заварити чай", "Почистити зуби", "Полити квіти", "Написати листа", "Приготувати суп", "Піти до магазину", "Почитати книгу", "Підмести підлогу", "Посадити квіти", "Попрасувати сорочку", "Зателефонувати", "Зачинити двері".
+- sequence.steps мають бути у правильному природному порядку.
+- naming.word — один конкретний предмет, 3-9 літер. Підказки мають прямо стосуватися предмета.
+- sentence.sentences — рівно 3 речення по 4-7 слів із прямим порядком слів.
+- associations — рівно 3 очевидні правильні та 3 очевидні неправильні ознаки одного предмета.
+- categories — 3 чіткі групи, по 2 предмети в кожній; кожен items.text починається з доречного emoji.
+- trueFalse — 3 короткі твердження, серед них мають бути і true, і false.
+- phraseCompletion — 3 функціональні фрази; відповідь дослівно входить до options; інші 2 варіанти очевидно не підходять.
+- writing.word — просте слово ВЕЛИКИМИ ЛІТЕРАМИ.
+- reading.phrases — 3 корисні дорослі фрази для щоденного спілкування.
+- verbs.scene — 12-20 англійських слів: одна людина, одна чітка побутова дія, простий фон, без тексту на зображенні.
+- Відповідай тільки JSON без markdown.
 
-УВАГА: Це новий користувацький запит. Згенеруй АБСОЛЮТНО НОВІ варіанти, не використовуй ті ж самі слова, що і минулого разу.
-Використай цей випадковий seed для унікальності: ${Math.random().toString(36).substring(2, 10)} - ${Date.now()}`;
+Seed: ${Math.random().toString(36).substring(2, 10)}-${Date.now()}`;
 
     try {
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${envKey}`
+                'Authorization': `Bearer ${envKey}`,
             },
             body: JSON.stringify({
                 model: 'gpt-5.4-mini',
                 messages: [
-                    { role: 'system', content: 'You are a helpful assistant that only outputs strictly valid JSON. You MUST write ONLY in Ukrainian language (українська мова). NEVER use Russian words. For example: use "прогулянка" NOT "прогулка", "кошик" NOT "корзина", "праска" NOT "утюг", "городина" NOT "овощі". Every single word must be correct Ukrainian.' },
-                    { role: 'user', content: GENERATION_PROMPT }
+                    {
+                        role: 'system',
+                        content: 'Return strictly valid JSON. Write natural Ukrainian without Russian words. Use respectful adult language and simple aphasia-friendly phrasing.',
+                    },
+                    { role: 'user', content: generationPrompt },
                 ],
-                response_format: { type: 'json_object' }
-            })
+                response_format: { type: 'json_object' },
+            }),
         });
 
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`OpenAI API error (Status ${response.status}):`, errorText);
-
-            if (response.status === 429) {
-                return new Response(JSON.stringify({ error: '429' }), { status: 429 });
-            }
-
-            return new Response(JSON.stringify({ error: `OpenAI API fail: ${response.status}`, details: errorText }), { status: response.status });
+            if (response.status === 429) return jsonResponse({ error: '429' }, 429);
+            return jsonResponse({ error: `OpenAI API fail: ${response.status}` }, response.status);
         }
 
         const data = await response.json();
-
         const content = data.choices?.[0]?.message?.content;
-        if (!content) {
-            console.error('Unexpected OpenAI response format:', JSON.stringify(data));
-            return new Response(JSON.stringify({ error: 'Unexpected AI Response format' }), { status: 500 });
-        }
+        if (!content) return jsonResponse({ error: 'Unexpected AI response format' }, 500);
 
-        const cleanJsonStr = content.replace(/^```json/g, '').replace(/```$/g, '').trim();
-
-        return new Response(cleanJsonStr, {
+        const cleanJson = content.replace(/^```json/g, '').replace(/```$/g, '').trim();
+        JSON.parse(cleanJson);
+        return new Response(cleanJson, {
             status: 200,
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
         });
-
-    } catch (e) {
-        console.error('Edge function error:', e);
-        return new Response(JSON.stringify({ error: 'OpenAI request failed', details: e.message }), { status: 500 });
+    } catch (error) {
+        console.error('Task generation error:', error);
+        return jsonResponse({ error: 'OpenAI request failed' }, 500);
     }
 }

@@ -1,35 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Eye, Lightbulb, Loader2, RotateCcw } from 'lucide-react';
+import { Check, EyeOff, Lightbulb, Loader2, RotateCcw, Volume2 } from 'lucide-react';
 import { Card, BigBtn, ChoiceButton, MiniBtn, TaskHeader, Result } from './common';
-import { playCorrect, playWrong, fireConfetti, shuffle, pick } from '../lib/audio';
+import { playCorrect, playWrong, fireConfetti, shuffle, pick, speakText } from '../lib/audio';
 import { isRecentValue, pickExcludingRecent, rememberRecentValue } from '../lib/recentTasks';
 import { useTaskImages } from '../lib/taskImages';
 import {
     MATCH_NEED_DATA,
     FIND_ODD_DATA,
     SEQUENCE_DATA,
-    BUDGET_DATA,
+    NAMING_DATA,
     SENTENCE_DATA,
     ASSOC_DATA,
     CATEGORY_SORT_DATA,
     TRUEFALSE_DATA,
-    ANTONYM_DATA,
-    VOWELS_DATA,
+    PHRASE_COMPLETION_DATA,
+    WRITING_DATA,
     VERB_DATA,
-    WHATCHANGED_DATA,
-    removeVowels,
+    READING_DATA,
 } from '../data/taskData';
 
 const MATCH_REPEAT_KEY = 'cognitive_trainer_recent_match_prompts';
 const SEQUENCE_REPEAT_KEY = 'cognitive_trainer_last_sequence_title';
-const BUDGET_REPEAT_KEY = 'cognitive_trainer_recent_budget_labels';
-const ANTONYM_REPEAT_KEY = 'cognitive_trainer_recent_antonym_blocks';
-
-const antonymBlockKey = (block) =>
-    (block?.sentences || [])
-        .map((item) => String(item?.a || '').trim().toLowerCase().replace(/[’`]/g, "'"))
-        .filter(Boolean)
-        .join('|');
 
 function VisualTile({ visual, imageUrl, compact = false, large = false, hideLabel = false }) {
     const item = visual || { label: '', fallback: '', emoji: '' };
@@ -119,6 +110,12 @@ export function Task1({ onScore, initialData }) {
             <div className="max-w-2xl mx-auto mb-6 text-center">
                 <div className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-pastel-green-light text-warm-gray font-extrabold text-4xl md:text-5xl">
                     {data.prompt}
+                </div>
+                <div className="mt-3">
+                    <MiniBtn onClick={() => speakText(data.prompt)} className="bg-pastel-blue text-warm-gray">
+                        <Volume2 className="h-5 w-5" />
+                        Почути
+                    </MiniBtn>
                 </div>
             </div>
             <p className="text-center text-2xl md:text-3xl font-medium text-warm-gray-light mb-6">Потрібно вибрати 2 предмети.</p>
@@ -246,19 +243,12 @@ export function Task2({ onScore, initialData }) {
 }
 
 export function Task3({ onScore, initialData }) {
-    const [data] = useState(() => {
-        if (initialData?.label && Array.isArray(initialData.items)) {
-            rememberRecentValue(BUDGET_REPEAT_KEY, initialData.label, 4);
-            return initialData;
-        }
-        return pickExcludingRecent(BUDGET_DATA, BUDGET_REPEAT_KEY, (item) => item.label, 4) || pick(BUDGET_DATA);
-    });
-    const total = data.items.reduce((s, i) => s + i.p * (i.qty || 1), 0);
-    const rest = data.wallet - total;
-    const [inputTotal, setInputTotal] = useState('');
-    const [inputRest, setInputRest] = useState('');
+    const [data] = useState(() => initialData || pick(NAMING_DATA));
+    const [answer, setAnswer] = useState('');
+    const [hintLevel, setHintLevel] = useState(0);
     const [checked, setChecked] = useState(false);
-    const correct = Number(inputTotal) === total && Number(inputRest) === rest;
+    const normalize = (value) => String(value || '').trim().toLowerCase().replace(/[’`]/g, "'");
+    const correct = normalize(answer) === normalize(data.word);
     const check = () => {
         setChecked(true);
         if (correct) {
@@ -269,32 +259,47 @@ export function Task3({ onScore, initialData }) {
     };
     return (
         <Card>
-            <TaskHeader icon="💰" title={`Бюджет: ${data.label}`} desc={`У вашому гаманці ${data.wallet} грн. Порахуйте витрати.`} />
-            <div className="max-w-md mx-auto space-y-3">
-                {data.items.map((it, i) => (
-                    <div key={i} className="flex justify-between p-4 bg-pastel-beige rounded-2xl text-2xl font-semibold text-warm-gray">
-                        <span>{it.n}{it.qty ? ` ×${it.qty}` : ''}</span>
-                        <span>{it.p} грн{it.qty ? ` / шт` : ''}</span>
-                    </div>
-                ))}
-                <div className="pt-4 space-y-3">
-                    <div className="flex items-center gap-4">
-                        <label className="text-2xl font-bold text-warm-gray w-56">Загальна сума:</label>
-                        <input type="number" value={inputTotal} onChange={(e) => setInputTotal(e.target.value)} disabled={checked} className="flex-1 p-5 text-3xl rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400" placeholder="?" />
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <label className="text-2xl font-bold text-warm-gray w-56">Решта:</label>
-                        <input type="number" value={inputRest} onChange={(e) => setInputRest(e.target.value)} disabled={checked} className="flex-1 p-5 text-3xl rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-400" placeholder="?" />
-                    </div>
+            <TaskHeader icon="🗣️" title="Назвіть предмет" desc="Скажіть слово вголос, потім напишіть його" />
+            <div className="max-w-lg mx-auto text-center">
+                <div className="text-8xl md:text-9xl mb-4" aria-label={data.word}>{data.emoji}</div>
+                <div className="flex flex-wrap justify-center gap-2 mb-5">
+                    <MiniBtn onClick={() => speakText(data.word)} className="bg-pastel-blue text-warm-gray">
+                        <Volume2 className="h-5 w-5" />
+                        Почути слово
+                    </MiniBtn>
+                    {!checked && hintLevel < 3 && (
+                        <MiniBtn onClick={() => setHintLevel((level) => level + 1)} className="bg-pastel-yellow text-warm-gray">
+                            <Lightbulb className="h-5 w-5" />
+                            {hintLevel === 0 ? 'Підказка' : 'Ще підказка'}
+                        </MiniBtn>
+                    )}
                 </div>
-                {!checked && (
-                    <div className="text-center mt-4">
-                        <BigBtn onClick={check} disabled={!inputTotal.trim() || !inputRest.trim()} className="bg-pastel-green text-warm-gray">
-                            Перевірити
-                        </BigBtn>
+                {hintLevel > 0 && (
+                    <div className="mb-5 space-y-2 text-left rounded-2xl bg-yellow-50 p-4 text-xl text-warm-gray">
+                        {hintLevel >= 1 && <p><strong>Для чого:</strong> {data.use}</p>}
+                        {hintLevel >= 2 && <p><strong>Де буває:</strong> {data.place}</p>}
+                        {hintLevel >= 3 && <p><strong>Початок слова:</strong> {data.firstLetter} · складів: {data.syllables}</p>}
                     </div>
                 )}
-                {checked && <Result correct={correct} msg={correct ? 'Відмінно порахували!' : `Правильно: сума ${total} грн, решта ${rest} грн`} />}
+                <label className="block text-xl font-bold text-warm-gray mb-2" htmlFor="naming-answer">Напишіть назву</label>
+                <input
+                    id="naming-answer"
+                    type="text"
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    disabled={checked}
+                    className="w-full p-4 text-3xl rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-500 text-center"
+                    placeholder="Слово"
+                    autoComplete="off"
+                />
+                {!checked && <div className="mt-4"><BigBtn onClick={check} disabled={!answer.trim()} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
+                {checked && <Result correct={correct} msg={correct ? 'Так, це правильне слово!' : `Це слово: ${data.word}. Послухайте і повторіть його.`} />}
+                {checked && !correct && (
+                    <div className="mt-4 flex justify-center gap-2">
+                        <MiniBtn onClick={() => speakText(data.word)} className="bg-pastel-blue text-warm-gray"><Volume2 className="h-5 w-5" />Почути</MiniBtn>
+                        <MiniBtn onClick={() => { setAnswer(''); setChecked(false); }} className="bg-pastel-beige-dark text-warm-gray"><RotateCcw className="h-5 w-5" />Спробувати ще</MiniBtn>
+                    </div>
+                )}
             </div>
         </Card>
     );
@@ -454,7 +459,6 @@ export function Task4({ onScore, initialData }) {
 export function Task5({ onScore, initialData }) {
     const [data] = useState(() => initialData || pick(ASSOC_DATA));
     const [items] = useState(() => shuffle([...data.correct, ...data.wrong]));
-    const { visualItems, images, loading: imagesLoading } = useTaskImages(5, items);
     const [sel, setSel] = useState(new Set());
     const [checked, setChecked] = useState(false);
     const toggle = (it) => {
@@ -474,24 +478,23 @@ export function Task5({ onScore, initialData }) {
     };
     return (
         <Card>
-            <TaskHeader icon="🔗" title="Асоціації" desc={data.q} />
-            <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть 3 правильні відповіді</p>
-            {imagesLoading && (
-                <p className="text-center text-sm md:text-base font-semibold text-warm-gray-light mb-4">Готуємо картинки. Можна відповідати вже зараз.</p>
-            )}
+            <TaskHeader icon="🔗" title="Ознаки предмета" desc={data.q} />
+            <div className="mb-5 flex justify-center">
+                <MiniBtn onClick={() => speakText(data.q)} className="bg-pastel-blue text-warm-gray"><Volume2 className="h-5 w-5" />Почути питання</MiniBtn>
+            </div>
+            <p className="text-center text-2xl md:text-3xl font-medium text-warm-gray-light mb-8">Оберіть 3 ознаки</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
                 {items.map((it, i) => {
                     const isSel = sel.has(it);
                     const isCorr = data.correct.includes(it);
-                    const visual = visualItems[i];
                     return (
                         <ChoiceButton
                             key={i}
                             onClick={() => toggle(it)}
                             state={checked ? (isCorr ? 'correct' : isSel ? 'incorrect' : 'muted') : isSel ? 'selected' : 'idle'}
-                            className="min-h-[176px] p-3 md:p-5"
+                            className="min-h-[112px] p-4 text-xl md:text-2xl font-bold leading-snug"
                         >
-                            <VisualTile visual={visual} imageUrl={visual ? images[visual.cacheKey] : null} />
+                            {it}
                         </ChoiceButton>
                     );
                 })}
@@ -574,7 +577,7 @@ export function Task6({ onScore, initialData }) {
                             onClick={() => selectedItem !== null && assign(selectedItem, groupIdx)}
                             disabled={checked}
                             align="left"
-                            className={`min-h-[180px] rounded-3xl border-4 border-dashed p-4 md:p-6 text-left transition-all active:scale-[0.99] ${basketStyles[groupIdx % basketStyles.length]} ${dropCue?.groupIdx === groupIdx ? 'animate-basket-pop' : ''}`}
+                            className={`min-h-[140px] rounded-xl border-4 border-dashed p-4 text-left transition-all active:scale-[0.99] md:min-h-[180px] md:p-6 ${basketStyles[groupIdx % basketStyles.length]} ${dropCue?.groupIdx === groupIdx ? 'animate-basket-pop' : ''}`}
                         >
                             <div className={`inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full text-5xl md:text-6xl mb-3 ${iconRing[groupIdx % iconRing.length]}`}>
                                 {data.groupIcons?.[groupIdx] || '🧺'}
@@ -624,7 +627,7 @@ export function Task6({ onScore, initialData }) {
                                 }
                             }}
                             state={checked ? (isCorrectPlace ? 'correct' : isWrongPlace ? 'incorrect' : 'muted') : placed ? 'selected' : isSelected ? 'selectedBlue' : 'idle'}
-                            className={`min-h-[310px] p-4 md:min-h-[390px] md:p-6 ${justDropped ? 'animate-basket-pop' : ''}`}
+                            className={`min-h-[230px] p-4 md:min-h-[390px] md:p-6 ${justDropped ? 'animate-basket-pop' : ''}`}
                         >
                             <VisualTile visual={visual} imageUrl={visual ? images[visual.cacheKey] : null} large />
                         </ChoiceButton>
@@ -693,7 +696,7 @@ export function Task7({ onScore, initialData }) {
 
     return (
         <Card>
-            <TaskHeader icon="🤔" title="Правда чи Ні?" desc={`Твердження ${current + 1} з ${statements.length}`} />
+            <TaskHeader icon="👂" title="Так чи ні?" desc={`Твердження ${current + 1} з ${statements.length}`} />
             <div className="max-w-lg mx-auto">
                 <div className="flex justify-center gap-3 mb-8">
                     {statements.map((_, idx) => (
@@ -708,6 +711,12 @@ export function Task7({ onScore, initialData }) {
                             animation: slideIn ? 'tf-slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' : 'tf-slide-out 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards',
                         }}
                     >
+                        <div className="mb-4 flex justify-center">
+                            <MiniBtn onClick={() => speakText(s.text)} className="bg-pastel-blue text-warm-gray">
+                                <Volume2 className="h-5 w-5" />
+                                Послухати
+                            </MiniBtn>
+                        </div>
                         <div className={`p-8 rounded-3xl text-center mb-8 transition-colors duration-500 ${answered ? (answers[current]?.correct ? 'bg-green-100 border-2 border-green-300' : 'bg-red-100 border-2 border-red-300') : 'bg-pastel-yellow'}`}>
                             <p className="text-4xl font-bold text-warm-gray leading-tight">"{s.text}"</p>
                             {answered && <p className={`mt-3 text-2xl font-bold ${answers[current]?.correct ? 'text-green-600' : 'text-red-500'}`}>{answers[current]?.correct ? '✅ Правильно!' : s.answer ? '❌ Це була правда' : '❌ Це було неправдою'}</p>}
@@ -715,7 +724,7 @@ export function Task7({ onScore, initialData }) {
                         {!answered && (
                             <div className="flex gap-4 justify-center">
                                 <ChoiceButton onClick={() => handle(true)} className="flex-1 rounded-3xl border-3 border-pastel-green py-8 text-4xl font-extrabold">
-                                    ✅ Правда
+                                    ✅ Так
                                 </ChoiceButton>
                                 <ChoiceButton onClick={() => handle(false)} className="flex-1 rounded-3xl border-3 border-pastel-pink py-8 text-4xl font-extrabold hover:bg-red-50 hover:border-pastel-pink">
                                     ❌ Ні
@@ -751,148 +760,143 @@ export function Task7({ onScore, initialData }) {
 }
 
 export function Task8({ onScore, initialData }) {
-    const [data] = useState(() => {
-        if (initialData?.sentences) {
-            const key = antonymBlockKey(initialData);
-            if (isRecentValue(ANTONYM_REPEAT_KEY, key, 5)) {
-                return pickExcludingRecent(ANTONYM_DATA, ANTONYM_REPEAT_KEY, antonymBlockKey, 5) || pick(ANTONYM_DATA);
+    const [data] = useState(() => initialData || pick(PHRASE_COMPLETION_DATA));
+    const [current, setCurrent] = useState(0);
+    const [results, setResults] = useState([]);
+    const [selected, setSelected] = useState(null);
+    const [done, setDone] = useState(false);
+    const item = data.items[current];
+    const answer = (option) => {
+        if (selected !== null || done) return;
+        const correct = option === item.answer;
+        setSelected(option);
+        setResults((values) => [...values, correct]);
+        correct ? playCorrect() : playWrong();
+
+        setTimeout(() => {
+            if (current < data.items.length - 1) {
+                setCurrent((value) => value + 1);
+                setSelected(null);
+            } else {
+                setDone(true);
+                if ([...results, correct].every(Boolean)) {
+                    fireConfetti();
+                    onScore();
+                }
             }
-            rememberRecentValue(ANTONYM_REPEAT_KEY, key, 5);
-            return initialData;
-        }
-        return pickExcludingRecent(ANTONYM_DATA, ANTONYM_REPEAT_KEY, antonymBlockKey, 5) || pick(ANTONYM_DATA);
-    });
-    const [answers, setAnswers] = useState(data.sentences.map(() => ''));
-    const [checked, setChecked] = useState(false);
-    const [hintLevel, setHintLevel] = useState(data.sentences.map(() => 0));
-    const correct = data.sentences.every((s, i) => answers[i].trim().toLowerCase() === s.a.toLowerCase());
-    const setAns = (i, v) => {
-        const n = [...answers];
-        n[i] = v;
-        setAnswers(n);
-    };
-    const addHint = (i) => {
-        const n = [...hintLevel];
-        n[i] = Math.min(n[i] + 1, 3);
-        setHintLevel(n);
-    };
-    const getHintText = (s, level) => {
-        const u = s.a.toUpperCase();
-        if (level === 1) return `1 літера: ${u[0]}`;
-        if (level === 2) return `${u[0]}${'_'.repeat(u.length - 2)}${u[u.length - 1]}`;
-        if (level === 3) {
-            if (u.length <= 4) return u;
-            return `${u[0]}${u[1]}${'_'.repeat(u.length - 4)}${u[u.length - 2]}${u[u.length - 1]}`;
-        }
-        return '';
-    };
-    const check = () => {
-        setChecked(true);
-        if (correct) {
-            playCorrect();
-            fireConfetti();
-            onScore();
-        } else playWrong();
+        }, 900);
     };
     return (
         <Card>
-            <TaskHeader icon="↔️" title="Протилежності" desc="Коротке слово" />
-            <div className="max-w-xl mx-auto space-y-4">
-                {data.sentences.map((s, i) => (
-                    <div key={i} className={`p-4 md:p-5 rounded-3xl border-2 ${checked ? (answers[i].trim().toLowerCase() === s.a.toLowerCase() ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-white border-pastel-beige-dark'}`}>
-                        <p className="text-2xl md:text-3xl font-extrabold text-warm-gray mb-3 leading-tight">{s.s.replace(new RegExp(s.a, 'gi'), '...').replace(/\.\.\.\.\.\./g, '...')}</p>
-                        <div className="flex gap-2 md:gap-3 items-stretch">
-                            <input type="text" value={answers[i]} onChange={(e) => setAns(i, e.target.value)} disabled={checked} placeholder="..." className="flex-1 min-w-0 p-3 md:p-4 text-3xl md:text-4xl rounded-3xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center tracking-wide" />
-                            {!checked && hintLevel[i] < 3 && (
-                                <MiniBtn onClick={() => addHint(i)} className="bg-pastel-yellow text-warm-gray hover:bg-yellow-200">
-                                    <Lightbulb className="h-5 w-5" />
-                                    {hintLevel[i] === 0 ? 'Підказка' : 'Ще'}
-                                </MiniBtn>
-                            )}
-                        </div>
-                        {hintLevel[i] > 0 && !checked && <p className="mt-2 inline-flex text-sm md:text-base px-3 py-2 bg-yellow-50 rounded-2xl text-warm-gray font-semibold">💡 {getHintText(s, hintLevel[i])}</p>}
-                        {checked && answers[i].trim().toLowerCase() !== s.a.toLowerCase() && <p className="text-sm md:text-base text-red-500 mt-2 font-semibold">Відповідь: {s.a}</p>}
+            <TaskHeader icon="💬" title="Завершіть фразу" desc={`Фраза ${current + 1} з ${data.items.length}`} />
+            {!done ? (
+                <div className="max-w-xl mx-auto">
+                    <div className="mb-5 flex justify-center">
+                        <MiniBtn onClick={() => speakText(item.text.replace('...', ''))} className="bg-pastel-blue text-warm-gray">
+                            <Volume2 className="h-5 w-5" />
+                            Почути фразу
+                        </MiniBtn>
                     </div>
-                ))}
-            </div>
-            {!checked && <div className="text-center mt-4"><BigBtn onClick={check} disabled={answers.some((a) => !a.trim())} className="bg-pastel-green text-warm-gray">Перевірити</BigBtn></div>}
-            {checked && <Result correct={correct} msg={correct ? 'Всі антоніми правильні!' : 'Деякі відповіді неточні'} />}
+                    <p className="mb-7 rounded-2xl bg-pastel-yellow p-6 text-center text-3xl md:text-4xl font-extrabold leading-snug text-warm-gray">{item.text}</p>
+                    <div className="space-y-3">
+                        {item.options.map((option) => (
+                            <ChoiceButton
+                                key={option}
+                                onClick={() => answer(option)}
+                                disabled={selected !== null}
+                                state={selected === null ? 'idle' : option === item.answer ? 'correct' : option === selected ? 'incorrect' : 'muted'}
+                                className="w-full p-5 text-2xl md:text-3xl font-bold"
+                            >
+                                {option}
+                            </ChoiceButton>
+                        ))}
+                    </div>
+                    {selected !== null && <p className="mt-4 text-center text-xl font-semibold text-warm-gray">Повна фраза: {item.text.replace('...', item.answer)}</p>}
+                </div>
+            ) : (
+                <Result correct={results.every(Boolean)} msg={results.every(Boolean) ? 'Усі фрази завершено самостійно!' : 'Фрази завершено. Підказки та повторення допомагають навчанню.'} />
+            )}
         </Card>
     );
 }
 
 export function Task9({ onScore, initialData }) {
-    const [data] = useState(() => initialData || pick(VOWELS_DATA));
-    const [answers, setAnswers] = useState(data.words.map(() => ''));
-    const [checked, setChecked] = useState(data.words.map(() => false));
-    const [allDone, setAllDone] = useState(false);
-
-    const isCorrect = (w, i) => answers[i].trim().toUpperCase() === w.full.toUpperCase();
-    const setAns = (i, v) => {
-        const n = [...answers];
-        n[i] = v;
-        setAnswers(n);
-    };
-
-    const checkWord = (i) => {
-        if (!answers[i].trim()) return;
-        const n = [...checked];
-        n[i] = true;
-        setChecked(n);
-        if (isCorrect(data.words[i], i)) {
-            playCorrect();
-        } else {
+    const [data] = useState(() => initialData || pick(WRITING_DATA));
+    const [current, setCurrent] = useState(0);
+    const [phase, setPhase] = useState('copy');
+    const [answer, setAnswer] = useState('');
+    const [feedback, setFeedback] = useState(null);
+    const [done, setDone] = useState(false);
+    const item = data.words[current];
+    const isCorrect = answer.trim().toUpperCase() === item.word.toUpperCase();
+    const submit = () => {
+        if (!answer.trim()) return;
+        if (!isCorrect) {
+            setFeedback('wrong');
             playWrong();
+            return;
         }
-        const allChecked = n.every((c) => c);
-        if (allChecked) {
-            setAllDone(true);
-            const allCorrect = data.words.every((w, idx) => isCorrect(w, idx));
-            if (allCorrect) {
-                setTimeout(() => {
-                    fireConfetti();
-                    onScore();
-                }, 500);
-            }
+
+        playCorrect();
+        setFeedback(null);
+        setAnswer('');
+        if (phase === 'copy') {
+            setPhase('recall');
+            return;
+        }
+
+        if (current < data.words.length - 1) {
+            setCurrent((value) => value + 1);
+            setPhase('copy');
+        } else {
+            setDone(true);
+            fireConfetti();
+            onScore();
         }
     };
 
     return (
         <Card>
-            <TaskHeader icon="📝" title="Загублені голосні" desc="Відновіть слова, вписавши пропущені літери" />
-            <div className="max-w-lg mx-auto space-y-2 md:space-y-3">
-                {data.words.map((w, i) => (
-                    <div key={i} className={`p-3 md:p-4 rounded-2xl border-2 ${checked[i] ? (isCorrect(w, i) ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300') : 'bg-white border-pastel-beige-dark'}`}>
-                        <p className="text-3xl md:text-4xl font-extrabold text-warm-gray tracking-[0.2em] text-center mb-1">{removeVowels(w.full)}</p>
-                        <p className="text-base md:text-lg text-warm-gray-light text-center italic mb-2">💡 {w.hint}</p>
-
-                        <div className="flex gap-2 items-stretch justify-center">
-                            <input type="text" value={answers[i]} onChange={(e) => setAns(i, e.target.value)} disabled={checked[i]} placeholder="Слово..." className="flex-1 w-full min-w-0 p-2 md:p-3 text-2xl md:text-3xl uppercase rounded-xl border-2 border-pastel-green focus:outline-none focus:border-green-400 text-center" />
-
-                            {!checked[i] ? (
-                                <MiniBtn
-                                    onClick={() => checkWord(i)}
-                                    disabled={!answers[i].trim()}
-                                    aria-label="Перевірити слово"
-                                    className="rounded-xl bg-pastel-green px-5 py-2 text-warm-gray hover:bg-green-400"
-                                >
-                                    <Check className="h-7 w-7" />
-                                </MiniBtn>
-                            ) : (
-                                <div className="flex items-center justify-center px-4 bg-white/50 rounded-xl">
-                                    {isCorrect(w, i) ? <p className="text-2xl text-green-600 font-bold">✅</p> : <p className="text-lg text-red-500 font-bold leading-tight">❌ {w.full}</p>}
-                                </div>
-                            )}
-                        </div>
+            <TaskHeader icon="✍️" title="Напишіть і згадайте" desc={`Слово ${current + 1} з ${data.words.length}`} />
+            {!done ? (
+                <div className="max-w-lg mx-auto text-center">
+                    <div className="text-8xl mb-3">{item.emoji}</div>
+                    <p className="text-xl text-warm-gray-light mb-4">{item.hint}</p>
+                    <div className="mb-5 flex justify-center gap-2">
+                        <MiniBtn onClick={() => speakText(item.word)} className="bg-pastel-blue text-warm-gray"><Volume2 className="h-5 w-5" />Почути</MiniBtn>
                     </div>
-                ))}
-            </div>
-            {allDone && <Result correct={data.words.every((w, idx) => isCorrect(w, idx))} msg={data.words.every((w, idx) => isCorrect(w, idx)) ? 'Всі слова відновлено!' : 'Деякі слова невірні'} />}
+                    <div className="mb-5 rounded-2xl bg-pastel-beige p-5">
+                        <p className="text-lg font-bold text-warm-gray-light mb-2">{phase === 'copy' ? '1. Перепишіть слово' : '2. Напишіть слово з пам\'яті'}</p>
+                        {phase === 'copy' ? (
+                            <p className="text-4xl md:text-5xl font-extrabold text-warm-gray">{item.word}</p>
+                        ) : (
+                            <p className="flex items-center justify-center gap-2 text-xl font-semibold text-warm-gray-light"><EyeOff className="h-5 w-5" />Слово приховано</p>
+                        )}
+                    </div>
+                    <input
+                        type="text"
+                        value={answer}
+                        onChange={(e) => { setAnswer(e.target.value); setFeedback(null); }}
+                        className="w-full p-4 text-3xl uppercase rounded-2xl border-2 border-pastel-green focus:outline-none focus:border-green-500 text-center"
+                        placeholder="Напишіть слово"
+                        autoComplete="off"
+                    />
+                    <div className="mt-4"><BigBtn onClick={submit} disabled={!answer.trim()} className="bg-pastel-green text-warm-gray"><Check className="h-6 w-6" />Готово</BigBtn></div>
+                    {feedback === 'wrong' && (
+                        <div className="mt-4 rounded-2xl bg-yellow-50 p-4 text-xl font-semibold text-warm-gray">
+                            <p>Подивіться на слово ще раз: <strong>{item.word}</strong></p>
+                            <MiniBtn onClick={() => { setAnswer(''); setFeedback(null); }} className="mt-3 bg-pastel-beige-dark text-warm-gray"><RotateCcw className="h-5 w-5" />Спробувати ще</MiniBtn>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <Result correct msg="Ви переписали й пригадали всі слова!" />
+            )}
         </Card>
     );
 }
 
-export function Task10({ onScore, initialData, imageUrl, scenePrompt, loading }) {
+export function Task10({ onScore, initialData, imageUrl, loading }) {
     const baseDataRef = useRef(initialData || pick(VERB_DATA));
     const [data, setData] = useState(() => baseDataRef.current);
     const [options, setOptions] = useState(() => {
@@ -975,8 +979,8 @@ export function Task10({ onScore, initialData, imageUrl, scenePrompt, loading })
                     </div>
                 ) : (
                     <div className="mb-4 md:mb-6 p-6 bg-pastel-beige rounded-3xl">
-                        <p className="text-4xl font-bold text-warm-gray mb-2">🖼️ {data.title}</p>
-                        {scenePrompt && <p className="text-lg md:text-xl text-warm-gray-light leading-snug">{scenePrompt}</p>}
+                        <p className="text-7xl mb-3">{data.emoji || '🖼️'}</p>
+                        <p className="text-4xl font-bold text-warm-gray">{data.title || 'Побутова сцена'}</p>
                     </div>
                 )}
                 <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Оберіть 3 правильні відповіді</p>
@@ -1011,124 +1015,45 @@ export function Task10({ onScore, initialData, imageUrl, scenePrompt, loading })
 }
 
 export function Task11({ onScore, initialData }) {
-    const [data] = useState(() => initialData || pick(WHATCHANGED_DATA));
-    const changedGrid = useState(() => {
-        const g = [...data.items];
-        data.changes.forEach((c) => {
-            g[c.idx] = c.to;
-        });
-        return g;
-    })[0];
-    const allCards = [...data.items, ...changedGrid];
-    const { visualItems, images, loading: imagesLoading } = useTaskImages(11, allCards);
-    const changedIndices = useState(() => new Set(data.changes.map((c) => c.idx)))[0];
-    const [revealed, setRevealed] = useState(false);
-    const [selected, setSelected] = useState(new Set());
-    const [checked, setChecked] = useState(false);
-    const numChanges = data.changes.length;
-    const resetAttempt = () => {
-        setRevealed(false);
-        setSelected(new Set());
-        setChecked(false);
-    };
-
-    const toggle = (i) => {
-        if (!revealed || checked) return;
-        const n = new Set(selected);
-        n.has(i) ? n.delete(i) : (n.size < numChanges && n.add(i));
-        setSelected(n);
-    };
-
-    const correct = selected.size === numChanges && [...selected].every((i) => changedIndices.has(i));
-    const check = () => {
-        setChecked(true);
-        if (correct) {
+    const [data] = useState(() => initialData || pick(READING_DATA));
+    const [completed, setCompleted] = useState(() => new Set());
+    const done = completed.size === data.phrases.length;
+    const markRead = (index) => {
+        if (completed.has(index)) return;
+        const next = new Set(completed);
+        next.add(index);
+        setCompleted(next);
+        if (next.size === data.phrases.length) {
             playCorrect();
             fireConfetti();
             onScore();
-        } else playWrong();
+        }
     };
-
-    const grid = revealed ? changedGrid : data.items;
-    const selectedCount = selected.size;
 
     return (
         <Card>
-            <TaskHeader
-                icon="👀"
-                title="Що змінилось?"
-                desc={revealed ? `Тепер знайдіть ${numChanges} змінені картки.` : 'Спочатку запам\'ятайте 6 карток, потім натисніть кнопку.'}
-            />
-            <div className="max-w-md mx-auto">
-                <div className="mb-4 p-4 rounded-2xl bg-white/70 border border-pastel-beige-dark text-center">
-                    <p className="text-xl md:text-2xl font-extrabold text-warm-gray">{revealed ? 'Крок 2: Знайдіть зміни' : 'Крок 1: Запам\'ятайте'}</p>
-                    <p className="text-sm md:text-base text-warm-gray-light mt-1">
-                        {imagesLoading
-                            ? 'Картинки готуються. Якщо вони не встигнуть, залишаться старі картки.'
-                            : revealed ? `Знайдено ${selectedCount} з ${numChanges}.` : 'Просто дивіться і запамʼятовуйте.'}
-                    </p>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                    {grid.map((item, i) => {
-                        const isSel = selected.has(i);
-                        const isChanged = changedIndices.has(i);
-                        const visualIndex = (revealed ? data.items.length : 0) + i;
-                        const visual = visualItems[visualIndex];
-                        const state = !revealed
-                            ? 'idle'
-                            : checked
-                                ? isChanged
-                                    ? isSel
-                                        ? 'correct'
-                                        : 'warning'
-                                    : isSel
-                                        ? 'incorrect'
-                                        : 'muted'
-                                : isSel
-                                    ? 'selectedBlue'
-                                    : 'idle';
-                        return (
-                            <ChoiceButton
-                                key={i}
-                                onClick={() => toggle(i)}
-                                disabled={!revealed}
-                                state={state}
-                                className={`aspect-square flex items-center justify-center border-3 p-2 ${!revealed ? 'cursor-default opacity-100' : 'hover:scale-[1.03]'}`}
-                            >
-                                <VisualTile visual={visual} imageUrl={visual ? images[visual.cacheKey] : null} hideLabel />
-                            </ChoiceButton>
-                        );
-                    })}
-                </div>
-                {!revealed && (
-                    <div className="text-center mt-6">
-                        <BigBtn onClick={() => setRevealed(true)} className="bg-pastel-green text-warm-gray">
-                            <Eye className="h-5 w-5" />
-                            Показати зміни
-                        </BigBtn>
-                    </div>
-                )}
-                {revealed && !checked && selected.size === numChanges && (
-                    <div className="text-center mt-6">
-                        <BigBtn onClick={check} className="bg-pastel-green text-warm-gray">
-                            Перевірити
-                        </BigBtn>
-                    </div>
-                )}
-                {revealed && !checked && selected.size < numChanges && (
-                    <p className="text-center text-sm md:text-base text-warm-gray-light mt-4">
-                        Залишилось вибрати: {numChanges - selected.size}
-                    </p>
-                )}
-                {checked && <Result correct={correct} msg={correct ? 'Чудова пам\'ять! Ви знайшли всі зміни!' : `Змінились: позиції ${[...changedIndices].map((i) => i + 1).join(', ')}`} />}
-                {checked && !correct && (
-                    <div className="text-center mt-4">
-                        <BigBtn onClick={resetAttempt} className="bg-pastel-beige-dark text-warm-gray">
-                            <RotateCcw className="h-5 w-5" />
-                            Спробувати ще раз
-                        </BigBtn>
-                    </div>
-                )}
+            <TaskHeader icon="📖" title="Читайте вголос" desc="Слухайте, повторюйте і говоріть у своєму темпі" />
+            <div className="max-w-xl mx-auto space-y-4">
+                {data.phrases.map((phrase, index) => {
+                    const isDone = completed.has(index);
+                    return (
+                        <div key={`${phrase.context}-${index}`} className={`rounded-2xl border-2 p-5 ${isDone ? 'border-green-300 bg-green-50' : 'border-pastel-beige-dark bg-white'}`}>
+                            <p className="mb-2 text-base font-bold uppercase text-warm-gray-light">{phrase.context}</p>
+                            <p className="mb-4 text-3xl md:text-4xl font-extrabold leading-snug text-warm-gray">{phrase.text}</p>
+                            <div className="flex flex-wrap gap-2">
+                                <MiniBtn onClick={() => speakText(phrase.text)} className="bg-pastel-blue text-warm-gray">
+                                    <Volume2 className="h-5 w-5" />
+                                    Послухати
+                                </MiniBtn>
+                                <MiniBtn onClick={() => markRead(index)} disabled={isDone} className="bg-pastel-green text-warm-gray">
+                                    <Check className="h-5 w-5" />
+                                    {isDone ? 'Прочитано' : 'Я прочитала'}
+                                </MiniBtn>
+                            </div>
+                        </div>
+                    );
+                })}
+                {done && <Result correct msg="Чудово! Ви прочитали всі корисні фрази." />}
             </div>
         </Card>
     );

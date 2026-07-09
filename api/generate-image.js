@@ -1,21 +1,33 @@
+import { guardAiRequest, jsonResponse, normalizeText, readJsonBody } from '../server/apiSecurity.js';
+
 export const config = {
     runtime: 'edge',
 };
 
 export default async function handler(req) {
-    if (req.method !== 'POST') {
-        return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
-    }
+    const guardResponse = guardAiRequest(req, {
+        key: 'generate-image',
+        limit: 4,
+        maxBodyBytes: 4096,
+    });
+    if (guardResponse) return guardResponse;
 
     const envKey = process.env.OPENAI_API_KEY;
     if (!envKey) {
-        return new Response(JSON.stringify({ error: 'Missing OPENAI_API_KEY' }), { status: 500 });
+        return jsonResponse({ error: 'Missing OPENAI_API_KEY' }, 500);
     }
 
     try {
-        const { prompt } = await req.json();
+        const { data: body, error: bodyError } = await readJsonBody(req, 4096);
+        if (bodyError) return bodyError;
+
+        const prompt = normalizeText(body?.prompt, 800);
         if (!prompt) {
-            return new Response(JSON.stringify({ error: 'Missing prompt' }), { status: 400 });
+            return jsonResponse({ error: 'Missing prompt' }, 400);
+        }
+
+        if (prompt.length < 24 || prompt.split(/\s+/).length > 40) {
+            return jsonResponse({ error: 'Invalid prompt' }, 400);
         }
 
         const toDataUrl = async (url) => {
@@ -53,14 +65,14 @@ export default async function handler(req) {
         if (!imageResponse.ok) {
             const errorText = await imageResponse.text();
             console.error(`DALL-E API error (Status ${imageResponse.status}):`, errorText);
-            return new Response(JSON.stringify({ error: `DALL-E API fail: ${imageResponse.status}` }), { status: imageResponse.status });
+            return jsonResponse({ error: `DALL-E API fail: ${imageResponse.status}` }, imageResponse.status);
         }
 
         const imageData = await imageResponse.json();
         const imageUrl = imageData.data?.[0]?.url;
 
         if (!imageUrl) {
-            return new Response(JSON.stringify({ error: 'No image URL in response' }), { status: 500 });
+            return jsonResponse({ error: 'No image URL in response' }, 500);
         }
 
         let finalImageUrl = imageUrl;
@@ -132,13 +144,10 @@ export default async function handler(req) {
             console.error('Vision API error:', await visionResponse.text());
         }
 
-        return new Response(JSON.stringify({ url: finalImageUrl, questions }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-        });
+        return jsonResponse({ url: finalImageUrl, questions });
 
     } catch (e) {
         console.error('Image generation error:', e);
-        return new Response(JSON.stringify({ error: 'Image generation failed', details: e.message }), { status: 500 });
+        return jsonResponse({ error: 'Image generation failed', details: e.message }, 500);
     }
 }

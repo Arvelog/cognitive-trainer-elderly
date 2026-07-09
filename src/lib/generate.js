@@ -1,160 +1,199 @@
-import { isSafeAntonymBlock, fallbackAntonymBlock } from './antonyms';
-import { ANTONYM_DATA, BUDGET_DATA, MATCH_NEED_DATA, SEQUENCE_DATA, VERB_DATA } from '../data/taskData';
+import {
+  ASSOC_DATA,
+  CATEGORY_SORT_DATA,
+  MATCH_NEED_DATA,
+  NAMING_DATA,
+  PHRASE_COMPLETION_DATA,
+  READING_DATA,
+  SENTENCE_DATA,
+  SEQUENCE_DATA,
+  TRUEFALSE_DATA,
+  VERB_DATA,
+  WRITING_DATA,
+} from '../data/taskData';
 import { pick } from './audio';
 import { isRecentValue, normalizeRecentValue, selectExcludingRecent } from './recentTasks';
 
 const SEQUENCE_REPEAT_KEY = 'cognitive_trainer_last_sequence_title';
 const MATCH_REPEAT_KEY = 'cognitive_trainer_recent_match_prompts';
-const BUDGET_REPEAT_KEY = 'cognitive_trainer_recent_budget_labels';
-const ANTONYM_REPEAT_KEY = 'cognitive_trainer_recent_antonym_blocks';
+
+const isObject = (value) =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const isNonEmptyString = (value) =>
+  typeof value === 'string' && value.trim().length > 0;
+
+const hasUniqueStrings = (value, length) => {
+  if (!Array.isArray(value) || value.length !== length) return false;
+  if (value.some((item) => !isNonEmptyString(item))) return false;
+  return new Set(value.map((item) => item.trim().toLowerCase())).size === length;
+};
+
+const hasNoOverlap = (left, right) => {
+  const normalizedLeft = new Set(left.map((item) => item.trim().toLowerCase()));
+  return right.every((item) => !normalizedLeft.has(item.trim().toLowerCase()));
+};
 
 const pickSequenceFallback = () =>
   selectExcludingRecent(SEQUENCE_DATA, SEQUENCE_REPEAT_KEY, (item) => item.title, 7) || pick(SEQUENCE_DATA);
 
+const pickMatchNeedFallback = () =>
+  selectExcludingRecent(MATCH_NEED_DATA, MATCH_REPEAT_KEY, (item) => item.prompt, 10) || pick(MATCH_NEED_DATA);
+
 const isValidScenePrompt = (scene) => {
   const text = String(scene || '').trim();
-  return text.length >= 24 && /[A-Za-z]/.test(text) && /[a-z]/i.test(text);
+  return text.length >= 24 && /[A-Za-z]/.test(text);
 };
-
-const pickSceneFallback = () => pick(VERB_DATA).scene;
-
-const normalizeMatchText = (value) =>
-  normalizeRecentValue(value);
-
-const pickMatchNeedFallback = () =>
-  selectExcludingRecent(MATCH_NEED_DATA, MATCH_REPEAT_KEY, (item) => item.prompt, 12) || pick(MATCH_NEED_DATA);
-
-const pickBudgetFallback = () =>
-  selectExcludingRecent(BUDGET_DATA, BUDGET_REPEAT_KEY, (item) => item.label, 4) || pick(BUDGET_DATA);
-
-const antonymBlockKey = (block) =>
-  (block?.sentences || [])
-    .map((item) => normalizeRecentValue(item?.a))
-    .filter(Boolean)
-    .join('|');
-
-const pickAntonymFallback = () =>
-  selectExcludingRecent(ANTONYM_DATA, ANTONYM_REPEAT_KEY, antonymBlockKey, 5) || fallbackAntonymBlock();
 
 const toTrustedMatchNeedBlock = (matchWord) => {
-  const prompt = normalizeMatchText(matchWord?.word || matchWord?.prompt);
-  const trusted = MATCH_NEED_DATA.find((item) => normalizeMatchText(item.prompt) === prompt);
-
+  const prompt = normalizeRecentValue(matchWord?.word || matchWord?.prompt);
+  const trusted = MATCH_NEED_DATA.find((item) => normalizeRecentValue(item.prompt) === prompt);
   return trusted ? { ...trusted } : null;
 };
+
+const isValidSequenceBlock = (sequence) =>
+  isObject(sequence) &&
+  isNonEmptyString(sequence.title) &&
+  Array.isArray(sequence.steps) &&
+  sequence.steps.length === 4 &&
+  sequence.steps.every(isNonEmptyString);
+
+const isValidNamingBlock = (naming) =>
+  isObject(naming) &&
+  isNonEmptyString(naming.word) &&
+  isNonEmptyString(naming.emoji) &&
+  isNonEmptyString(naming.category) &&
+  isNonEmptyString(naming.use) &&
+  isNonEmptyString(naming.place) &&
+  isNonEmptyString(naming.firstLetter) &&
+  Number.isInteger(naming.syllables) &&
+  naming.syllables >= 1 &&
+  naming.syllables <= 6;
+
+const isValidSentenceBlock = (sentence) =>
+  isObject(sentence) &&
+  Array.isArray(sentence.sentences) &&
+  sentence.sentences.length >= 1 &&
+  sentence.sentences.length <= 3 &&
+  sentence.sentences.every((item) => isNonEmptyString(item) && item.trim().split(/\s+/).length >= 3);
+
+const isValidAssociationsBlock = (associations) =>
+  isObject(associations) &&
+  isNonEmptyString(associations.q) &&
+  hasUniqueStrings(associations.correct, 3) &&
+  hasUniqueStrings(associations.wrong, 3) &&
+  hasNoOverlap(associations.correct, associations.wrong);
+
+const isValidCategoriesBlock = (categories) => {
+  const items = Array.isArray(categories?.items) ? categories.items : [];
+  const counts = [0, 1, 2].map((group) => items.filter((item) => item?.group === group).length);
+  return (
+    isObject(categories) &&
+    hasUniqueStrings(categories.groupLabels, 3) &&
+    hasUniqueStrings(categories.groupIcons, 3) &&
+    items.length === 6 &&
+    items.every((item) => isNonEmptyString(item?.text) && /\p{Extended_Pictographic}/u.test(item.text) && Number.isInteger(item.group) && item.group >= 0 && item.group <= 2) &&
+    counts.every((count) => count === 2)
+  );
+};
+
+const isValidTrueFalseBlock = (trueFalse) =>
+  isObject(trueFalse) &&
+  Array.isArray(trueFalse.statements) &&
+  trueFalse.statements.length === 3 &&
+  trueFalse.statements.every((item) => isNonEmptyString(item?.text) && typeof item.answer === 'boolean');
+
+const isValidPhraseCompletionBlock = (block) =>
+  isObject(block) &&
+  Array.isArray(block.items) &&
+  block.items.length === 3 &&
+  block.items.every((item) =>
+    isNonEmptyString(item?.text) &&
+    item.text.includes('...') &&
+    isNonEmptyString(item.answer) &&
+    hasUniqueStrings(item.options, 3) &&
+    item.options.includes(item.answer));
+
+const isValidWritingBlock = (writing) =>
+  isObject(writing) &&
+  Array.isArray(writing.words) &&
+  writing.words.length === 3 &&
+  writing.words.every((item) => isNonEmptyString(item?.word) && isNonEmptyString(item?.emoji) && isNonEmptyString(item?.hint));
+
+const isValidReadingBlock = (reading) =>
+  isObject(reading) &&
+  Array.isArray(reading.phrases) &&
+  reading.phrases.length === 3 &&
+  reading.phrases.every((item) => isNonEmptyString(item?.context) && isNonEmptyString(item?.text));
 
 export async function generateAllTasks() {
   try {
     const response = await fetch('/api/generate', { method: 'POST' });
 
-    if (response.status === 429) {
-      console.warn('Backend reported 429 Too Many Requests.');
-      return { _rateLimited: true };
-    }
-
+    if (response.status === 429) return { _rateLimited: true };
     if (!response.ok) {
       console.warn(`Backend request failed with status ${response.status}.`);
       return null;
     }
 
     const text = await response.text();
-    if (text.trim().startsWith('<')) {
-      return null;
-    }
+    if (text.trim().startsWith('<')) return null;
 
-    let resultData = null;
+    let data;
     try {
-      resultData = JSON.parse(text);
-    } catch (parseError) {
-      console.warn('Failed to parse backend JSON response:', parseError);
+      data = JSON.parse(text);
+    } catch (error) {
+      console.warn('Failed to parse backend JSON response:', error);
       return null;
     }
 
-    if (resultData?.error) {
-      const errorText = String(resultData.error);
-      if (errorText.includes('429')) {
-        console.warn('Backend response body indicates 429 Too Many Requests.');
-        return { _rateLimited: true };
-      }
-      return null;
-    }
+    if (!isObject(data) || data.error) return null;
 
-    const data = resultData;
+    const fallbackBlocks = [];
+    const localAnswerBlocks = [];
+    const replaceInvalid = (name, valid, fallback) => {
+      if (valid) return;
+      fallbackBlocks.push(name);
+      data[name] = pick(fallback);
+      console.warn(`App: ${name} data is malformed, using fallback block`);
+    };
 
-    if (
-      !data ||
-      (!data.matchWord && !data.findOdd) ||
-      !data.sequence ||
-      !data.budget ||
-      !data.sentence ||
-      !data.associations ||
-      !data.categories ||
-      !data.trueFalse ||
-      !data.antonyms ||
-      !data.vowels ||
-      !data.verbs
-    ) {
-      console.warn('App: incomplete data, using fallback');
-      return null;
-    }
+    replaceInvalid('naming', isValidNamingBlock(data.naming), NAMING_DATA);
+    replaceInvalid('sentence', isValidSentenceBlock(data.sentence), SENTENCE_DATA);
+    replaceInvalid('associations', isValidAssociationsBlock(data.associations), ASSOC_DATA);
+    replaceInvalid('categories', isValidCategoriesBlock(data.categories), CATEGORY_SORT_DATA);
+    replaceInvalid('trueFalse', isValidTrueFalseBlock(data.trueFalse), TRUEFALSE_DATA);
+    replaceInvalid('phraseCompletion', isValidPhraseCompletionBlock(data.phraseCompletion), PHRASE_COMPLETION_DATA);
+    replaceInvalid('writing', isValidWritingBlock(data.writing), WRITING_DATA);
+    replaceInvalid('reading', isValidReadingBlock(data.reading), READING_DATA);
 
-    const categories = data.categories;
-    const categoryItems = Array.isArray(categories?.items) ? categories.items : [];
-    const groupCounts = [0, 1, 2].map((group) => categoryItems.filter((item) => item?.group === group).length);
-    if (
-      !categories ||
-      !Array.isArray(categories.groupLabels) ||
-      categories.groupLabels.length !== 3 ||
-      categories.groupLabels.some((label) => typeof label !== 'string' || !label.trim()) ||
-      new Set(categories.groupLabels.map((label) => label.trim().toLowerCase())).size !== 3 ||
-      !Array.isArray(categories.groupIcons) ||
-      categories.groupIcons.length !== 3 ||
-      categories.groupIcons.some((icon) => typeof icon !== 'string' || !icon.trim()) ||
-      categoryItems.length !== 6 ||
-      categoryItems.some((item) => typeof item?.text !== 'string' || !item.text.trim() || !Number.isInteger(item.group) || item.group < 0 || item.group > 2) ||
-      groupCounts.some((count) => count !== 2)
-    ) {
-      console.warn('App: categories data is malformed, using fallback to prevent UI breakage');
-      return null;
-    }
-
-    const matchWord = data.matchWord || data.findOdd;
-    let trustedMatchWord = toTrustedMatchNeedBlock(matchWord);
-    const matchPrompt = normalizeMatchText(trustedMatchWord?.prompt);
-    if (!trustedMatchWord || isRecentValue(MATCH_REPEAT_KEY, matchPrompt, 12)) {
-      console.warn('App: matchWord semantic quality is not trusted, using fallback block');
+    const trustedMatchWord = toTrustedMatchNeedBlock(data.matchWord || data.findOdd);
+    const matchPrompt = normalizeRecentValue(trustedMatchWord?.prompt);
+    if (!trustedMatchWord || isRecentValue(MATCH_REPEAT_KEY, matchPrompt, 10)) {
+      fallbackBlocks.push('matchWord');
       data.matchWord = pickMatchNeedFallback();
     } else {
       data.matchWord = trustedMatchWord;
+      localAnswerBlocks.push('matchWord');
     }
 
-    const antonymKey = antonymBlockKey(data.antonyms);
-    if (!isSafeAntonymBlock(data.antonyms) || isRecentValue(ANTONYM_REPEAT_KEY, antonymKey, 5)) {
-      console.warn('App: antonyms data is too similar, repetitive or unsafe, using fallback block');
-      data.antonyms = pickAntonymFallback();
-    }
-
-    const budgetLabel = normalizeRecentValue(data.budget?.label);
-    if (!budgetLabel || isRecentValue(BUDGET_REPEAT_KEY, budgetLabel, 4)) {
-      console.warn('App: budget data is repetitive, using fallback block');
-      data.budget = pickBudgetFallback();
-    }
-
-    const scenePrompt = data.verbs?.scene;
-    if (!isValidScenePrompt(scenePrompt)) {
-      console.warn('App: scene prompt is missing or too weak, using fallback scene');
-      data.verbs = { ...(data.verbs || {}), scene: pickSceneFallback() };
-    }
-
-    const sequenceTitle = String(data.sequence?.title || '').trim().toLowerCase();
-    if (!sequenceTitle || sequenceTitle.includes('компот') || isRecentValue(SEQUENCE_REPEAT_KEY, sequenceTitle, 7)) {
-      console.warn('App: sequence data is repetitive, using fallback block');
+    const sequenceTitle = normalizeRecentValue(data.sequence?.title);
+    if (!isValidSequenceBlock(data.sequence) || !sequenceTitle || isRecentValue(SEQUENCE_REPEAT_KEY, sequenceTitle, 7)) {
+      fallbackBlocks.push('sequence');
       data.sequence = pickSequenceFallback();
     }
 
+    if (!isObject(data.verbs) || !isValidScenePrompt(data.verbs.scene)) {
+      fallbackBlocks.push('verbs');
+      data.verbs = { scene: pick(VERB_DATA).scene };
+    }
+
+    data._source = fallbackBlocks.length > 0 ? 'mixed' : 'ai';
+    data._fallbackBlocks = fallbackBlocks;
+    data._localAnswerBlocks = localAnswerBlocks;
     return data;
-  } catch (e) {
-    console.warn('AI generation failed:', e);
+  } catch (error) {
+    console.warn('AI generation failed:', error);
     return null;
   }
 }

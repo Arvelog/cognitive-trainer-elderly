@@ -1,7 +1,7 @@
 import { Loader2, RefreshCw, X } from 'lucide-react';
 
 export const Card = ({ children, className = '' }) => (
-  <div className={`bg-white rounded-3xl shadow-lg p-6 ${className}`}>{children}</div>
+  <div className={`bg-white rounded-2xl shadow-lg p-4 md:p-6 ${className}`}>{children}</div>
 );
 
 const buttonFocus = 'focus:outline-none focus-visible:ring-4 focus-visible:ring-pastel-green/45';
@@ -12,7 +12,7 @@ export const BigBtn = ({ children, onClick, className = '', disabled, type = 'bu
     disabled={disabled}
     onClick={onClick}
     {...props}
-    className={`inline-flex min-h-14 items-center justify-center gap-2 px-8 py-4 text-xl font-bold rounded-3xl shadow-md transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${buttonFocus} ${className}`}
+    className={`inline-flex min-h-14 items-center justify-center gap-2 px-5 py-3 text-lg font-bold rounded-xl shadow-md transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 md:px-8 md:py-4 md:text-xl ${buttonFocus} ${className}`}
   >
     {children}
   </button>
@@ -43,7 +43,7 @@ export const ChoiceButton = ({
     disabled={disabled}
     onClick={onClick}
     {...props}
-    className={`rounded-2xl border-2 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${buttonFocus} ${choiceStateClasses[state] || choiceStateClasses.idle} ${align === 'left' ? 'text-left' : 'text-center'} ${className}`}
+    className={`rounded-xl border-2 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${buttonFocus} ${choiceStateClasses[state] || choiceStateClasses.idle} ${align === 'left' ? 'text-left' : 'text-center'} ${className}`}
   >
     {children}
   </button>
@@ -55,7 +55,7 @@ export const MiniBtn = ({ children, onClick, className = '', disabled, type = 'b
     disabled={disabled}
     onClick={onClick}
     {...props}
-    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-3 text-lg font-bold transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${buttonFocus} ${className}`}
+    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2 text-base font-bold transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 md:px-5 md:py-3 md:text-lg ${buttonFocus} ${className}`}
   >
     {children}
   </button>
@@ -81,14 +81,14 @@ export const ErrorBox = ({ msg, onRetry }) => (
 
 export const TaskHeader = ({ icon, title, desc }) => (
   <div className="text-center mb-6 md:mb-8">
-    <div className="text-6xl mb-3">{icon}</div>
-    <h2 className="text-4xl md:text-5xl font-extrabold text-warm-gray mb-4">{title}</h2>
-    <p className="text-2xl md:text-3xl font-semibold text-warm-gray-light leading-snug">{desc}</p>
+    <div className="text-5xl md:text-6xl mb-3">{icon}</div>
+    <h2 className="text-3xl md:text-5xl font-extrabold text-warm-gray mb-3 md:mb-4">{title}</h2>
+    <p className="text-xl md:text-3xl font-semibold text-warm-gray-light leading-snug">{desc}</p>
   </div>
 );
 
 export const Result = ({ correct, msg }) => (
-  <div className={`mt-4 p-4 rounded-2xl text-center text-xl font-bold ${correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+  <div className={`mt-4 p-4 rounded-xl text-center text-xl font-bold ${correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
     {correct ? '✅ ' : '❌ '}
     {msg}
   </div>

@@ -1,3 +1,5 @@
+import { guardAiRequest, jsonResponse, normalizeText, readJsonBody } from '../server/apiSecurity.js';
+
 export const config = {
     runtime: 'edge',
 };
@@ -5,15 +7,11 @@ export const config = {
 const MAX_ITEMS = 8;
 const IMAGE_MODEL = 'gpt-image-2';
 
-const normalizeText = (value) => String(value || '').trim();
-
 const buildPrompt = ({ task, label, prompt }) => {
     const base = normalizeText(prompt) || normalizeText(label);
-    const taskHint = task === 11
-        ? 'The object must be easy to remember and visually distinct from other objects.'
-        : task === 6
-            ? 'The object must be easy to recognize as a sortable household category item.'
-            : 'The object must clearly represent one possible answer in an association exercise.';
+    const taskHint = task === 6
+        ? 'The object must be easy to recognize as a sortable household category item.'
+        : 'The object must be clear and familiar.';
 
     return [
         `Create a clear educational illustration of: ${base}.`,
@@ -92,36 +90,48 @@ const runLimited = async (items, limit, worker) => {
 };
 
 export default async function handler(req) {
-    if (req.method !== 'POST') {
-        return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
-    }
+    const guardResponse = guardAiRequest(req, {
+        key: 'generate-task-images',
+        limit: 6,
+        maxBodyBytes: 16_384,
+    });
+    if (guardResponse) return guardResponse;
 
     const envKey = process.env.OPENAI_API_KEY;
     if (!envKey) {
-        return new Response(JSON.stringify({ error: 'Missing OPENAI_API_KEY' }), { status: 500 });
+        return jsonResponse({ error: 'Missing OPENAI_API_KEY' }, 500);
     }
 
     try {
-        const body = await req.json();
-        const task = Number(body?.task);
-        const items = Array.isArray(body?.items) ? body.items.slice(0, MAX_ITEMS) : [];
+        const { data: body, error: bodyError } = await readJsonBody(req, 16_384);
+        if (bodyError) return bodyError;
 
-        if (![5, 6, 11].includes(task)) {
-            return new Response(JSON.stringify({ error: 'Unsupported task' }), { status: 400 });
+        const task = Number(body?.task);
+        const items = Array.isArray(body?.items)
+            ? body.items.slice(0, MAX_ITEMS).map((item) => ({
+                id: normalizeText(item?.id, 260),
+                label: normalizeText(item?.label, 80),
+                prompt: normalizeText(item?.prompt, 160),
+            }))
+            : [];
+
+        if (task !== 6) {
+            return jsonResponse({ error: 'Unsupported task' }, 400);
         }
 
         if (items.length === 0) {
-            return new Response(JSON.stringify({ error: 'Missing items' }), { status: 400 });
+            return jsonResponse({ error: 'Missing items' }, 400);
+        }
+
+        if (items.some((item) => !item.id || !item.label || item.label.length > 80 || item.prompt.length > 160)) {
+            return jsonResponse({ error: 'Invalid items' }, 400);
         }
 
         const images = await runLimited(items, 2, (item) => generateOne(envKey, item, task));
 
-        return new Response(JSON.stringify({ images }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return jsonResponse({ images });
     } catch (error) {
         console.error('Task image endpoint failed:', error);
-        return new Response(JSON.stringify({ error: 'Image generation failed', details: error.message }), { status: 500 });
+        return jsonResponse({ error: 'Image generation failed', details: error.message }, 500);
     }
 }
