@@ -1,4 +1,4 @@
-import { guardAiRequest, jsonResponse } from '../server/apiSecurity.js';
+import { fetchWithTimeout, guardAiRequest, jsonResponse } from '../server/apiSecurity.js';
 
 export const config = {
     runtime: 'edge',
@@ -39,7 +39,7 @@ export default async function handler(req) {
 - Використовуй дуже знайомі побутові слова. Один рядок — одна проста думка.
 - Не використовуй рідкісні слова, жарти з подвійним змістом, абстракції, ейджизм, сумні або лячні теми.
 - Не роби вправи дитячими за тоном. Людина доросла.
-- matchWord.word вибери ТІЛЬКИ з цього списку: "Заварити чай", "Почистити зуби", "Полити квіти", "Написати листа", "Приготувати суп", "Піти до магазину", "Почитати книгу", "Підмести підлогу", "Посадити квіти", "Попрасувати сорочку", "Зателефонувати", "Зачинити двері".
+- matchWord.word вибери ТІЛЬКИ з цього списку: "Заварити чай", "Почистити зуби", "Полити квіти", "Написати листа", "Приготувати суп", "Піти до магазину", "Почитати книгу", "Підмести підлогу", "Посадити квіти", "Попрасувати сорочку", "Зателефонувати", "Замкнути двері".
 - sequence.steps мають бути у правильному природному порядку.
 - naming.word — один конкретний предмет, 3-9 літер. Підказки мають прямо стосуватися предмета.
 - sentence.sentences — рівно 3 речення по 4-7 слів із прямим порядком слів.
@@ -57,7 +57,7 @@ export default async function handler(req) {
 Seed: ${Math.random().toString(36).substring(2, 10)}-${Date.now()}`;
 
     try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -74,7 +74,7 @@ Seed: ${Math.random().toString(36).substring(2, 10)}-${Date.now()}`;
                 ],
                 response_format: { type: 'json_object' },
             }),
-        });
+        }, 20_000);
 
         if (!response.ok) {
             const errorText = await response.text();

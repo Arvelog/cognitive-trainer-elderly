@@ -4,7 +4,7 @@ export const Card = ({ children, className = '' }) => (
   <div className={`bg-white rounded-2xl shadow-lg p-4 md:p-6 ${className}`}>{children}</div>
 );
 
-const buttonFocus = 'focus:outline-none focus-visible:ring-4 focus-visible:ring-pastel-green/45';
+const buttonFocus = 'focus:outline-none focus-visible:ring-4 focus-visible:ring-green-strong focus-visible:ring-offset-2';
 
 export const BigBtn = ({ children, onClick, className = '', disabled, type = 'button', ...props }) => (
   <button
@@ -42,6 +42,8 @@ export const ChoiceButton = ({
     type={type}
     disabled={disabled}
     onClick={onClick}
+    data-choice-state={state}
+    aria-pressed={['idle', 'selected', 'selectedBlue'].includes(state) ? ['selected', 'selectedBlue'].includes(state) : undefined}
     {...props}
     className={`rounded-xl border-2 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${buttonFocus} ${choiceStateClasses[state] || choiceStateClasses.idle} ${align === 'left' ? 'text-left' : 'text-center'} ${className}`}
   >
@@ -62,15 +64,15 @@ export const MiniBtn = ({ children, onClick, className = '', disabled, type = 'b
 );
 
 export const Spinner = () => (
-  <div className="flex flex-col items-center justify-center py-16 gap-4">
-    <Loader2 className="w-12 h-12 text-pastel-green animate-spin" />
+  <div className="flex flex-col items-center justify-center py-16 gap-4" role="status" aria-live="polite" aria-atomic="true">
+    <Loader2 aria-hidden="true" className="w-12 h-12 text-green-strong animate-spin" />
     <p className="text-xl text-warm-gray">Завантаження...</p>
   </div>
 );
 
 export const ErrorBox = ({ msg, onRetry }) => (
-  <div className="flex flex-col items-center justify-center py-12 gap-4">
-    <X className="w-12 h-12 text-error" />
+  <div className="flex flex-col items-center justify-center py-12 gap-4" role="alert" aria-live="assertive" aria-atomic="true">
+    <X aria-hidden="true" className="w-12 h-12 text-error" />
     <p className="text-xl text-warm-gray text-center">{msg}</p>
     <BigBtn onClick={onRetry} className="bg-pastel-green text-warm-gray">
       <RefreshCw className="w-5 h-5" />
@@ -88,7 +90,7 @@ export const TaskHeader = ({ icon, title, desc, compact = false }) => (
 );
 
 export const Result = ({ correct, msg }) => (
-  <div className={`mt-4 p-4 rounded-xl text-center text-xl font-bold ${correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+  <div role="status" aria-live="polite" aria-atomic="true" className={`mt-4 p-4 rounded-xl text-center text-xl font-bold ${correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
     {correct ? '✅ ' : '❌ '}
     {msg}
   </div>

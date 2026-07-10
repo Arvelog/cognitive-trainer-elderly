@@ -41,7 +41,9 @@ const pickMatchNeedFallback = () =>
 
 const isValidScenePrompt = (scene) => {
   const text = String(scene || '').trim();
-  return text.length >= 24 && /[A-Za-z]/.test(text);
+  const wordCount = text.split(/\s+/).length;
+  const unsafeScene = /\b(hospital|medical|doctor|nurse|injury|blood|weapon|danger|scary|crying|sad|child|boy|girl|baby)\b/i;
+  return text.length >= 24 && wordCount >= 16 && wordCount <= 32 && /[A-Za-z]/.test(text) && !unsafeScene.test(text);
 };
 
 const toTrustedMatchNeedBlock = (matchWord) => {
@@ -60,6 +62,7 @@ const isValidSequenceBlock = (sequence) =>
 const isValidNamingBlock = (naming) =>
   isObject(naming) &&
   isNonEmptyString(naming.word) &&
+  /^[А-ЯІЇЄҐа-яіїєґ'’-]{3,9}$/u.test(naming.word.trim()) &&
   isNonEmptyString(naming.emoji) &&
   isNonEmptyString(naming.category) &&
   isNonEmptyString(naming.use) &&
@@ -72,9 +75,12 @@ const isValidNamingBlock = (naming) =>
 const isValidSentenceBlock = (sentence) =>
   isObject(sentence) &&
   Array.isArray(sentence.sentences) &&
-  sentence.sentences.length >= 1 &&
-  sentence.sentences.length <= 3 &&
-  sentence.sentences.every((item) => isNonEmptyString(item) && item.trim().split(/\s+/).length >= 3);
+  sentence.sentences.length === 3 &&
+  sentence.sentences.every((item) => {
+    if (!isNonEmptyString(item)) return false;
+    const wordCount = item.trim().split(/\s+/).length;
+    return wordCount >= 4 && wordCount <= 7;
+  });
 
 const isValidAssociationsBlock = (associations) =>
   isObject(associations) &&
@@ -91,6 +97,7 @@ const isValidCategoriesBlock = (categories) => {
     hasUniqueStrings(categories.groupLabels, 3) &&
     hasUniqueStrings(categories.groupIcons, 3) &&
     items.length === 6 &&
+    hasUniqueStrings(items.map((item) => item?.text), 6) &&
     items.every((item) => isNonEmptyString(item?.text) && /\p{Extended_Pictographic}/u.test(item.text) && Number.isInteger(item.group) && item.group >= 0 && item.group <= 2) &&
     counts.every((count) => count === 2)
   );
@@ -100,7 +107,8 @@ const isValidTrueFalseBlock = (trueFalse) =>
   isObject(trueFalse) &&
   Array.isArray(trueFalse.statements) &&
   trueFalse.statements.length === 3 &&
-  trueFalse.statements.every((item) => isNonEmptyString(item?.text) && typeof item.answer === 'boolean');
+  trueFalse.statements.every((item) => isNonEmptyString(item?.text) && typeof item.answer === 'boolean') &&
+  new Set(trueFalse.statements.map((item) => item.answer)).size === 2;
 
 const isValidPhraseCompletionBlock = (block) =>
   isObject(block) &&
@@ -117,7 +125,14 @@ const isValidWritingBlock = (writing) =>
   isObject(writing) &&
   Array.isArray(writing.words) &&
   writing.words.length === 3 &&
-  writing.words.every((item) => isNonEmptyString(item?.word) && isNonEmptyString(item?.emoji) && isNonEmptyString(item?.hint));
+  hasUniqueStrings(writing.words.map((item) => item?.word), 3) &&
+  writing.words.every((item) =>
+    isNonEmptyString(item?.word) &&
+    item.word === item.word.toUpperCase() &&
+    /^[А-ЯІЇЄҐ'’-]{3,12}$/u.test(item.word) &&
+    isNonEmptyString(item?.emoji) &&
+    /\p{Extended_Pictographic}/u.test(item.emoji) &&
+    isNonEmptyString(item?.hint));
 
 const isValidVerbBlock = (verbs) =>
   isObject(verbs) &&
@@ -128,9 +143,9 @@ const isValidVerbBlock = (verbs) =>
   hasUniqueStrings(verbs.wrong, 3) &&
   hasNoOverlap(verbs.correct, verbs.wrong);
 
-export async function generateAllTasks() {
+export async function generateAllTasks({ signal } = {}) {
   try {
-    const response = await fetch('/api/generate', { method: 'POST' });
+    const response = await fetch('/api/generate', { method: 'POST', signal });
 
     if (response.status === 429) return { _rateLimited: true };
     if (!response.ok) {
@@ -193,6 +208,7 @@ export async function generateAllTasks() {
     data._localAnswerBlocks = localAnswerBlocks;
     return data;
   } catch (error) {
+    if (signal?.aborted) throw error;
     console.warn('AI generation failed:', error);
     return null;
   }

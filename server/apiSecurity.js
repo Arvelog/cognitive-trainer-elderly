@@ -12,6 +12,16 @@ export const jsonResponse = (body, status = 200, headers = {}) =>
         },
     });
 
+export const fetchWithTimeout = async (input, init = {}, timeoutMs = 45_000) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(input, { ...init, signal: controller.signal });
+    } finally {
+        clearTimeout(timeout);
+    }
+};
+
 const getHost = (req) =>
     req.headers.get('x-forwarded-host') ||
     req.headers.get('host') ||

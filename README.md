@@ -1,6 +1,14 @@
-# Мовлення щодня
+# Поруч
 
-React/Vite home-practice app with Ukrainian-language exercises for adults rebuilding speech, reading, and writing after stroke-related aphasia. It is designed to complement an individualized speech-language therapy plan, not replace it.
+React/Vite home-practice app with six short Ukrainian-language exercises for a person with severe aphasia and a family member or caregiver. It is designed to complement an individualized speech-language therapy plan, not replace it.
+
+The core session is intentionally predictable and local:
+
+- one familiar word or decision at a time;
+- two large choices rather than dense grids;
+- slow Ukrainian speech synthesis and progressive cues;
+- assisted speech counts as useful practice;
+- an unfinished session is saved on the device and can be resumed.
 
 ## Setup
 
@@ -9,9 +17,9 @@ npm ci
 npm run dev
 ```
 
-`npm run dev` starts the Vite frontend only. In that mode `/api/*` is not served, so the app intentionally falls back to local task data.
+`npm run dev` starts the Vite frontend. The six-step therapy session does not require a network connection or AI generation.
 
-To test AI generation locally, set `OPENAI_API_KEY` and run:
+To test AI generation locally, copy `.env.example` to `.env`, set `OPENAI_API_KEY`, and run:
 
 ```bash
 npm run dev:api
@@ -29,16 +37,16 @@ OPENAI_TASK_IMAGE_MODEL=gpt-image-1-mini
 
 Do not expose this key through `VITE_*` variables. The frontend calls local `/api/*` routes, and those routes call OpenAI from the server side.
 
-The "Що відбувається?" exercise first generates one coherent scene plan with Ukrainian answers, then renders that scene through GPT Image as a landscape WebP. A bundled photograph is used only when the image API is unavailable.
+The server-side AI routes remain isolated from the frontend bundle for development and regression coverage, but the primary therapy flow uses the fixed, familiar vocabulary bundled with the app. That vocabulary is never sent to an AI route.
 
-The final speech exercise uses a fixed bank of personally successful single words bundled with the app. It rotates four words per session and never sends that vocabulary to an AI route.
+`npm run build` also creates the Cloudflare Worker entrypoint required by Sites while preserving the existing Vite architecture.
 
 ## Production Checks
 
 ```bash
+npm test
 npm run build
 npm audit --audit-level=moderate
-npm run test:generation
 ```
 
 The AI routes enforce same-origin browser provenance, payload-size checks, and in-process per-IP rate limits. For high-traffic production, replace the in-process limiter with a shared store such as Vercel KV, Redis, or another edge-compatible rate-limit backend.

@@ -1,4 +1,4 @@
-import { guardAiRequest, jsonResponse, normalizeText, readJsonBody } from '../server/apiSecurity.js';
+import { fetchWithTimeout, guardAiRequest, jsonResponse, normalizeText, readJsonBody } from '../server/apiSecurity.js';
 
 const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1.5';
 
@@ -10,7 +10,7 @@ const buildScenePrompt = (scene) => [
     'No text, letters, numbers, labels, logos, watermark, collage, split scene, medical setting, or childish cartoon style.',
 ].join(' ');
 
-export default async function handler(req) {
+export async function POST(req) {
     const guardResponse = guardAiRequest(req, {
         key: 'generate-image',
         limit: 4,
@@ -36,7 +36,7 @@ export default async function handler(req) {
             return jsonResponse({ error: 'Invalid prompt' }, 400);
         }
 
-        const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
+        const imageResponse = await fetchWithTimeout('https://api.openai.com/v1/images/generations', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -52,7 +52,7 @@ export default async function handler(req) {
                 output_compression: 78,
                 background: 'opaque',
             }),
-        });
+        }, 50_000);
 
         if (!imageResponse.ok) {
             const errorText = await imageResponse.text();

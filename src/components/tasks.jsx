@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, EyeOff, Lightbulb, Loader2, RotateCcw, Users, Volume2 } from 'lucide-react';
 import { Card, BigBtn, ChoiceButton, MiniBtn, TaskHeader, Result } from './common';
 import { playCorrect, playWrong, fireConfetti, shuffle, pick, speakText } from '../lib/audio';
 import { isRecentValue, pickExcludingRecent, rememberRecentValue } from '../lib/recentTasks';
 import { useTaskImages } from '../lib/taskImages';
+import { normalizeRotationIndex, splitSentenceWords } from '../lib/taskState';
 import {
     MATCH_NEED_DATA,
     FIND_ODD_DATA,
@@ -21,6 +22,24 @@ import {
 
 const MATCH_REPEAT_KEY = 'cognitive_trainer_recent_match_prompts';
 const SEQUENCE_REPEAT_KEY = 'cognitive_trainer_last_sequence_title';
+
+const useManagedTimeout = () => {
+    const timersRef = useRef(new Set());
+
+    useEffect(() => () => {
+        timersRef.current.forEach((timer) => clearTimeout(timer));
+        timersRef.current.clear();
+    }, []);
+
+    return useCallback((callback, delay) => {
+        const timer = setTimeout(() => {
+            timersRef.current.delete(timer);
+            callback();
+        }, delay);
+        timersRef.current.add(timer);
+        return timer;
+    }, []);
+};
 
 function VisualTile({ visual, imageUrl, compact = false, large = false, hideLabel = false }) {
     const item = visual || { label: '', fallback: '', emoji: '' };
@@ -176,14 +195,18 @@ export function Task2({ onScore, initialData }) {
     const [shuffled] = useState(() => shuffle(data.steps.map((s, i) => ({ text: s, idx: i }))));
     const [selected, setSelected] = useState([]);
     const [checked, setChecked] = useState(false);
+    const [pending, setPending] = useState(false);
+    const schedule = useManagedTimeout();
     const tapStep = (item) => {
-        if (checked || selected.find((s) => s.idx === item.idx)) return;
+        if (checked || pending || selected.find((s) => s.idx === item.idx)) return;
         const next = [...selected, item];
         setSelected(next);
-        if (next.length === 4) {
+        if (next.length === data.steps.length) {
             const ok = next.every((s, i) => s.idx === i);
-            setTimeout(() => {
+            setPending(true);
+            schedule(() => {
                 setChecked(true);
+                setPending(false);
                 if (ok) {
                     playCorrect();
                     fireConfetti();
@@ -193,29 +216,29 @@ export function Task2({ onScore, initialData }) {
         }
     };
     const undoFrom = (fromIndex) => {
-        if (checked || selected.length === 0) return;
+        if (checked || pending || selected.length === 0) return;
         setSelected(selected.slice(0, fromIndex));
     };
-    const correct = selected.length === 4 && selected.every((s, i) => s.idx === i);
+    const correct = selected.length === data.steps.length && selected.every((s, i) => s.idx === i);
     return (
         <Card>
             <TaskHeader icon="📋" title="Відновіть послідовність" desc={data.title} />
-            <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Натискайте на кроки у правильному порядку: 1, 2, 3, 4</p>
+            <p className="text-center text-3xl md:text-4xl font-medium text-warm-gray-light mb-8">Натискайте на кроки у правильному порядку: {data.steps.map((_, index) => index + 1).join(', ')}</p>
             {selected.length > 0 && (
                 <div className="max-w-lg mx-auto mb-4 space-y-2">
                     <p className="text-sm font-bold text-warm-gray">Ваш порядок:</p>
                     {selected.map((s, i) => (
                         <ChoiceButton
                             key={i}
-                            onClick={() => !checked && undoFrom(i)}
-                            disabled={checked}
+                            onClick={() => !checked && !pending && undoFrom(i)}
+                            disabled={checked || pending}
                             state={checked ? (s.idx === i ? 'correct' : 'incorrect') : 'selected'}
                             align="left"
                             className="flex w-full items-center gap-3 p-3"
                         >
                             <span className="w-10 h-10 flex items-center justify-center rounded-full bg-pastel-green text-white font-bold text-2xl">{i + 1}</span>
                             <span className="text-2xl font-semibold text-warm-gray">{s.text}</span>
-                            {!checked && <span className="ml-auto text-warm-gray-light text-lg">✕</span>}
+                            {!checked && !pending && <span className="ml-auto text-warm-gray-light text-lg">✕</span>}
                         </ChoiceButton>
                     ))}
                 </div>
@@ -228,7 +251,7 @@ export function Task2({ onScore, initialData }) {
                         <ChoiceButton
                             key={i}
                             onClick={() => tapStep(item)}
-                            disabled={checked}
+                            disabled={checked || pending}
                             align="left"
                             className="w-full p-4 md:p-5 text-xl md:text-2xl font-semibold"
                         >
@@ -316,15 +339,17 @@ export function Task4({ onScore, initialData }) {
     });
     const allSentences = data.sentences;
     const [current, setCurrent] = useState(0);
-    const [pool, setPool] = useState(() => shuffle(allSentences[0].split(' ')));
+    const [pool, setPool] = useState(() => shuffle(splitSentenceWords(allSentences[0])));
     const [built, setBuilt] = useState([]);
     const [animating, setAnimating] = useState(false);
     const [slideIn, setSlideIn] = useState(true);
     const [results, setResults] = useState([]);
     const [done, setDone] = useState(false);
+    const schedule = useManagedTimeout();
 
     const sentence = allSentences[current];
-    const words = sentence.split(' ');
+    const words = splitSentenceWords(sentence);
+    const normalizedSentence = words.join(' ');
 
     const addWord = (w, i) => {
         if (animating || done) return;
@@ -332,24 +357,28 @@ export function Task4({ onScore, initialData }) {
         setBuilt(newBuilt);
         setPool(pool.filter((_, j) => j !== i));
         if (newBuilt.length === words.length) {
-            const isCorrect = newBuilt.join(' ') === sentence;
+            const isCorrect = newBuilt.join(' ') === normalizedSentence;
             if (isCorrect) {
                 playCorrect();
                 setResults((r) => [...r, true]);
                 if (current < allSentences.length - 1) {
-                    goToNext(true);
+                    goToNext();
                 } else {
-                    setTimeout(() => {
+                    setAnimating(true);
+                    schedule(() => {
                         setDone(true);
+                        setAnimating(false);
                         fireConfetti();
                         onScore();
                     }, 800);
                 }
             } else {
                 playWrong();
-                setTimeout(() => {
+                setAnimating(true);
+                schedule(() => {
                     setBuilt([]);
                     setPool(shuffle(words));
+                    setAnimating(false);
                 }, 1200);
             }
         }
@@ -363,12 +392,12 @@ export function Task4({ onScore, initialData }) {
 
     const goToNext = () => {
         setAnimating(true);
-        setTimeout(() => setSlideIn(false), 600);
-        setTimeout(() => {
+        schedule(() => setSlideIn(false), 600);
+        schedule(() => {
             const nextIdx = current + 1;
             setCurrent(nextIdx);
             setBuilt([]);
-            setPool(shuffle(allSentences[nextIdx].split(' ')));
+            setPool(shuffle(splitSentenceWords(allSentences[nextIdx])));
             setSlideIn(true);
             setAnimating(false);
         }, 1000);
@@ -404,7 +433,7 @@ export function Task4({ onScore, initialData }) {
                             animation: slideIn ? 'snt-slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' : 'snt-slide-out 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards',
                         }}
                     >
-                        <div className={`min-h-[100px] p-5 mb-6 rounded-3xl border-3 transition-all duration-300 flex flex-wrap gap-2 items-center justify-center ${built.length === words.length ? (built.join(' ') === sentence ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-400 animate-pulse') : 'bg-white border-pastel-green border-dashed'}`}>
+                        <div className={`min-h-[100px] p-5 mb-6 rounded-3xl border-3 transition-all duration-300 flex flex-wrap gap-2 items-center justify-center ${built.length === words.length ? (built.join(' ') === normalizedSentence ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-400 animate-pulse') : 'bg-white border-pastel-green border-dashed'}`}>
                             {built.length === 0 && <span className="text-warm-gray-light text-xl italic">Натискайте на слова, щоб скласти речення...</span>}
                             {built.map((w, i) => (
                                 <ChoiceButton key={`b-${i}`} onClick={() => removeWord(w, i)} state="selected" className="px-5 py-3 text-2xl font-bold shadow-md hover:bg-green-200 active:scale-90" style={{ animation: 'snt-word-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' }}>
@@ -660,6 +689,7 @@ export function Task7({ onScore, initialData }) {
     const [animating, setAnimating] = useState(false);
     const [slideIn, setSlideIn] = useState(true);
     const [done, setDone] = useState(false);
+    const schedule = useManagedTimeout();
 
     const handle = (v) => {
         if (animating || done) return;
@@ -670,16 +700,16 @@ export function Task7({ onScore, initialData }) {
         else playWrong();
         if (current < statements.length - 1) {
             setAnimating(true);
-            setTimeout(() => {
+            schedule(() => {
                 setSlideIn(false);
             }, 800);
-            setTimeout(() => {
+            schedule(() => {
                 setCurrent((c) => c + 1);
                 setSlideIn(true);
                 setAnimating(false);
             }, 1200);
         } else {
-            setTimeout(() => {
+            schedule(() => {
                 setDone(true);
                 const allCorrect = newAnswers.every((a) => a.correct);
                 if (allCorrect) {
@@ -765,6 +795,7 @@ export function Task8({ onScore, initialData }) {
     const [results, setResults] = useState([]);
     const [selected, setSelected] = useState(null);
     const [done, setDone] = useState(false);
+    const schedule = useManagedTimeout();
     const item = data.items[current];
     const answer = (option) => {
         if (selected !== null || done) return;
@@ -773,7 +804,7 @@ export function Task8({ onScore, initialData }) {
         setResults((values) => [...values, correct]);
         correct ? playCorrect() : playWrong();
 
-        setTimeout(() => {
+        schedule(() => {
             if (current < data.items.length - 1) {
                 setCurrent((value) => value + 1);
                 setSelected(null);
@@ -1036,7 +1067,7 @@ const selectSpeechWords = () => {
     ];
 
     try {
-        const current = Number(window.localStorage.getItem(SPEECH_ROTATION_KEY) || 0) % groups.length;
+        const current = normalizeRotationIndex(window.localStorage.getItem(SPEECH_ROTATION_KEY), groups.length);
         window.localStorage.setItem(SPEECH_ROTATION_KEY, String((current + 1) % groups.length));
         return groups[current];
     } catch {
@@ -1050,11 +1081,17 @@ export function Task11({ onScore }) {
     const [hintVisible, setHintVisible] = useState(false);
     const [results, setResults] = useState([]);
     const finishedRef = useRef(false);
+    const attemptLockedRef = useRef(false);
     const done = results.length === words.length;
     const item = words[current];
 
+    useEffect(() => {
+        if (!done) attemptLockedRef.current = false;
+    }, [current, done]);
+
     const markAttempt = (mode) => {
-        if (finishedRef.current) return;
+        if (finishedRef.current || attemptLockedRef.current) return;
+        attemptLockedRef.current = true;
 
         const nextResults = [...results, mode];
         setResults(nextResults);

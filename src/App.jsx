@@ -1,312 +1,247 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Brain, Star, RefreshCw, Loader2, Heart, Sparkles, Volume2 } from 'lucide-react';
-import { Card, BigBtn } from './components/common';
-import { generateAllTasks } from './lib/generate';
-import { playVictory, fireConfetti } from './lib/audio';
-import { TOTAL_TASKS, SLIDES, VERB_DATA } from './data/taskData';
-import { Task1, Task2, Task3, Task4, Task5, Task6, Task7, Task8, Task9, Task10, Task11 } from './components/tasks';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Clock3,
+  Headphones,
+  HeartHandshake,
+  Home,
+  RotateCcw,
+  Sparkles,
+  Volume2,
+} from 'lucide-react';
+import {
+  FindWordTask,
+  ListenTask,
+  PairTask,
+  PhraseTask,
+  SceneTask,
+  StrongWordsTask,
+} from './components/therapyTasks';
+import { createTherapySession, SESSION_STEPS } from './data/therapySession';
+import { speakText } from './lib/audio';
 
-const hasThreeUniqueStrings = (value) =>
-    Array.isArray(value) &&
-    value.length === 3 &&
-    value.every((item) => typeof item === 'string' && item.trim()) &&
-    new Set(value.map((item) => item.trim().toLowerCase())).size === 3;
+const STORAGE_KEY = 'poruch_active_session_v1';
 
-const isValidVerbTask = (task) => {
-    if (
-        !task ||
-        typeof task.title !== 'string' ||
-        typeof task.context !== 'string' ||
-        typeof task.scene !== 'string' ||
-        task.scene.trim().length < 24 ||
-        !hasThreeUniqueStrings(task.correct) ||
-        !hasThreeUniqueStrings(task.wrong)
-    ) {
-        return false;
-    }
-
-    const correct = new Set(task.correct.map((item) => item.trim().toLowerCase()));
-    return task.wrong.every((item) => !correct.has(item.trim().toLowerCase()));
+const loadSavedSession = () => {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY));
+    if (!saved?.session?.id || !Array.isArray(saved.completed)) return null;
+    return {
+      session: saved.session,
+      currentStep: Math.min(Math.max(Number(saved.currentStep) || 0, 0), SESSION_STEPS.length - 1),
+      completed: saved.completed.slice(0, SESSION_STEPS.length),
+      details: saved.details || {},
+    };
+  } catch {
+    return null;
+  }
 };
 
-const VERB_FALLBACK = VERB_DATA.find((item) => item.imageUrl) || VERB_DATA[0];
+function ProgressRail({ currentStep, completed }) {
+  return (
+    <ol className="progress-rail" aria-label="Шість кроків заняття">
+      {SESSION_STEPS.map((step, index) => {
+        const state = completed[index] ? 'done' : index === currentStep ? 'current' : 'upcoming';
+        return (
+          <li key={step.short} data-state={state} aria-current={index === currentStep ? 'step' : undefined}>
+            <span className="progress-rail__beat">{completed[index] ? <Check aria-hidden="true" /> : index + 1}</span>
+            <span>{step.short}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+function Brand({ compact = false }) {
+  return (
+    <div className="brand" data-compact={compact || undefined}>
+      <span className="brand__mark" aria-hidden="true">П</span>
+      <div>
+        <strong>Поруч</strong>
+        <span>домашня практика мовлення</span>
+      </div>
+    </div>
+  );
+}
+
+function HomeScreen({ saved, onStart, onResume }) {
+  const [speaking, setSpeaking] = useState(false);
+  const previewWord = () => {
+    speakText('чай', { rate: 0.62 });
+    setSpeaking(true);
+    window.setTimeout(() => setSpeaking(false), 1100);
+  };
+
+  return (
+    <div className="home-screen">
+      <header className="home-header">
+        <Brand />
+        <div className="home-header__meta"><Clock3 aria-hidden="true" /> 6 кроків · близько 10 хв</div>
+      </header>
+
+      <main className="home-main">
+        <section className="home-copy">
+          <p className="home-kicker"><HeartHandshake aria-hidden="true" /> Для занять удвох</p>
+          <h1>Коротке заняття.<br />Знайомі слова.<br /><em>Разом.</em></h1>
+          <p className="home-lead">
+            Спокійна практика для людини з афазією: одне завдання за раз, великі підказки й жодних штрафів за допомогу.
+          </p>
+          <div className="home-actions">
+            {saved ? (
+              <>
+                <button className="start-button" type="button" onClick={onResume}>
+                  Продовжити заняття <ArrowRight aria-hidden="true" />
+                </button>
+                <button className="secondary-button" type="button" onClick={onStart}>
+                  <RotateCcw aria-hidden="true" /> Нове заняття
+                </button>
+              </>
+            ) : (
+              <button className="start-button" type="button" onClick={onStart}>
+                Почати заняття <ArrowRight aria-hidden="true" />
+              </button>
+            )}
+          </div>
+          <p className="clinical-note">Домашня практика доповнює, але не замінює роботу з логопедом.</p>
+        </section>
+
+        <section className="home-demo" aria-label="Приклад вправи">
+          <div className="demo-rail" aria-hidden="true">
+            {SESSION_STEPS.map((step, index) => <span key={step.short} data-active={index === 0 || undefined}>{index + 1}</span>)}
+          </div>
+          <div className="demo-label"><Headphones aria-hidden="true" /> Послухайте. Скажіть разом.</div>
+          <div className="demo-word">ЧАЙ</div>
+          <button className="demo-listen" type="button" onClick={previewWord}>
+            <Volume2 aria-hidden="true" /> {speaking ? 'Слухаємо…' : 'Почути слово'}
+          </button>
+          <div className="demo-outcomes" aria-hidden="true">
+            <span>Сказала сама</span><span>Сказали разом</span>
+          </div>
+          <p>Обидва результати добрі.</p>
+        </section>
+      </main>
+
+      <div className="home-footer-line" aria-hidden="true">
+        {SESSION_STEPS.map((step) => <span key={step.short}>{step.short}</span>)}
+      </div>
+    </div>
+  );
+}
+
+function Summary({ completed, details, onRestart, onHome }) {
+  const completeCount = completed.filter(Boolean).length;
+  const speech = details[5];
+  return (
+    <main className="summary-screen">
+      <Brand compact />
+      <section className="summary-panel">
+        <div className="summary-symbol"><Check aria-hidden="true" /></div>
+        <p className="task-eyebrow">Заняття завершено</p>
+        <h1>Сьогодні ви були поруч.</h1>
+        <p className="summary-lead">Пройдено {completeCount} із {SESSION_STEPS.length} кроків. Важлива не оцінка, а спокійна практика й жива спроба.</p>
+        {speech && (
+          <div className="summary-stats">
+            <div><strong>{speech.independent || 0}</strong><span>сказала сама</span></div>
+            <div><strong>{speech.together || 0}</strong><span>сказали разом</span></div>
+          </div>
+        )}
+        <div className="summary-actions">
+          <button className="start-button" type="button" onClick={onRestart}>
+            Нове заняття <Sparkles aria-hidden="true" />
+          </button>
+          <button className="secondary-button" type="button" onClick={onHome}>
+            <Home aria-hidden="true" /> На головну
+          </button>
+        </div>
+      </section>
+    </main>
+  );
+}
 
 export default function App() {
-    const [slide, setSlide] = useState(0);
-    const [scoredTasks, setScoredTasks] = useState(() => new Set());
-    const [taskKeys, setTaskKeys] = useState(() => Array.from({ length: TOTAL_TASKS }, () => Math.random()));
-    const [aiData, setAiData] = useState(null);
-    const [generating, setGenerating] = useState(false);
-    const [rateLimitError, setRateLimitError] = useState(false);
-    const [generationSource, setGenerationSource] = useState('idle');
-    const [fallbackBlocks, setFallbackBlocks] = useState([]);
-    const [localAnswerBlocks, setLocalAnswerBlocks] = useState([]);
-    const [started, setStarted] = useState(false);
-    const [verbImage, setVerbImage] = useState(null);
-    const [verbQuestions, setVerbQuestions] = useState(null);
-    const [verbFallbackData, setVerbFallbackData] = useState(null);
-    const [verbLoading, setVerbLoading] = useState(false);
-    const score = scoredTasks.size;
-    const addScore = useCallback((taskIndex) => {
-        setScoredTasks((current) => {
-            if (current.has(taskIndex)) return current;
-            const next = new Set(current);
-            next.add(taskIndex);
-            return next;
-        });
-    }, []);
-    const next = () => setSlide((s) => Math.min(s + 1, SLIDES - 1));
-    const prev = () => setSlide((s) => Math.max(s - 1, 0));
-    const restart = () => {
-        setSlide(0);
-        setScoredTasks(new Set());
-        setAiData(null);
-        setRateLimitError(false);
-        setGenerationSource('idle');
-        setFallbackBlocks([]);
-        setLocalAnswerBlocks([]);
-        setStarted(false);
-        setVerbImage(null);
-        setVerbQuestions(null);
-        setVerbFallbackData(null);
-        setVerbLoading(false);
-        setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random()));
-    };
+  const initial = useMemo(loadSavedSession, []);
+  const [view, setView] = useState('home');
+  const [session, setSession] = useState(initial?.session || null);
+  const [currentStep, setCurrentStep] = useState(initial?.currentStep || 0);
+  const [completed, setCompleted] = useState(initial?.completed || Array(SESSION_STEPS.length).fill(false));
+  const [details, setDetails] = useState(initial?.details || {});
 
-    const generateImage = async (task) => {
-        try {
-            const res = await fetch('/api/generate-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: task.scene }),
-            });
-            if (!res.ok) return false;
-            const { url } = await res.json();
-            if (!url) return false;
+  useEffect(() => {
+    if (!session) {
+      window.localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ session, currentStep, completed, details }));
+  }, [session, currentStep, completed, details]);
 
-            setVerbImage(url);
-            setVerbQuestions(task);
-            return true;
-        } catch {
-            // Task10 keeps a bundled scene available when image generation fails.
-            return false;
-        }
-    };
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.querySelector('.session-main')?.focus({ preventScroll: true });
+  }, [currentStep, view]);
 
-    const prepareVerbTask = async (requestedTask) => {
-        const task = isValidVerbTask(requestedTask) ? requestedTask : VERB_FALLBACK;
-        setVerbLoading(true);
-        setVerbFallbackData(VERB_FALLBACK);
+  const startNew = () => {
+    setSession(createTherapySession());
+    setCurrentStep(0);
+    setCompleted(Array(SESSION_STEPS.length).fill(false));
+    setDetails({});
+    setView('session');
+  };
 
-        try {
-            let ok = await generateImage(task);
-            if (ok) return;
+  const completeStep = (index, result = {}) => {
+    setCompleted((current) => current.map((value, itemIndex) => itemIndex === index ? true : value));
+    setDetails((current) => ({ ...current, [index]: result }));
+  };
 
-            const fallback = VERB_FALLBACK;
-            if (task.scene !== fallback.scene) {
-                ok = await generateImage(fallback);
-            }
+  const goNext = () => {
+    if (currentStep === SESSION_STEPS.length - 1) setView('summary');
+    else setCurrentStep((value) => value + 1);
+  };
 
-            if (!ok) {
-                setVerbImage(null);
-                setVerbQuestions(null);
-                setVerbFallbackData(fallback);
-            }
-        } finally {
-            setVerbLoading(false);
-        }
-    };
+  if (view === 'home') {
+    return <HomeScreen saved={Boolean(session)} onStart={startNew} onResume={() => setView('session')} />;
+  }
 
-    const startSession = async () => {
-        setGenerating(true);
-        setRateLimitError(false);
-        setGenerationSource('loading');
-        setFallbackBlocks([]);
-        setLocalAnswerBlocks([]);
-        setVerbImage(null);
-        setVerbQuestions(null);
-        setVerbFallbackData(null);
-        setVerbLoading(false);
-        const data = await generateAllTasks();
-        setGenerating(false);
-        if (data && data._rateLimited) {
-            setRateLimitError(true);
-            setGenerationSource('rate-limited');
-            setFallbackBlocks(['all']);
-            setLocalAnswerBlocks([]);
-            setAiData(null);
-            prepareVerbTask(VERB_FALLBACK);
-        } else if (data) {
-            setGenerationSource(data._source || 'ai');
-            setFallbackBlocks(data._fallbackBlocks || []);
-            setLocalAnswerBlocks(data._localAnswerBlocks || []);
-            setAiData(data);
-            prepareVerbTask(data.verbs);
-        } else {
-            setGenerationSource('fallback');
-            setFallbackBlocks(['all']);
-            setLocalAnswerBlocks([]);
-            prepareVerbTask(VERB_FALLBACK);
-        }
-        setStarted(true);
-        next();
-    };
+  if (view === 'summary') {
+    return <Summary completed={completed} details={details} onRestart={startNew} onHome={() => setView('home')} />;
+  }
 
-    useEffect(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-        document.querySelector('main')?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    }, [slide]);
+  const tasks = [
+    <ListenTask data={session.listen} onComplete={(result) => completeStep(0, result)} />,
+    <FindWordTask data={session.find} onComplete={(result) => completeStep(1, result)} />,
+    <PairTask data={session.pair} onComplete={(result) => completeStep(2, result)} />,
+    <PhraseTask data={session.phrase} onComplete={(result) => completeStep(3, result)} />,
+    <SceneTask data={session.scene} onComplete={(result) => completeStep(4, result)} />,
+    <StrongWordsTask words={session.strongWords} onComplete={(result) => completeStep(5, result)} />,
+  ];
 
-    useEffect(() => {
-        if (slide === SLIDES - 1) {
-            playVictory();
-            fireConfetti();
-            setTimeout(fireConfetti, 800);
-        }
-    }, [slide]);
+  return (
+    <div className="session-screen">
+      <header className="session-header">
+        <button className="home-link" type="button" onClick={() => setView('home')} aria-label="Повернутися на головну">
+          <ArrowLeft aria-hidden="true" />
+        </button>
+        <Brand compact />
+        <span className="session-count">{currentStep + 1} з {SESSION_STEPS.length}</span>
+      </header>
+      <ProgressRail currentStep={currentStep} completed={completed} />
 
-    const sourceLabel = {
-        ai: localAnswerBlocks.length ? 'AI + перевірені відповіді' : 'AI завдання',
-        mixed: 'AI + базові блоки',
-        fallback: 'Базові завдання',
-        'rate-limited': 'Базові завдання',
-        loading: 'Створюємо',
-    }[generationSource];
-    const sourceTitle = [
-        fallbackBlocks.length ? `Fallback: ${fallbackBlocks.join(', ')}` : '',
-        localAnswerBlocks.length ? `Локальні відповіді: ${localAnswerBlocks.join(', ')}` : '',
-    ].filter(Boolean).join(' | ');
+      <main className="session-main" tabIndex={-1} aria-label={`Крок ${currentStep + 1}: ${SESSION_STEPS[currentStep].title}`}>
+        <div key={`${session.id}-${currentStep}`}>{tasks[currentStep]}</div>
+      </main>
 
-    const tasks = [
-        <Task1 key={taskKeys[0]} onScore={() => addScore(0)} initialData={aiData?.matchWord} />,
-        <Task2 key={taskKeys[1]} onScore={() => addScore(1)} initialData={aiData?.sequence} />,
-        <Task3 key={taskKeys[2]} onScore={() => addScore(2)} initialData={aiData?.naming} />,
-        <Task4 key={taskKeys[3]} onScore={() => addScore(3)} initialData={aiData?.sentence} />,
-        <Task5 key={taskKeys[4]} onScore={() => addScore(4)} initialData={aiData?.associations} />,
-        <Task6 key={taskKeys[5]} onScore={() => addScore(5)} initialData={aiData?.categories} />,
-        <Task7 key={taskKeys[6]} onScore={() => addScore(6)} initialData={aiData?.trueFalse} />,
-        <Task8 key={taskKeys[7]} onScore={() => addScore(7)} initialData={aiData?.phraseCompletion} />,
-        <Task9 key={taskKeys[8]} onScore={() => addScore(8)} initialData={aiData?.writing} />,
-        <Task10 key={taskKeys[9]} onScore={() => addScore(9)} initialData={verbQuestions || verbFallbackData} fallbackData={verbFallbackData || VERB_FALLBACK} imageUrl={verbImage} loading={verbLoading} />,
-        <Task11 key={taskKeys[10]} onScore={() => addScore(10)} />,
-    ];
-
-    return (
-        <div className="min-h-screen bg-pastel-beige flex flex-col relative">
-            {rateLimitError && (
-                <div className="absolute top-0 left-0 right-0 bg-yellow-400 text-yellow-900 px-4 py-3 text-center text-sm md:text-base font-bold shadow-md z-50">
-                    ⚠️ Штучний інтелект перевантажено (забагато запитів). Увімкнено базові завдання. Спробуйте пізніше для нових завдань.
-                </div>
-            )}
-
-            <header className="bg-white/70 backdrop-blur-md shadow-sm py-3 px-3 md:py-4 md:px-6 flex items-center justify-between gap-2 sticky top-0 z-10">
-                <div className="flex min-w-0 items-center gap-2 md:gap-3">
-                    <Brain className="h-7 w-7 shrink-0 text-pastel-green md:h-8 md:w-8" />
-                    <h1 className="truncate text-base md:text-2xl font-extrabold text-warm-gray">Мовлення щодня</h1>
-                </div>
-                {slide > 0 && slide < SLIDES - 1 && (
-                    <div className="flex items-center gap-2">
-                        <Star className="w-6 h-6 text-yellow-500" />
-                        <span className="text-sm md:text-lg font-bold text-warm-gray">Вдалося {score}</span>
-                    </div>
-                )}
-                {slide > 0 && slide < SLIDES - 1 && (
-                    <div className="flex flex-col items-end gap-1 text-sm font-semibold text-warm-gray-light">
-                        <div className="flex items-center gap-1">
-                            {generationSource !== 'fallback' && generationSource !== 'rate-limited' && <Sparkles className="w-4 h-4 text-pastel-green" />}
-                            {slide} / {TOTAL_TASKS}
-                        </div>
-                        {sourceLabel && (
-                            <span title={sourceTitle} className="hidden text-xs text-warm-gray-light md:block md:text-sm">
-                                {sourceLabel}
-                            </span>
-                        )}
-                    </div>
-                )}
-            </header>
-
-            <main className="flex-1 flex items-start justify-center p-3 pb-28 md:p-8 md:pb-10 overflow-y-auto mt-2">
-                <div className="w-full max-w-5xl">
-                    {slide === 0 && (
-                        <Card className="text-center py-12">
-                            <div className="text-7xl mb-6">🗣️</div>
-                            <h1 className="text-3xl md:text-4xl font-extrabold text-warm-gray mb-4">Час для мовлення</h1>
-                            <p className="text-xl text-warm-gray-light mb-2">Короткі вправи на слова, фрази, читання та письмо.</p>
-                            <p className="text-lg text-warm-gray-light mb-4">Працюйте у своєму темпі. Підказки можна і треба використовувати.</p>
-                            <p className="text-sm text-warm-gray-light mb-8">Домашня практика доповнює, але не замінює заняття з логопедом.</p>
-                            {generating ? (
-                                <div className="flex flex-col items-center gap-4">
-                                    <Loader2 className="w-14 h-14 text-pastel-green animate-spin" />
-                                    <p className="text-xl font-bold text-warm-gray animate-pulse">✨ Створюємо нові завдання...</p>
-                                    <p className="text-sm text-warm-gray-light">Зазвичай це займає 5-10 секунд</p>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center gap-4">
-                                    <BigBtn onClick={startSession} className="bg-pastel-green text-warm-gray text-2xl">
-                                        <Sparkles className="w-6 h-6" />
-                                        Розпочати
-                                    </BigBtn>
-                                    <p className="text-sm text-warm-gray-light flex items-center gap-1">
-                                        <Sparkles className="w-4 h-4 text-pastel-green" />
-                                        Щоразу з'являються нові знайомі слова й фрази
-                                    </p>
-                                    <div className="flex items-center gap-2 text-warm-gray-light">
-                                        <Volume2 className="w-5 h-5" />
-                                        <span className="text-sm">Увімкніть звук для кращого досвіду</span>
-                                    </div>
-                                </div>
-                            )}
-                        </Card>
-                    )}
-
-                    {slide > 0 && slide < SLIDES - 1 && tasks[slide - 1]}
-
-                    {slide === SLIDES - 1 && (
-                        <Card className="text-center py-12">
-                            <div className="text-7xl mb-4">🌷</div>
-                            <h1 className="text-3xl md:text-4xl font-extrabold text-warm-gray mb-4">Заняття завершено!</h1>
-                            <div className="text-3xl md:text-4xl font-extrabold text-pastel-green mb-2">Вдалося: {score} із {TOTAL_TASKS}</div>
-                            <p className="text-xl text-warm-gray-light mb-2">
-                                {score >= 8
-                                    ? 'Сьогодні багато вдалося. Чудова робота!'
-                                    : score >= 5
-                                        ? 'Гарна робота. Підказки допомагають мозку вчитися.'
-                                        : 'Ви завершили все заняття — це вже важливий крок. Підказки можна використовувати.'}
-                            </p>
-                            <div className="flex items-center justify-center gap-1 my-4">
-                                {Array.from({ length: TOTAL_TASKS }).map((_, i) => (
-                                    <Heart key={i} className={`w-7 h-7 ${i < score ? 'text-red-400 fill-red-400' : 'text-gray-300'}`} />
-                                ))}
-                            </div>
-                            <BigBtn onClick={restart} className="bg-pastel-green text-warm-gray text-xl mt-4">
-                                <RefreshCw className="w-5 h-5" />
-                                Пройти ще раз
-                            </BigBtn>
-                        </Card>
-                    )}
-                </div>
-            </main>
-
-            {(slide > 0 || started) && (
-                <nav className="bg-white/80 backdrop-blur-md shadow-[0_-2px_10px_rgba(0,0,0,0.05)] py-3 px-3 md:py-4 md:px-6 flex justify-between items-center gap-2 sticky bottom-0 z-10">
-                    <BigBtn onClick={prev} className="bg-pastel-beige-dark px-3 text-base text-warm-gray md:px-8 md:text-xl" disabled={slide === 0}>
-                        <ChevronLeft className="w-5 h-5" />
-                        Назад
-                    </BigBtn>
-                    <div className="hidden gap-1 md:flex">
-                        {Array.from({ length: SLIDES }).map((_, i) => (
-                            <div
-                                key={i}
-                                className={`w-2.5 h-2.5 rounded-full transition-all ${i === slide ? 'bg-pastel-green scale-125' : i < slide ? 'bg-pastel-green/50' : 'bg-gray-300'}`}
-                            />
-                        ))}
-                    </div>
-                    <BigBtn onClick={next} className="bg-pastel-green px-3 text-base text-warm-gray md:px-8 md:text-xl" disabled={slide === SLIDES - 1}>
-                        Вперед
-                        <ChevronRight className="w-5 h-5" />
-                    </BigBtn>
-                </nav>
-            )}
+      <nav className="session-nav" aria-label="Навігація заняттям">
+        <button className="nav-button nav-button--back" type="button" onClick={() => setCurrentStep((value) => Math.max(0, value - 1))} disabled={currentStep === 0}>
+          <ArrowLeft aria-hidden="true" /> Назад
+        </button>
+        <div className="session-nav__status">
+          {completed[currentStep] ? <><Check aria-hidden="true" /> Крок готовий</> : 'Можна перейти далі у будь-який момент'}
         </div>
-    );
+        <button className="nav-button nav-button--next" type="button" onClick={goNext}>
+          {currentStep === SESSION_STEPS.length - 1 ? 'Завершити' : 'Далі'} <ArrowRight aria-hidden="true" />
+        </button>
+      </nav>
+    </div>
+  );
 }

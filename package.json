@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "node scripts/dev-api.mjs",
+    "test": "npm run test:core && npm run test:generation",
+    "test:core": "node scripts/test-core.mjs",
     "test:generation": "node scripts/smoke-generation.mjs",
-    "build": "vite build",
+    "build": "vite build && node scripts/build-sites.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

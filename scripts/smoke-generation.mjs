@@ -89,6 +89,23 @@ assert(aiResult?._localAnswerBlocks?.includes('matchWord'), 'Expected matchWord 
 assert(aiResult?.matchWord?.prompt === 'Заварити чай', 'Expected trusted matchWord prompt from AI-selected word');
 assert(aiResult?.verbs?.correct?.length === 3, 'Expected AI scene plan and matching answers to be preserved');
 
+const invalidBlockCases = [
+  ['sentence', (payload) => { payload.sentence = { sentences: ['Лише три прості слова'] }; }],
+  ['categories', (payload) => { payload.categories.items[1].text = payload.categories.items[0].text; }],
+  ['trueFalse', (payload) => { payload.trueFalse.statements.forEach((item) => { item.answer = true; }); }],
+  ['writing', (payload) => { payload.writing.words[0].word = 'чашка'; }],
+  ['verbs', (payload) => { payload.verbs.scene = 'A sad patient waits inside a hospital room while a doctor prepares a scary medical procedure with sharp equipment nearby'; }],
+];
+
+for (const [block, mutate] of invalidBlockCases) {
+  window.localStorage.clear();
+  const payload = structuredClone(validAiPayload);
+  mutate(payload);
+  globalThis.fetch = async () => new Response(JSON.stringify(payload), { status: 200 });
+  const result = await generateAllTasks();
+  assert(result?._fallbackBlocks?.includes(block), `Expected malformed ${block} data to use its fallback block`);
+}
+
 globalThis.fetch = async () => new Response('', { status: 404 });
 const fallbackResult = await generateAllTasks();
 assert(fallbackResult === null, 'Expected failed backend response to trigger app-level fallback');
@@ -127,7 +144,7 @@ globalThis.fetch = async (url, options) => {
   });
 };
 
-const { default: generateImageHandler } = await import('../api/generate-image.js');
+const { POST: generateImageHandler } = await import('../api/generate-image.js');
 const imageHandlerResponse = await generateImageHandler(new Request('https://app.example/api/generate-image', {
   method: 'POST',
   headers: {
@@ -142,7 +159,7 @@ const imageHandlerPayload = await imageHandlerResponse.json();
 
 assert(imageHandlerResponse.status === 200, 'Expected /api/generate-image handler to return 200 with mocked OpenAI');
 assert(imageCalls.length === 1, 'Expected scene generation to use one image request without a second Vision call');
-assert(imageCalls[0]?.model === 'gpt-image-1.5', 'Expected the current GPT Image model for scene generation');
+assert(imageCalls[0]?.model === (process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1.5'), 'Expected the configured GPT Image model for scene generation');
 assert(imageCalls[0]?.size === '1536x1024', 'Expected a landscape image for the scene exercise');
 assert(imageHandlerPayload.url === 'data:image/webp;base64,dGVzdC1pbWFnZQ==', 'Expected a durable WebP data URL');
 
@@ -154,6 +171,7 @@ console.log(JSON.stringify({
   openAiCalls,
   imageModel: imageCalls[0]?.model,
   imageRequestCount: imageCalls.length,
+  invalidBlockCases: invalidBlockCases.length,
 }, null, 2));
 
 await vite.close();

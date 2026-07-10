@@ -1,6 +1,9 @@
-import { guardAiRequest, jsonResponse, normalizeText, readJsonBody } from '../server/apiSecurity.js';
+import { fetchWithTimeout, guardAiRequest, jsonResponse, normalizeText, readJsonBody } from '../server/apiSecurity.js';
 
-const MAX_ITEMS = 8;
+const MAX_ITEMS = 2;
+const MAX_ID_LENGTH = 260;
+const MAX_LABEL_LENGTH = 80;
+const MAX_PROMPT_LENGTH = 160;
 const IMAGE_MODEL = process.env.OPENAI_TASK_IMAGE_MODEL || 'gpt-image-1-mini';
 
 const buildPrompt = ({ task, label, prompt }) => {
@@ -18,13 +21,13 @@ const buildPrompt = ({ task, label, prompt }) => {
 };
 
 const generateOne = async (envKey, item, task) => {
-    const label = normalizeText(item?.label);
-    const id = normalizeText(item?.id) || label;
+    const label = normalizeText(item?.label, MAX_LABEL_LENGTH);
+    const id = normalizeText(item?.id, MAX_ID_LENGTH) || label;
     if (!label || !id) {
         return { id, ok: false, error: 'Missing label' };
     }
 
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
+    const response = await fetchWithTimeout('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -37,9 +40,10 @@ const generateOne = async (envKey, item, task) => {
             size: '1024x1024',
             quality: 'low',
             output_format: 'webp',
+            output_compression: 60,
             background: 'opaque',
         }),
-    });
+    }, 50_000);
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -73,7 +77,7 @@ const runLimited = async (items, limit, worker) => {
             } catch (error) {
                 console.error('Task image generation failed:', error);
                 results[current] = {
-                    id: normalizeText(items[current]?.id) || normalizeText(items[current]?.label),
+                    id: normalizeText(items[current]?.id, MAX_ID_LENGTH) || normalizeText(items[current]?.label, MAX_LABEL_LENGTH),
                     ok: false,
                     error: error.message || 'Image generation failed',
                 };
@@ -85,10 +89,10 @@ const runLimited = async (items, limit, worker) => {
     return results;
 };
 
-export default async function handler(req) {
+export async function POST(req) {
     const guardResponse = guardAiRequest(req, {
         key: 'generate-task-images',
-        limit: 6,
+        limit: 12,
         maxBodyBytes: 16_384,
     });
     if (guardResponse) return guardResponse;
@@ -103,25 +107,34 @@ export default async function handler(req) {
         if (bodyError) return bodyError;
 
         const task = Number(body?.task);
-        const items = Array.isArray(body?.items)
-            ? body.items.slice(0, MAX_ITEMS).map((item) => ({
-                id: normalizeText(item?.id, 260),
-                label: normalizeText(item?.label, 80),
-                prompt: normalizeText(item?.prompt, 160),
-            }))
-            : [];
+        const rawItems = Array.isArray(body?.items) ? body.items : [];
 
         if (task !== 6) {
             return jsonResponse({ error: 'Unsupported task' }, 400);
         }
 
-        if (items.length === 0) {
+        if (rawItems.length === 0) {
             return jsonResponse({ error: 'Missing items' }, 400);
         }
 
-        if (items.some((item) => !item.id || !item.label || item.label.length > 80 || item.prompt.length > 160)) {
+        if (rawItems.length > MAX_ITEMS || rawItems.some((item) => (
+            typeof item?.id !== 'string' ||
+            typeof item?.label !== 'string' ||
+            (item.prompt !== undefined && typeof item.prompt !== 'string') ||
+            !item.id.trim() ||
+            !item.label.trim() ||
+            item.id.trim().length > MAX_ID_LENGTH ||
+            item.label.trim().length > MAX_LABEL_LENGTH ||
+            String(item.prompt || '').trim().length > MAX_PROMPT_LENGTH
+        ))) {
             return jsonResponse({ error: 'Invalid items' }, 400);
         }
+
+        const items = rawItems.map((item) => ({
+            id: normalizeText(item.id, MAX_ID_LENGTH),
+            label: normalizeText(item.label, MAX_LABEL_LENGTH),
+            prompt: normalizeText(item.prompt, MAX_PROMPT_LENGTH),
+        }));
 
         const images = await runLimited(items, 2, (item) => generateOne(envKey, item, task));
 

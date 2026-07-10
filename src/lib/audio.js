@@ -35,11 +35,15 @@ export const playWrong = () => {
 };
 
 export const playVictory = () => {
-  [523, 587, 659, 698, 784, 880, 988, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.2), i * 150));
+  const timers = [523, 587, 659, 698, 784, 880, 988, 1047]
+    .map((frequency, index) => setTimeout(() => playTone(frequency, 0.2), index * 150));
+  return () => timers.forEach((timer) => clearTimeout(timer));
 };
 
 export const fireConfetti = () => {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
   confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
+  return true;
 };
 
 export const speakText = (text, { rate = 0.78, pitch = 1 } = {}) => {

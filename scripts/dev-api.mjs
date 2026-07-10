@@ -1,9 +1,14 @@
 import { createServer as createHttpServer } from 'node:http';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createServer as createViteServer } from 'vite';
+import { createServer as createViteServer, loadEnv } from 'vite';
 
 const root = process.cwd();
+const mode = process.env.NODE_ENV || 'development';
+const localEnv = loadEnv(mode, root, '');
+Object.entries(localEnv).forEach(([key, value]) => {
+  if (process.env[key] === undefined) process.env[key] = value;
+});
 const host = process.env.HOST || '127.0.0.1';
 const port = Number(process.env.PORT || 5174);
 
@@ -13,13 +18,7 @@ const apiRoutes = new Map([
   ['/api/generate-task-images', 'api/generate-task-images.js'],
 ]);
 
-const vite = await createViteServer({
-  root,
-  appType: 'spa',
-  server: {
-    middlewareMode: true,
-  },
-});
+let vite;
 
 const readBody = async (req) => {
   const chunks = [];
@@ -44,7 +43,14 @@ const toHeaders = (req) => {
 const handleApi = async (req, res, routePath) => {
   try {
     const moduleUrl = `${pathToFileURL(path.join(root, routePath)).href}?t=${Date.now()}`;
-    const { default: handler } = await import(moduleUrl);
+    const routeModule = await import(moduleUrl);
+    const handler = routeModule[req.method] || routeModule.default?.fetch || routeModule.default;
+    if (typeof handler !== 'function') {
+      const allowedMethods = Object.keys(routeModule).filter((key) => /^[A-Z]+$/.test(key));
+      res.writeHead(405, { 'Content-Type': 'application/json', Allow: allowedMethods.join(', ') });
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
     const body = ['GET', 'HEAD'].includes(req.method) ? undefined : await readBody(req);
     const request = new Request(`http://${req.headers.host || `${host}:${port}`}${req.url}`, {
       method: req.method,
@@ -72,6 +78,15 @@ const server = createHttpServer(async (req, res) => {
   }
 
   vite.middlewares(req, res);
+});
+
+vite = await createViteServer({
+  root,
+  appType: 'spa',
+  server: {
+    middlewareMode: true,
+    hmr: { server },
+  },
 });
 
 server.listen(port, host, () => {
