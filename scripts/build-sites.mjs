@@ -32,8 +32,31 @@ async function collectFiles(directory) {
   return files;
 }
 
-const files = await collectFiles(dist);
-const embeddedAssets = {};
+const indexPath = resolve(dist, 'index.html');
+let inlineIndex = await readFile(indexPath, 'utf8');
+
+for (const match of [...inlineIndex.matchAll(/<script\b[^>]*\bsrc="([^"]+)"[^>]*><\/script>/g)]) {
+  const source = await readFile(resolve(dist, match[1].replace(/^\//, '')), 'utf8');
+  const replacement = `<script type="module">${source.replaceAll('</script', '<\\/script')}</script>`;
+  inlineIndex = inlineIndex.replace(match[0], () => replacement);
+}
+
+for (const match of [...inlineIndex.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"[^>]*>/g)]) {
+  const source = await readFile(resolve(dist, match[1].replace(/^\//, '')), 'utf8');
+  const replacement = `<style>${source.replaceAll('</style', '<\\/style')}</style>`;
+  inlineIndex = inlineIndex.replace(match[0], () => replacement);
+}
+
+const files = (await collectFiles(dist)).filter((file) => {
+  const pathname = relative(dist, file).split(sep).join('/');
+  return pathname !== 'index.html' && !pathname.startsWith('assets/');
+});
+const embeddedAssets = {
+  '/index.html': {
+    body: Buffer.from(inlineIndex).toString('base64'),
+    type: contentTypes['.html'],
+  },
+};
 
 for (const file of files) {
   const pathname = `/${relative(dist, file).split(sep).join('/')}`;
