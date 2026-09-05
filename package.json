@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "node scripts/dev-api.mjs",
-    "test": "npm run test:core && npm run test:generation",
+    "test": "npm run test:core && npm run test:therapy && npm run test:generation",
+    "test:therapy": "node scripts/test-therapy.mjs",
     "test:core": "node scripts/test-core.mjs",
     "test:generation": "node scripts/smoke-generation.mjs",
     "build": "vite build && node scripts/build-sites.mjs",

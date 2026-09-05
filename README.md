@@ -10,6 +10,10 @@ The core session is intentionally predictable and local:
 - assisted speech counts as useful practice;
 - an unfinished session is saved on the device and can be resumed.
 
+Answers and progress within the four-word exercise survive navigation and page reloads. A completed answer stays selected until the caregiver chooses **Повторити крок**. Skipping is optional; ending early preserves partial word results in the summary. Finished sessions remain available as a summary and are never offered as an active session.
+
+The interface is checked at laptop and phone widths, including 320 px. Caregiver advice is collapsed by default and answer choices remain together. The progress regression checks run with `npm run test:therapy` and are also included in `npm test`.
+
 ## Setup
 
 ```bash

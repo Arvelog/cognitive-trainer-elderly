@@ -46,11 +46,16 @@ export const fireConfetti = () => {
   return true;
 };
 
-export const speakText = (text, { rate = 0.78, pitch = 1 } = {}) => {
+export const speakText = (text, { rate = 0.78, pitch = 1, onEnd, onError } = {}) => {
   if (!text || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
 
   window.speechSynthesis.cancel();
   const utterance = new window.SpeechSynthesisUtterance(String(text));
+  utterance.onend = onEnd;
+  utterance.onerror = (event) => {
+    if (event.error === 'canceled' || event.error === 'interrupted') onEnd?.();
+    else onError?.();
+  };
   utterance.lang = 'uk-UA';
   utterance.rate = Math.min(1.2, Math.max(0.5, Number(rate) || 0.78));
   utterance.pitch = Math.min(1.5, Math.max(0.5, Number(pitch) || 1));

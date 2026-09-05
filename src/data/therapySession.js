@@ -22,10 +22,17 @@ const PAIR_TASKS = [
 ];
 
 const PHRASE_TASKS = [
-  { lead: 'Я хочу', answer: 'чай', options: ['чай', 'чоботи'], spoken: 'Я хочу чай' },
+  { lead: 'Я п’ю', answer: 'чай', options: ['чай', 'чоботи'], spoken: 'Я п’ю чай' },
   { lead: 'Ось', answer: 'вода', options: ['вода', 'вчасно'], spoken: 'Ось вода' },
-  { lead: 'Треба', answer: 'чистити', options: ['чистити', 'часто'], spoken: 'Треба чистити зуби' },
+  { lead: 'Зуби треба', answer: 'чистити', options: ['чистити', 'часто'], spoken: 'Зуби треба чистити' },
 ];
+
+// Apply the same clear wording to an unfinished session saved before this update.
+export const clarifyPhrase = (phrase) => {
+  if (phrase.lead === 'Я хочу' && phrase.answer === 'чай') return { ...phrase, lead: 'Я п’ю', spoken: 'Я п’ю чай' };
+  if (phrase.lead === 'Треба' && phrase.answer === 'чистити') return { ...phrase, lead: 'Зуби треба', spoken: 'Зуби треба чистити' };
+  return phrase;
+};
 
 const SCENE_TASKS = [
   {
@@ -68,4 +75,3 @@ export const createTherapySession = () => ({
   strongWords: shuffle(WORDS).slice(0, 4),
   createdAt: new Date().toISOString(),
 });
-

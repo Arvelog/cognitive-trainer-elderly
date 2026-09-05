@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Check,
   Ear,
@@ -13,34 +13,18 @@ import {
   Volume2,
 } from 'lucide-react';
 import { speakText } from '../lib/audio';
-
-const useCompleteOnce = (onComplete) => {
-  const completeRef = useRef(false);
-  return (details) => {
-    if (completeRef.current) return;
-    completeRef.current = true;
-    onComplete(details);
-  };
-};
+import { speechTotals } from '../lib/therapyProgress';
 
 function CoachNote({ children }) {
-  const [open, setOpen] = useState(false);
   return (
     <aside className="coach-note">
-      <div className="coach-note__label">
-        <HeartHandshake aria-hidden="true" />
-        <span>Для людини поруч</span>
-      </div>
-      <p>{children}</p>
-      <button className="text-action" type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
-        <Lightbulb aria-hidden="true" />
-        {open ? 'Сховати підказку' : 'Як допомогти'}
-      </button>
-      {open && (
-        <div className="coach-note__hint" role="status">
+      <details>
+        <summary><HeartHandshake aria-hidden="true" /><span>Як допомогти</span></summary>
+        <p>{children}</p>
+        <p className="coach-note__hint">
           Дайте 8–10 секунд на відповідь. Якщо важко — скажіть перший звук або промовте слово разом.
-        </div>
-      )}
+        </p>
+      </details>
     </aside>
   );
 }
@@ -64,44 +48,48 @@ function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, coach })
   );
 }
 
-function ListenButton({ text, label = 'Почути слово', rate = 0.62 }) {
+export function ListenButton({ text, label = 'Почути слово', rate = 0.62 }) {
   const [speaking, setSpeaking] = useState(false);
-  const timerRef = useRef(null);
-
-  useEffect(() => () => clearTimeout(timerRef.current), []);
+  const [unavailable, setUnavailable] = useState(false);
+  useEffect(() => {
+    setSpeaking(false);
+    setUnavailable(false);
+    return () => window.speechSynthesis?.cancel();
+  }, [text]);
 
   const play = () => {
-    speakText(text, { rate });
-    setSpeaking(true);
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setSpeaking(false), 1200);
+    setUnavailable(false);
+    const started = speakText(text, {
+      rate,
+      onEnd: () => setSpeaking(false),
+      onError: () => { setSpeaking(false); setUnavailable(true); },
+    });
+    setSpeaking(started);
+    if (!started) setUnavailable(true);
   };
 
   return (
-    <button className="listen-button" type="button" onClick={play} data-speaking={speaking || undefined}>
-      <Volume2 aria-hidden="true" />
-      {speaking ? 'Слухаємо…' : label}
-    </button>
+    <div className="listen-control">
+      <button className="listen-button" type="button" onClick={play} data-speaking={speaking || undefined} aria-label={label}>
+        <Volume2 aria-hidden="true" />
+        {speaking ? 'Слухаємо…' : label}
+      </button>
+      {unavailable && <span className="audio-notice" role="status">Звук недоступний. Прочитайте вголос.</span>}
+    </div>
   );
 }
 
-function ChoiceButtons({ options, answer, onComplete, spoken }) {
-  const [chosen, setChosen] = useState(null);
-  const [message, setMessage] = useState('');
-  const [attempts, setAttempts] = useState(0);
-  const complete = useCompleteOnce(onComplete);
+function ChoiceButtons({ options, answer, progress, onProgress, spoken }) {
+  const { chosen = null, attempts = 0, done = false } = progress;
+  const message = done ? 'Так. Саме так.' : chosen == null ? 'Оберіть один варіант.'
+    : attempts > 1 ? `Правильна відповідь: ${answer}. Натисніть її разом.` : 'Це інший варіант. Спробуйте ще раз.';
 
   const choose = (option) => {
-    setChosen(option);
+    if (done) return;
+    onProgress({ chosen: option, attempts: attempts + 1, done: option === answer });
     if (option === answer) {
-      setMessage('Так. Саме так.');
       speakText(spoken || answer, { rate: 0.68 });
-      complete({ attempts: attempts + 1 });
-      return;
     }
-    const nextAttempts = attempts + 1;
-    setAttempts(nextAttempts);
-    setMessage(nextAttempts > 1 ? `Правильна відповідь: ${answer}. Натисніть її разом.` : 'Це інший варіант. Спробуйте ще раз.');
   };
 
   return (
@@ -117,6 +105,7 @@ function ChoiceButtons({ options, answer, onComplete, spoken }) {
               className="choice-button"
               data-state={isCorrect ? 'correct' : isWrong ? 'retry' : undefined}
               onClick={() => choose(option)}
+              disabled={done}
               aria-pressed={chosen === option}
             >
               {isCorrect && <Check aria-hidden="true" />}
@@ -126,26 +115,24 @@ function ChoiceButtons({ options, answer, onComplete, spoken }) {
         })}
       </div>
       <div className="task-feedback" data-positive={chosen === answer || undefined} role="status" aria-live="polite">
-        {message || 'Оберіть один варіант.'}
+        {message}
       </div>
     </>
   );
 }
 
-export function ListenTask({ data, onComplete }) {
-  const [done, setDone] = useState(false);
-  const complete = useCompleteOnce(onComplete);
+export function ListenTask({ data, progress, onProgress }) {
+  const done = Boolean(progress.done);
   const finish = () => {
-    setDone(true);
-    complete({ mode: 'practice' });
+    if (!done) onProgress({ done: true, mode: 'practice' });
   };
 
   return (
     <TaskFrame
       icon={Headphones}
       eyebrow="Крок 1 · слухаємо"
-      title="Одне знайоме слово"
-      instruction="Послухайте повільно. Потім скажіть як вийде."
+      title="Послухайте й скажіть"
+      instruction="Можна повторити самостійно або разом."
       coach="Не виправляйте вимову одразу. Тут важлива сама спроба."
     >
       <div className="word-stage">
@@ -167,29 +154,29 @@ export function ListenTask({ data, onComplete }) {
   );
 }
 
-export function FindWordTask({ data, onComplete }) {
+export function FindWordTask({ data, progress, onProgress }) {
   return (
     <TaskFrame
       icon={Hand}
       eyebrow="Крок 2 · знаходимо"
       title={data.prompt}
-      instruction="Подивіться на знак і торкніться потрібного слова."
+      instruction="Торкніться потрібного слова."
       coach="Прочитайте обидва варіанти вголос, якщо самостійно вибрати важко."
     >
       <div className="visual-prompt" aria-label={`Зображення для слова ${data.answer}`}>{data.visual}</div>
       <ListenButton text={data.answer} label="Почути підказку" />
-      <ChoiceButtons {...data} onComplete={onComplete} spoken={data.answer} />
+      <ChoiceButtons {...data} progress={progress} onProgress={onProgress} spoken={data.answer} />
     </TaskFrame>
   );
 }
 
-export function PairTask({ data, onComplete }) {
+export function PairTask({ data, progress, onProgress }) {
   return (
     <TaskFrame
       icon={Link2}
       eyebrow="Крок 3 · поєднуємо"
       title="Що підходить разом?"
-      instruction="Додайте до першого слова те, що з ним пов’язане."
+      instruction="Оберіть пару до слова."
       coach="Спочатку назвіть перше слово. Потім повільно прочитайте два варіанти."
     >
       <div className="pair-prompt">
@@ -199,18 +186,18 @@ export function PairTask({ data, onComplete }) {
         <span className="pair-prompt__empty">?</span>
       </div>
       <ListenButton text={data.lead} label="Почути перше слово" />
-      <ChoiceButtons {...data} onComplete={onComplete} />
+      <ChoiceButtons {...data} progress={progress} onProgress={onProgress} />
     </TaskFrame>
   );
 }
 
-export function PhraseTask({ data, onComplete }) {
+export function PhraseTask({ data, progress, onProgress }) {
   return (
     <TaskFrame
       icon={MessageCircle}
       eyebrow="Крок 4 · фраза"
-      title="Закінчіть коротку фразу"
-      instruction="Прочитайте початок і виберіть останнє слово."
+      title="Закінчіть фразу"
+      instruction="Оберіть останнє слово."
       coach="Проведіть пальцем під словами та промовте всю фразу разом."
     >
       <div className="phrase-prompt">
@@ -218,47 +205,36 @@ export function PhraseTask({ data, onComplete }) {
         <strong>…</strong>
       </div>
       <ListenButton text={data.lead} label="Почути початок" />
-      <ChoiceButtons {...data} onComplete={onComplete} />
+      <ChoiceButtons {...data} progress={progress} onProgress={onProgress} />
     </TaskFrame>
   );
 }
 
-export function SceneTask({ data, onComplete }) {
+export function SceneTask({ data, progress, onProgress }) {
   return (
     <TaskFrame
       icon={ImageIcon}
       eyebrow="Крок 5 · розуміємо"
       title={data.prompt}
-      instruction="Подивіться на знайому дію та виберіть коротку відповідь."
+      instruction="Подивіться й оберіть відповідь."
       coach="Спочатку дайте час просто роздивитися сцену. Не поспішайте читати варіанти."
     >
       <img className="scene-image" src={data.imageUrl} alt={data.alt} />
-      <ChoiceButtons {...data} onComplete={onComplete} />
+      <ChoiceButtons {...data} progress={progress} onProgress={onProgress} />
     </TaskFrame>
   );
 }
 
-export function StrongWordsTask({ words, onComplete }) {
-  const [current, setCurrent] = useState(0);
-  const [hint, setHint] = useState(false);
-  const [results, setResults] = useState([]);
-  const complete = useCompleteOnce(onComplete);
-  const done = results.length === words.length;
+export function StrongWordsTask({ words, progress, onProgress }) {
+  const { results = [], hint = false, done = false } = progress;
+  const current = results.length;
+  const totals = speechTotals(progress);
   const word = words[Math.min(current, words.length - 1)];
 
   const mark = (mode) => {
     if (done) return;
     const next = [...results, mode];
-    setResults(next);
-    setHint(false);
-    if (next.length === words.length) {
-      complete({
-        independent: next.filter((item) => item === 'independent').length,
-        together: next.filter((item) => item === 'together').length,
-      });
-    } else {
-      setCurrent((value) => value + 1);
-    }
+    onProgress({ results: next, hint: false, done: next.length === words.length });
   };
 
   return (
@@ -275,22 +251,15 @@ export function StrongWordsTask({ words, onComplete }) {
             <span className="word-stage__emoji" aria-hidden="true">{word.emoji}</span>
             <strong>{word.word}</strong>
           </div>
-          <div className="primary-actions">
+          <div className="primary-actions primary-actions--speech">
             <ListenButton text={word.word} />
-            <button className="hint-button" type="button" onClick={() => setHint((value) => !value)} aria-expanded={hint}>
+            <button className="hint-button" type="button" onClick={() => onProgress({ ...progress, hint: !hint })} aria-expanded={hint}>
               <Lightbulb aria-hidden="true" />
               Підказка
             </button>
           </div>
-          {hint && (
-            <div className="sound-hint" role="status">
-              <span>Початок: {word.sound}…</span>
-              <strong>{word.syllables}</strong>
-              <ListenButton text={word.phrase} label={word.phrase} rate={0.68} />
-            </div>
-          )}
-          <p className="outcome-label">Як вийшло цього разу?</p>
-          <div className="choice-grid">
+          <p className="outcome-label">Для людини поруч: як вийшло?</p>
+          <div className="choice-grid choice-grid--outcomes">
             <button className="choice-button choice-button--outcome" type="button" onClick={() => mark('independent')}>
               <Check aria-hidden="true" />
               Сказала сама
@@ -300,15 +269,21 @@ export function StrongWordsTask({ words, onComplete }) {
               Сказали разом
             </button>
           </div>
+          {hint && (
+            <div className="sound-hint" role="status">
+              <span>Початок: {word.sound}…</span>
+              <strong>{word.syllables}</strong>
+              <ListenButton text={word.phrase} label={word.phrase} rate={0.68} />
+            </div>
+          )}
         </>
       ) : (
         <div className="speech-summary" role="status" aria-live="polite">
           <Check aria-hidden="true" />
           <h2>Чотири слова — готово</h2>
-          <p>Сама: {results.filter((item) => item === 'independent').length} · Разом: {results.filter((item) => item === 'together').length}</p>
+          <p>Сама: {totals.independent} · Разом: {totals.together}</p>
         </div>
       )}
     </TaskFrame>
   );
 }
-
