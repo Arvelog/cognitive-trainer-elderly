@@ -382,6 +382,11 @@ a:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
 .outcome-buttons button:disabled:not([aria-pressed='true']) { background: var(--paper); }
 .conversation-situation { font-size: 27px; line-height: 1.4; margin: 20px 0; }
 .conversation-note { color: var(--ink-soft); font-size: 18px; line-height: 1.5; }
+.conversation-setup, .conversation-response { margin: 18px 0; padding: 14px 16px; background: var(--ice); color: var(--ink-soft); font-size: 17px; line-height: 1.5; }
+.conversation-setup strong, .conversation-response strong { display: block; margin-bottom: 5px; color: var(--mineral-deep); font-size: 15px; }
+.conversation-directions { margin: 20px 0; padding-left: 32px; font-size: clamp(22px, 2.2vw, 28px); line-height: 1.45; }
+.conversation-directions li { padding-left: 5px; margin-bottom: 14px; }
+.conversation-directions li::marker { color: var(--mineral-deep); font-weight: 700; }
 .counting-dots, .counting-dots > span { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .counting-dots { margin: 12px 0; }
 .counting-dots i { display: block; width: 22px; height: 22px; border-radius: 50%; background: var(--mineral); }

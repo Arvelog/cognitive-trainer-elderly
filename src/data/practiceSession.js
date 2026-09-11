@@ -69,11 +69,52 @@ export const WRITING_PICTURES = [
   { word: 'ключ', image: '/images/practice/03.webp', hint: 'Цим відмикають двері.', first: 'К', accepted: 'Ключ.' },
 ];
 const CONVERSATION = [
-  { kind: 'conversation', title: 'Попросіть про допомогу', situation: 'Потрібна допомога з ґудзиком.', prompt: 'Як покликати людину поруч?', model: 'Допоможи, будь ласка.', cue: 'Допоможи…', coach: 'Зіграйте короткий діалог. Відгукніться на прохання. Приймайте власну фразу, жест або вказування.' },
-  { kind: 'conversation', title: 'Попросіть потрібну річ', situation: 'Ви хочете написати щось у зошиті.', prompt: 'Попросіть олівець.', model: 'Дай олівець, будь ласка.', cue: 'Дай…', coach: 'Покладіть олівець поруч. Після прохання передайте його: фраза має живий зміст. Приймайте жест.' },
-  { kind: 'conversation', title: 'Скажіть про свій вибір', situation: 'Людина поруч пропонує ще одну вправу.', prompt: 'Попросіть відпочити.', model: 'Хочу відпочити.', cue: 'Хочу…', coach: 'Запитайте, чи справді потрібна перерва, і поважайте відповідь. Не вимагайте точної фрази зі зразка.' },
+  {
+    kind: 'conversation', scenario: 'help', title: 'Попросіть допомогти з ґудзиком',
+    prompt: 'Зверніться до людини, з якою займаєтеся.',
+    setup: 'Покладіть перед вами одяг із розстебнутим ґудзиком.',
+    directions: ['Покажіть людині поруч на ґудзик.', 'Попросіть допомогти його застебнути — словом, фразою або жестом.'],
+    partnerResponse: 'У відповідь на прохання допоможіть із ґудзиком.',
+    model: 'Допоможи, будь ласка.', cue: 'Допоможи…',
+    coach: 'Залиште час на власне прохання. Якщо важко — відкрийте початок фрази або приклад і скажіть разом. Відгукніться й на жест.',
+  },
+  {
+    kind: 'conversation', scenario: 'pencil', title: 'Попросіть олівець',
+    prompt: 'Зверніться до людини, з якою займаєтеся.',
+    setup: 'Візьміть олівець у руку й тримайте так, щоб його було видно.',
+    directions: ['Подивіться на олівець у руках людини поруч.', 'Попросіть її дати вам олівець — словом, фразою або жестом.'],
+    partnerResponse: 'У відповідь на прохання передайте олівець.',
+    model: 'Дай олівець, будь ласка.', cue: 'Дай…',
+    coach: 'Не давайте олівець до спроби попросити. Достатньо слова «олівець» або зрозумілого жесту. Якщо важко — відкрийте приклад і промовте разом.',
+  },
+  {
+    kind: 'conversation', scenario: 'rest', title: 'Попросіть зробити перерву',
+    prompt: 'Зверніться до людини, з якою займаєтеся.',
+    setup: 'Скажіть: «Потренуймо, як попросити зробити перерву».',
+    directions: ['Подивіться на людину поруч.', 'Повідомте їй, що хочете відпочити — словом, фразою або жестом.'],
+    partnerResponse: 'Підтвердьте, що зрозуміли прохання, і запропонуйте перепочити.',
+    model: 'Хочу відпочити.', cue: 'Хочу…',
+    coach: 'Власне формулювання або жест теж підходять. Якщо потрібна справжня перерва, зробіть її. Не вимагайте повторити зразок дослівно.',
+  },
 ];
-const STORY = { kind: 'conversation', title: 'Розкажіть про малюнок', image: '/images/scenes/woman-cooking.jpg', situation: 'Подивіться на сцену.', prompt: 'Хто тут? Що робить?', model: 'Жінка готує їжу на кухні.', cue: 'Жінка…', coach: 'Прийміть одне слово або жест. Додайте до відповіді одне слово й запропонуйте сказати разом. Запитайте: «Що ви любите готувати?»' };
+const STORY = {
+  kind: 'conversation', scenario: 'scene', title: 'Розкажіть про малюнок',
+  image: '/images/scenes/woman-cooking.jpg', prompt: 'Розкажіть людині поруч, що ви бачите.',
+  setup: 'Покажіть малюнок. Ставте запитання нижче по одному й чекайте на відповідь.',
+  directions: ['Хто зображений на малюнку? Назвіть або покажіть.', 'Що ця людина робить? Скажіть слово, фразу або покажіть дію жестом.'],
+  partnerResponse: 'Повторіть те, що зрозуміли з відповіді. За бажанням додайте одне слово й скажіть разом.',
+  model: 'Жінка готує їжу на кухні.', cue: 'Жінка…',
+  coach: 'Не обов’язково складати ціле речення. Приймайте власну відповідь, одне слово або жест. Зразок відкривайте лише за потреби.',
+};
+
+// Sessions contain task snapshots. Refresh the instructions when an older session resumes.
+export function clarifyConversationTask(task) {
+  if (task.kind !== 'conversation') return task;
+  const current = [...CONVERSATION, STORY].find((item) => task.scenario ? item.scenario === task.scenario : item.model === task.model);
+  if (!current) return task;
+  const { situation, ...saved } = task;
+  return { ...saved, ...current };
+}
 const pick = (items) => items[Math.floor(Math.random() * items.length)];
 const shuffle = (items) => {
   const copy = [...items];
@@ -101,7 +142,7 @@ export function createPracticeSession(blockId = null) {
   return { id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, mode: 'extended', blockId, tasks, createdAt: new Date().toISOString() };
 }
 
-export const getSessionSteps = (session) => session?.mode === 'extended' ? session.tasks : SESSION_STEPS;
+export const getSessionSteps = (session) => session?.mode === 'extended' ? session.tasks.map(clarifyConversationTask) : SESSION_STEPS;
 export const getSessionBlocks = (session) => session?.mode === 'extended'
   ? PRACTICE_BLOCKS.filter((block) => session.tasks.some((task) => task.block === block.id)) : SESSION_STEPS;
 export const getStepCount = (session) => getSessionSteps(session).length;

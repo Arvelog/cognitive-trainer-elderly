@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createTherapySession } from '../src/data/therapySession.js';
 import { newProgress, restoreProgress, speechTotals, therapyReducer } from '../src/lib/therapyProgress.js';
-import { createPracticeSession, getStepCount, PRACTICE_BLOCKS, validPracticeSession } from '../src/data/practiceSession.js';
+import { createPracticeSession, getSessionSteps, getStepCount, PRACTICE_BLOCKS, validPracticeSession } from '../src/data/practiceSession.js';
 import { existsSync } from 'node:fs';
 
 const session = createTherapySession();
@@ -139,3 +139,26 @@ for (let i = 0; i < 80; i += 1) {
   }
 }
 console.log('Extended practice: 13 tasks, six blocks, paper-writing recall, nested progress, early finish, variants and assets passed.');
+
+// A task already saved on a user's device must receive corrected instructions without losing their place or answer.
+const conversationSave = newProgress(createPracticeSession('communication'));
+conversationSave.session.tasks[0] = {
+  id: 'communication-0', block: 'communication', kind: 'conversation',
+  title: 'Попросіть потрібну річ', situation: 'Ви хочете написати щось у зошиті.',
+  prompt: 'Попросіть олівець.', model: 'Дай олівець, будь ласка.', cue: 'Дай…',
+};
+conversationSave.details[0] = { hint: true, model: true, mode: 'supported', done: true };
+conversationSave.completed[0] = true;
+const resumedConversation = restoreProgress(JSON.stringify(conversationSave));
+const refreshedTask = getSessionSteps(resumedConversation.session)[0];
+assert.equal(refreshedTask.scenario, 'pencil');
+assert.notEqual(refreshedTask.title, conversationSave.session.tasks[0].title);
+assert.equal(refreshedTask.directions.length, 2);
+assert.ok(refreshedTask.setup && refreshedTask.partnerResponse);
+assert.equal(refreshedTask.id, 'communication-0');
+assert.equal(refreshedTask.situation, undefined, 'Outdated context is removed');
+assert.deepEqual(resumedConversation.details[0], conversationSave.details[0]);
+assert.equal(resumedConversation.currentStep, 0);
+assert.equal(resumedConversation.completed[0], true);
+assert.equal(conversationSave.session.tasks[0].title, 'Попросіть потрібну річ', 'Refreshing display data does not mutate the saved snapshot');
+console.log('Conversation correction: existing sessions show current instructions and retain answers.');

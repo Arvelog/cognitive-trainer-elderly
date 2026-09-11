@@ -80,11 +80,12 @@ function SequenceTask({ data, progress, onProgress }) {
   </Frame>;
 }
 
-function Outcomes({ done, mode, onMark, writing = false }) {
+function Outcomes({ done, mode, onMark, writing = false, partnerResponse }) {
   const labels = writing ? ['Написала сама', 'Написали з допомогою', 'Спробували'] : ['Вийшло самостійно', 'Разом / із підказкою', 'Жестом або інакше'];
   const modes = writing ? ['independent', 'supported', 'attempted'] : ['independent', 'supported', 'alternative'];
   return <div className="practice-outcomes">
-    <p className="outcome-label">Для людини поруч: як вийшло?</p>
+    {partnerResponse && <p className="conversation-response"><strong>Після спроби · для людини поруч</strong>{partnerResponse} Потім оберіть нижче, як вийшло.</p>}
+    {!partnerResponse && <p className="outcome-label">Для людини поруч: як вийшло?</p>}
     <div className="outcome-buttons">{labels.map((label, i) => <button key={label} type="button" className="secondary-button" disabled={done} aria-pressed={mode === modes[i]} onClick={() => onMark(modes[i])}>{mode === modes[i] && <Check aria-hidden="true" />}{label}</button>)}</div>
     {done && <p className="task-feedback" role="status">Спробу збережено. Можна рухатися далі.</p>}
   </div>;
@@ -111,13 +112,13 @@ function WritingTask({ data, progress, onProgress }) {
 
 function ConversationTask({ data, progress, onProgress }) {
   return <Frame data={data} instruction={data.prompt} coach={data.coach}>
+    {data.setup && <p className="conversation-setup"><strong>Перед початком · для людини поруч</strong>{data.setup}</p>}
     {data.image && <img className="scene-image" src={data.image} alt="Сцена для розповіді" />}
-    <p className="conversation-situation">{data.situation}</p>
-    <ListenButton text={`${data.situation} ${data.prompt}`} label="Послухати завдання" />
-    <p className="conversation-note">Можна сказати слово, фразу або показати жестом.</p>
+    {data.directions ? <ol className="conversation-directions" aria-label="Що зробити">{data.directions.map((direction) => <li key={direction}>{direction}</li>)}</ol> : <p className="conversation-situation">{data.situation}</p>}
+    <ListenButton text={[data.prompt, ...(data.directions || [data.situation])].filter(Boolean).join(' ')} label="Послухати, що зробити" />
     {!progress.done && <Hint shown={Boolean(progress.hint)} onToggle={() => onProgress({ ...progress, hint: !progress.hint, usedHint: true })} label="Початок фрази"><strong className="subtask-title">{data.cue}</strong><button type="button" className="text-action" onClick={() => onProgress({ ...progress, model: true, usedModel: true })}>Показати приклад фрази</button></Hint>}
     {progress.model && <div className="hint-content"><p>{data.model}</p><ListenButton text={data.model} label="Почути приклад" /><p className="conversation-note">Власна відповідь теж підходить.</p></div>}
-    <Outcomes done={progress.done} mode={progress.mode} onMark={(mode) => onProgress({ ...progress, mode, done: true })} />
+    <Outcomes done={progress.done} mode={progress.mode} partnerResponse={data.partnerResponse} onMark={(mode) => onProgress({ ...progress, mode, done: true })} />
   </Frame>;
 }
 
