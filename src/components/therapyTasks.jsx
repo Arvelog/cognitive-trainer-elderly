@@ -29,7 +29,7 @@ function CoachNote({ children }) {
   );
 }
 
-function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, coach }) {
+export function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, coach }) {
   return (
     <div className="task-layout">
       <section className="task-stage" aria-labelledby="task-title">
@@ -79,7 +79,7 @@ export function ListenButton({ text, label = 'Почути слово', rate = 0
   );
 }
 
-function ChoiceButtons({ options, answer, progress, onProgress, spoken }) {
+export function ChoiceButtons({ options, answer, progress, onProgress, spoken }) {
   const { chosen = null, attempts = 0, done = false } = progress;
   const message = done ? 'Так. Саме так.' : chosen == null ? 'Оберіть один варіант.'
     : attempts > 1 ? `Правильна відповідь: ${answer}. Натисніть її разом.` : 'Це інший варіант. Спробуйте ще раз.';

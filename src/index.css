@@ -320,3 +320,108 @@ main[tabindex]:focus { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* Extended practice: one task at a time, with a separate caregiver plan. */
+a { color: var(--mineral-deep); text-underline-offset: 3px; }
+a:focus-visible { outline: 4px solid var(--sun); outline-offset: 3px; }
+.home-main--practice { align-items: start; gap: 36px 44px; }
+.home-main--practice .home-copy h1 { font-size: clamp(34px, 3.6vw, 51px); }
+.home-main--practice .home-actions { align-items: stretch; flex-direction: column; max-width: 440px; }
+.home-main--practice .home-actions .secondary-button { justify-content: center; }
+.notebook-note { display: flex; align-items: center; gap: 8px; margin: 0 0 22px; color: var(--ink-soft); font-size: 17px; }
+.notebook-note svg { flex-shrink: 0; width: 21px; }
+.practice-plan { min-width: 0; background: var(--paper); border: 2px solid var(--ink); border-radius: 24px; padding: 24px; box-shadow: 8px 8px 0 var(--ice); }
+.practice-plan h2 { margin: 0 0 20px; font-size: 29px; line-height: 1.2; }
+.practice-plan .demo-caption { margin-bottom: 12px; }
+.practice-plan ol { padding: 0; margin: 0; list-style: none; }
+.practice-plan li { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 10px; padding: 13px 0; border-top: 1px solid var(--line); align-items: start; }
+.plan-number { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--ice); color: var(--mineral-deep); font-size: 14px; font-weight: 700; }
+.practice-plan li strong { font-size: 20px; }
+.practice-plan li p { margin: 4px 0 0; font-size: 15px; line-height: 1.4; color: var(--ink-soft); }
+.plan-duration { padding-top: 4px; white-space: nowrap; color: var(--ink-soft); font-size: 14px; }
+.block-picker { margin-top: 12px; border-top: 2px solid var(--line); padding-top: 8px; }
+.block-picker summary, .evidence-note summary { cursor: pointer; padding: 14px 0; color: var(--mineral-deep); font-weight: 700; line-height: 1.4; }
+.block-picker > div { display: grid; gap: 8px; }
+.block-picker button { justify-content: space-between; width: 100%; padding: 10px 16px; }
+.block-picker button span { font-weight: 400; }
+.evidence-note { grid-column: 1 / -1; border-top: 2px solid var(--line); font-size: 17px; line-height: 1.6; }
+.evidence-note summary svg { width: 20px; height: 20px; vertical-align: middle; margin-right: 6px; }
+.evidence-note p, .evidence-note ul { max-width: 900px; }
+.evidence-note li { margin-bottom: 10px; }
+.session-tools { display: flex; align-items: center; gap: 18px; }
+.pause-button { display: flex; align-items: center; gap: 6px; min-height: 44px; background: transparent; border: 2px solid var(--line); border-radius: 12px; padding: 7px 12px; cursor: pointer; font-size: 15px; font-weight: 600; }
+.pause-button:hover { background: var(--ice); }
+.progress-rail { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+.practice-stimulus { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; margin: 18px 0; text-align: center; background: var(--ice); }
+.practice-stimulus strong { font-size: clamp(25px, 2.8vw, 36px); line-height: 1.35; overflow-wrap: anywhere; }
+.practice-stimulus--number strong { font-size: clamp(40px, 4.5vw, 58px); font-variant-numeric: tabular-nums; }
+.practice-emoji { font-size: 44px; }
+.practice-hint { margin: 12px 0; }
+.hint-content { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 10px; padding: 16px; background: #fff8dc; font-size: 20px; line-height: 1.45; }
+.hint-content p { margin: 0; }
+.round-label { margin: 18px 0 8px; color: var(--mineral-deep); font-size: 17px; font-weight: 600; }
+.subtask-title { display: block; margin: 8px 0 16px; font-size: 27px; line-height: 1.3; }
+.practice-completion { padding: 16px; background: var(--success-soft); font-size: 23px; line-height: 1.5; }
+.practice-completion > svg { color: var(--success); }
+.sequence-choices { display: grid; gap: 10px; margin-top: 14px; }
+.sequence-choices .choice-button { justify-content: flex-start; font-size: 24px; text-align: left; }
+.sequence-number { flex-shrink: 0; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--ice); font-size: 19px; }
+.sequence-result { margin: 20px 0 0; padding-left: 28px; color: var(--ink-soft); font-size: 19px; line-height: 1.65; }
+.writing-picture { display: block; width: min(100%, 320px); height: 220px; object-fit: contain; margin: 16px auto; background: #faf9f6; border-radius: 16px; }
+.writing-model { padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; background: var(--ice); }
+.writing-model > strong { font-size: clamp(38px, 5vw, 58px); text-transform: uppercase; letter-spacing: .06em; }
+.writing-model p { margin: 0; font-size: 17px; line-height: 1.4; }
+.writing-actions { display: flex; justify-content: center; margin: 14px 0; }
+.writing-actions .confirm-button { padding: 12px 18px; }
+.first-letter { font-size: 36px; }
+.recall-note { background: var(--ice); padding: 14px; font-size: 19px; }
+.outcome-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 0; }
+.outcome-buttons .secondary-button { flex: 1 1 180px; padding: 12px; justify-content: center; font-size: 18px; line-height: 1.3; }
+.outcome-buttons button[aria-pressed='true'] { background: var(--success-soft); border-color: var(--success); color: var(--success); }
+.outcome-buttons button:disabled { cursor: default; }
+.outcome-buttons button:disabled:not([aria-pressed='true']) { background: var(--paper); }
+.conversation-situation { font-size: 27px; line-height: 1.4; margin: 20px 0; }
+.conversation-note { color: var(--ink-soft); font-size: 18px; line-height: 1.5; }
+.counting-dots, .counting-dots > span { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.counting-dots { margin: 12px 0; }
+.counting-dots i { display: block; width: 22px; height: 22px; border-radius: 50%; background: var(--mineral); }
+.block-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; margin: 0 auto 20px; max-width: 550px; text-align: left; }
+.block-summary > div { display: flex; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 18px; }
+.block-summary span { white-space: nowrap; color: var(--ink-soft); }
+.summary-note, .next-block { font-size: 19px; color: var(--ink-soft); line-height: 1.5; margin: 24px 0; }
+.break-screen .summary-symbol { background: var(--mineral); }
+.break-screen .clinical-note { margin-inline: auto; }
+@media (max-width: 720px) {
+  .home-main--practice .home-copy h1 { font-size: clamp(28px, 8vw, 40px); }
+  .practice-plan { padding: 18px; box-shadow: 4px 4px 0 var(--ice); }
+  .practice-plan h2 { font-size: 26px; }
+  .practice-plan li { grid-template-columns: 28px minmax(0, 1fr); gap: 8px; }
+  .plan-duration { grid-column: 2; padding: 0; margin-top: -4px; }
+  .session-header { column-gap: 10px; }
+  .session-tools { gap: 8px; }
+  .session-count { font-family: var(--body); font-size: 14px; white-space: nowrap; }
+  .pause-button { padding: 7px; font-size: 14px; }
+  .pause-button svg { width: 16px; }
+  .practice-stimulus { padding: 16px 12px; }
+  .practice-stimulus strong { font-size: 26px; }
+  .practice-stimulus--number strong { font-size: 42px; }
+  .practice-emoji { font-size: 36px; }
+  .subtask-title { font-size: 24px; }
+  .writing-picture { height: 185px; }
+  .sequence-choices .choice-button { font-size: 21px; }
+  .outcome-buttons { flex-direction: column; }
+  .outcome-buttons .secondary-button { flex: 0 0 auto; min-height: 58px; }
+  .hint-content { padding: 12px; font-size: 19px; }
+  .hint-content .text-action { text-align: left; }
+  .conversation-situation { font-size: 24px; }
+  .block-summary { grid-template-columns: 1fr; }
+  .evidence-note summary { font-size: 16px; }
+}
+.semantic-stimulus { flex-direction: row; padding: 12px; min-height: 74px; }
+.subtask-title[tabindex]:focus { outline: none; }
+.writing-tools { display: flex; flex-wrap: wrap; align-items: start; justify-content: center; gap: 12px; margin: 14px 0; }
+.writing-tools .writing-actions, .writing-tools .practice-hint { margin: 0; }
+.writing-tools .practice-hint:has(.hint-content) { flex-basis: 100%; }
+@media (max-width: 720px) {
+  .writing-tools { flex-direction: column; align-items: stretch; }
+}
