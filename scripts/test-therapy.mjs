@@ -134,6 +134,8 @@ for (let i = 0; i < 80; i += 1) {
     if (task.equation) {
       const [, a, operator, b] = task.stimulus.match(/(\d+) ([+−]) (\d+)/);
       assert.equal(Number(task.answer), operator === '+' ? Number(a) + Number(b) : Number(a) - Number(b));
+      assert.ok([Number(a), Number(b), Number(task.answer)].every((value) => value > 0 && value <= 20), 'Arithmetic stays within 20');
+      assert.ok(operator === '+' ? Number(task.answer) > 10 : Number(a) > 10 && Number(task.answer) < 10, 'Arithmetic includes crossing ten');
     }
     if (task.kind === 'writing') assert.ok(existsSync(new URL(`../public${task.image}`, import.meta.url)), `Missing picture: ${task.image}`);
   }
@@ -162,3 +164,32 @@ assert.equal(resumedConversation.currentStep, 0);
 assert.equal(resumedConversation.completed[0], true);
 assert.equal(conversationSave.session.tasks[0].title, 'Попросіть потрібну річ', 'Refreshing display data does not mutate the saved snapshot');
 console.log('Conversation correction: existing sessions show current instructions and retain answers.');
+
+// Upgrade untouched saved math, without changing a problem after a hint, attempt or recorded result.
+const mathSave = newProgress(createPracticeSession('numbers'));
+mathSave.session.tasks = [
+  { id: 'numbers-0', block: 'numbers', kind: 'choice', title: 'Скільки всього?', stimulus: '2 + 3 = ?', answer: '5', options: ['4', '5', '6'], equation: true, dots: [2, 3] },
+  { id: 'numbers-1', block: 'numbers', kind: 'choice', title: 'Скільки яблук?', stimulus: '🍎  🍎  🍎', answer: '3', options: ['2', '3', '4'], visualCount: true },
+];
+mathSave.currentStep = 1;
+const upgradedMath = restoreProgress(JSON.stringify(mathSave));
+assert.equal(upgradedMath.session.tasks[0].stimulus, '8 + 5 = ?');
+assert.equal(upgradedMath.session.tasks[1].answer, '12 яблук');
+assert.equal(upgradedMath.session.tasks[0].dots, undefined, 'Old counting dots must not accompany the new equation');
+assert.equal(upgradedMath.session.tasks[1].visualCount, undefined, 'The new word problem can be read aloud');
+assert.deepEqual(upgradedMath.session.tasks.map((task) => task.id), ['numbers-0', 'numbers-1']);
+assert.equal(upgradedMath.currentStep, 1);
+assert.deepEqual(restoreProgress(JSON.stringify(upgradedMath)), upgradedMath, 'Repeated reloads retain the same problems and option order');
+assert.equal(mathSave.session.tasks[0].answer, '5', 'Migration does not mutate its input');
+for (const progress of [{ chosen: '4', attempts: 1, done: false }, { hint: true }, { chosen: '5', attempts: 1, done: true }]) {
+  const startedMath = structuredClone(mathSave);
+  startedMath.details[0] = progress;
+  startedMath.completed[0] = Boolean(progress.done);
+  const resumedMath = restoreProgress(JSON.stringify(startedMath));
+  assert.deepEqual(resumedMath.session.tasks[0], mathSave.session.tasks[0]);
+  assert.deepEqual(resumedMath.details[0], progress);
+  assert.equal(resumedMath.session.tasks[1].answer, '12 яблук', 'Untouched work still upgrades after a previous attempt');
+}
+const finishedMath = restoreProgress(JSON.stringify({ ...mathSave, status: 'completed' }));
+assert.deepEqual(finishedMath.session.tasks, mathSave.session.tasks, 'Finished sessions retain their original problems');
+console.log('Math update: harder arithmetic, untouched-save migration, hint/answer retention and stable reloads passed.');

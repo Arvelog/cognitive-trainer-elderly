@@ -1,5 +1,5 @@
 import { clarifyPhrase } from '../data/therapySession.js';
-import { getStepCount, validPracticeSession } from '../data/practiceSession.js';
+import { getStepCount, upgradeUntouchedNumberTask, validPracticeSession } from '../data/practiceSession.js';
 
 export const STORAGE_KEY = 'poruch_active_session_v1';
 
@@ -21,6 +21,11 @@ export function restoreProgress(raw) {
         || !['listen', 'find', 'pair', 'phrase', 'scene'].every((key) => saved.session[key])) return null;
     const completed = Array.from({ length: getStepCount(saved.session) }, (_, index) => Boolean(saved.completed[index]));
     const details = { ...saved.details };
+    const session = extended && saved.status !== 'completed' ? {
+      ...saved.session,
+      tasks: saved.session.tasks.map((task, index) => completed[index] || Object.keys(details[index] || {}).length
+        ? task : upgradeUntouchedNumberTask(task)),
+    } : saved.session;
     completed.forEach((done, index) => {
       if (!done) return;
       details[index] = { ...details[index], done: true };
@@ -28,7 +33,7 @@ export function restoreProgress(raw) {
       if (task?.answer) details[index].chosen = task.answer;
     });
     return {
-      session: extended ? saved.session : { ...saved.session, phrase: clarifyPhrase(saved.session.phrase) },
+      session: extended ? session : { ...session, phrase: clarifyPhrase(session.phrase) },
       currentStep: Math.min(Math.max(Math.trunc(Number(saved.currentStep)) || 0, 0), completed.length - 1),
       completed,
       details,
