@@ -72,7 +72,6 @@ export default function App() {
   const goNext = () => {
     dispatch({ type: 'next' });
     if (currentStep === steps.length - 1) setView('summary');
-    else if (extended && steps[currentStep + 1].block !== steps[currentStep].block) setView('break');
   };
   const Task = extended ? PracticeTask : [ListenTask, FindWordTask, PairTask, PhraseTask, SceneTask, StrongWordsTask][currentStep];
   const data = extended ? steps[currentStep] : session[['listen', 'find', 'pair', 'phrase', 'scene'][currentStep]];

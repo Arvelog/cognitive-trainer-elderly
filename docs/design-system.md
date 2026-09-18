@@ -20,7 +20,7 @@ A quiet, adult practice space: forest green, white surfaces, clear type and rest
 - An active session must never be replaced without the native confirmation dialog. Cancel receives initial focus, Escape closes, focus returns to the triggering control.
 - Practice: six-block progress rail, one large task, distinct audio and hint buttons, two or three large answers, collapsible caregiver help, persistent back/next controls.
 - Short laptop viewports use tighter spacing without reducing instructional text. Phones use one task column and a two-button bottom bar with a safe-area inset.
-- Break: continue, return later or finish early. Summary shows actual completed counts, including partial sessions.
+- Blocks advance directly to the next task without automatic breaks. The optional «Перерва» button opens a pause where the user can continue, return later or finish early. Summary shows actual completed counts, including partial sessions.
 - Keep the existing storage key, reducers, task generation and saved-answer migrations. The visual redesign does not replace saved task snapshots.
 
 ## Accessibility and validation
