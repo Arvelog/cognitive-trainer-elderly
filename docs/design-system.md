@@ -22,6 +22,7 @@ A quiet, adult practice space: forest green, white surfaces, clear type and rest
 - Short laptop viewports use tighter spacing without reducing instructional text. Phones use one task column and a two-button bottom bar with a safe-area inset.
 - Blocks advance directly to the next task without automatic breaks. The optional «Перерва» button opens a pause where the user can continue, return later or finish early. Summary shows actual completed counts, including partial sessions.
 - Keep the existing storage key, reducers, task generation and saved-answer migrations. The visual redesign does not replace saved task snapshots.
+- New writing practice selects two different pictures from the existing collection. Its first picture differs from the first writing picture in the previous session when one is available. Resuming an existing session keeps its original pictures and answers.
 
 ## Accessibility and validation
 

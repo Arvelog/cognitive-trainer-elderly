@@ -59,7 +59,7 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); window.speechSynthesis?.cancel(); document.querySelector('main')?.focus({ preventScroll: true });
   }, [currentStep, view]);
-  const startNew = (mode = 'extended', block = null) => { dispatch({ type: 'start', session: mode === 'short' ? createTherapySession() : createPracticeSession(block) }); setView('session'); };
+  const startNew = (mode = 'extended', block = null) => { dispatch({ type: 'start', session: mode === 'short' ? createTherapySession() : createPracticeSession(block, session) }); setView('session'); };
   const goHome = () => setView('home');
   const finish = () => { dispatch({ type: 'finish' }); setView('summary'); };
   const notice = <SaveNotice failed={saveFailed} />;

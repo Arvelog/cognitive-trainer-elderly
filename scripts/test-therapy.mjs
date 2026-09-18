@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createTherapySession } from '../src/data/therapySession.js';
 import { newProgress, restoreProgress, speechTotals, therapyReducer } from '../src/lib/therapyProgress.js';
-import { createPracticeSession, getSessionSteps, getStepCount, PRACTICE_BLOCKS, validPracticeSession } from '../src/data/practiceSession.js';
+import { createPracticeSession, getSessionSteps, getStepCount, PRACTICE_BLOCKS, validPracticeSession, WRITING_PICTURES } from '../src/data/practiceSession.js';
 import { existsSync } from 'node:fs';
 
 const session = createTherapySession();
@@ -87,11 +87,14 @@ for (const block of PRACTICE_BLOCKS) {
 }
 apply({ type: 'start', session: fullSession });
 const writingIndex = fullSession.tasks.findIndex((task) => task.kind === 'writing');
-assert.equal(fullSession.tasks[writingIndex].word, 'борщ', 'The requested unlabelled borscht exercise is always included');
+const writingTasks = fullSession.tasks.filter((task) => task.kind === 'writing');
+assert.equal(writingTasks.length, 2);
+assert.equal(new Set(writingTasks.map((task) => task.image)).size, 2, 'Writing pictures must be distinct within a session');
 for (let i = 0; i < writingIndex; i += 1) apply({ type: 'next' });
 apply({ type: 'progress', index: writingIndex, progress: { stage: 'recall', usedModel: true, hint: false, done: false } });
 reload();
 assert.equal(state.currentStep, writingIndex);
+assert.deepEqual(state.session.tasks.filter((task) => task.kind === 'writing'), writingTasks, 'Reload preserves the writing pictures and their hints');
 assert.equal(state.details[writingIndex].stage, 'recall', 'Reload must not reveal the writing model again');
 assert.equal(state.details[writingIndex].usedModel, true);
 assert.equal(state.completed[writingIndex], false);
@@ -141,6 +144,33 @@ for (let i = 0; i < 80; i += 1) {
   }
 }
 console.log('Extended practice: 13 tasks, six blocks, paper-writing recall, nested progress, early finish, variants and assets passed.');
+
+// Every picture can start a new lesson; consecutive lessons must not repeat the first one.
+const originalRandom = Math.random;
+try {
+  for (const blockId of [null, 'writing']) {
+    const firstImages = new Set();
+    for (const value of [0, 0.5, 0.999999]) {
+      Math.random = () => value;
+      const fresh = createPracticeSession(blockId);
+      const pictures = fresh.tasks.filter((task) => task.kind === 'writing');
+      firstImages.add(pictures[0].image);
+      assert.equal(new Set(pictures.map((task) => task.image)).size, 2);
+      const snapshot = JSON.stringify(fresh);
+      for (const nextValue of [0, 0.5, 0.999999]) {
+        Math.random = () => nextValue;
+        const next = createPracticeSession(blockId, fresh).tasks.filter((task) => task.kind === 'writing');
+        assert.notEqual(next[0].image, pictures[0].image, 'A new lesson starts with a different picture');
+        assert.notEqual(next[0].image, next[1].image, 'The two writing exercises use different pictures');
+        assert.equal(JSON.stringify(fresh), snapshot, 'Selecting pictures does not mutate the previous lesson');
+      }
+    }
+    assert.deepEqual(firstImages, new Set(WRITING_PICTURES.map((picture) => picture.image)));
+  }
+} finally {
+  Math.random = originalRandom;
+}
+console.log('Writing variation: all pictures can start, no duplicate pictures or consecutive first-picture repeats, saved pictures preserved.');
 
 // A task already saved on a user's device must receive corrected instructions without losing their place or answer.
 const conversationSave = newProgress(createPracticeSession('communication'));

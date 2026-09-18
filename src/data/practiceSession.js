@@ -141,13 +141,16 @@ const shuffle = (items) => {
   return copy;
 };
 
-export function createPracticeSession(blockId = null) {
+export function createPracticeSession(blockId = null, previousSession = null) {
+  const previousFirstImage = previousSession?.tasks?.find((task) => task.kind === 'writing')?.image;
+  const firstPicture = pick(WRITING_PICTURES.filter((picture) => picture.image !== previousFirstImage));
+  const secondPicture = pick(WRITING_PICTURES.filter((picture) => picture.image !== firstPicture.image));
   const groups = [
     [pick(UNDERSTANDING), pick(READING)],
     [pick(FEATURES), pick(ASSOCIATIONS), pick(CATEGORIES)],
     [pick(SEQUENCES), pick(LOGIC)],
     [pick(NUMBERS), pick(EVERYDAY_NUMBERS)],
-    [{ kind: 'writing', title: 'Напишіть назву малюнка', ...WRITING_PICTURES[0] }, { kind: 'writing', title: 'Ще одне слово в зошиті', ...pick(WRITING_PICTURES.slice(1)) }],
+    [{ kind: 'writing', title: 'Напишіть назву малюнка', ...firstPicture }, { kind: 'writing', title: 'Ще одне слово в зошиті', ...secondPicture }],
     [pick(CONVERSATION), STORY],
   ];
   const tasks = groups.flatMap((group, i) => group.map((task, j) => ({
