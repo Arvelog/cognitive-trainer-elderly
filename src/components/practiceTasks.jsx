@@ -94,11 +94,15 @@ function Outcomes({ done, mode, onMark, writing = false, partnerResponse }) {
 function WritingTask({ data, progress, onProgress }) {
   const stage = progress.stage || 'write';
   const revealed = stage === 'model';
+  const stageContent = useRef(null);
+  useEffect(() => {
+    if (stage !== 'write') stageContent.current?.focus({ preventScroll: true });
+  }, [stage]);
   const change = (patch) => onProgress({ ...progress, ...patch });
   return <Frame data={data} instruction={stage === 'recall' ? 'Закрийте попередній запис. Напишіть слово ще раз із пам’яті.' : revealed ? 'Подивіться на зразок. Спишіть слово в зошит.' : 'Напишіть олівцем у зошиті, що зображено. Не поспішайте.'} coach="Не називайте предмет до першої спроби. Якщо важко: ознака → перша літера → зразок. Можна списати, сховати зразок і спробувати з пам’яті. Рухові труднощі з письмом не є оцінкою мовлення; можна написати одну літеру або пропустити.">
     <img className="writing-picture" src={data.image} alt="Малюнок для письмового завдання; назва відкриється за запитом" />
-    {revealed && <div className="writing-model"><strong>{data.word}</strong><ListenButton text={data.word} label="Почути назву" /><p>{data.accepted}</p></div>}
-    {stage === 'recall' && <p className="recall-note">Зразок сховано. Новий рядок — нова спроба.</p>}
+    {revealed && <div className="writing-model" ref={stageContent} tabIndex={-1} aria-label={`Зразок: ${data.word}`}><strong>{data.word}</strong><ListenButton text={data.word} label="Почути назву" /><p>{data.accepted}</p></div>}
+    {stage === 'recall' && <p className="recall-note" ref={stageContent} tabIndex={-1}>Зразок сховано. Новий рядок — нова спроба.</p>}
     {!progress.done && <div className="writing-tools">
       <div className="writing-actions">
         {!revealed && <button type="button" className="secondary-button" onClick={() => change({ stage: 'model', usedModel: true, hint: false })}>Показати зразок</button>}
