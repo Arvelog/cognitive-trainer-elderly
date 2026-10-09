@@ -1,12 +1,14 @@
 import { SESSION_STEPS } from './therapySession.js';
+import { levelLabel, normalizePracticeSettings } from './practiceLevels.js';
+import { CATEGORY_CONTEXTS, CONTEXTS, DECISIONS, DIALOGUES, ITEM_FEATURES, NUMBER_CONTEXTS, PLANS, READING_CONTEXTS, RELATIONS, WRITTEN_MESSAGES } from './richerPractice.js';
 
 export const PRACTICE_BLOCKS = [
-  { id: 'understanding', short: 'Розуміння', title: 'Слухаємо й читаємо', minutes: '2–3 хв', description: 'Слова, речення та їхній зміст.' },
-  { id: 'meaning', short: 'Асоціації', title: 'Знаходимо зв’язки', minutes: '3–4 хв', description: 'Ознаки предметів, пари й категорії.' },
-  { id: 'logic', short: 'Логіка', title: 'Думаємо по порядку', minutes: '2–3 хв', description: 'Послідовності зі щоденного життя.' },
-  { id: 'numbers', short: 'Рахунок', title: 'Рахуємо в побуті', minutes: '2 хв', description: 'Додавання, віднімання й покупки в межах 20.' },
-  { id: 'writing', short: 'Письмо', title: 'Пишемо в зошиті', minutes: '4–5 хв', description: 'Малюнок → слово. За потреби — зразок.' },
-  { id: 'communication', short: 'Розмова', title: 'Спілкуємося разом', minutes: '2–3 хв', description: 'Прохання та власна коротка розповідь.' },
+  { id: 'understanding', short: 'Розуміння', title: 'Слухаємо й читаємо', minutes: '2–4 хв', description: 'Слова, повідомлення, зміна планів і висновки.' },
+  { id: 'meaning', short: 'Асоціації', title: 'Знаходимо зв’язки', minutes: '3–5 хв', description: 'Ознаки, порівняння та вибір за призначенням.' },
+  { id: 'logic', short: 'Логіка', title: 'Думаємо по порядку', minutes: '3–5 хв', description: 'Планування справ, умови й пояснення рішення.' },
+  { id: 'numbers', short: 'Рахунок', title: 'Рахуємо в побуті', minutes: '3–4 хв', description: 'Приклади, бюджет, покупки, решта й час.' },
+  { id: 'writing', short: 'Письмо', title: 'Пишемо в зошиті', minutes: '4–6 хв', description: 'Від назви предмета до речення й власного повідомлення.' },
+  { id: 'communication', short: 'Розмова', title: 'Спілкуємося разом', minutes: '3–5 хв', description: 'Прохання, уточнення та домовленості в діалозі.' },
 ];
 
 const choice = (title, stimulus, answer, options, extra = {}) => ({ kind: 'choice', title, stimulus, answer, options, ...extra });
@@ -16,9 +18,9 @@ const UNDERSTANDING = [
   choice('Що допоможе в темряві?', 'У кімнаті темно.', 'лампа', ['лампа', 'рушник'], { emoji: '💡' }),
 ];
 const READING = [
-  choice('Оберіть потрібне слово', 'Яблуко — це фрукт.', 'фрукт', ['одяг', 'фрукт'], { instruction: 'Прочитайте речення. Що таке яблуко?' }),
-  choice('Оберіть потрібне слово', 'Хліб лежить на столі.', 'на столі', ['у шафі', 'на столі'], { instruction: 'Прочитайте речення. Де хліб?' }),
-  choice('Оберіть потрібне слово', 'Олена читає книгу.', 'читає', ['читає', 'спить'], { instruction: 'Прочитайте речення. Що робить Олена?' }),
+  choice('Оберіть потрібне слово', 'Яблуко — це фрукт.', 'фрукт', ['одяг', 'фрукт'], { question: 'Що таке яблуко?', instruction: 'Прочитайте речення. Що таке яблуко?' }),
+  choice('Оберіть потрібне слово', 'Хліб лежить на столі.', 'на столі', ['у шафі', 'на столі'], { question: 'Де хліб?', instruction: 'Прочитайте речення. Де хліб?' }),
+  choice('Оберіть потрібне слово', 'Олена читає книгу.', 'читає', ['читає', 'спить'], { question: 'Що робить Олена?', instruction: 'Прочитайте речення. Що робить Олена?' }),
 ];
 const FEATURES = [
   { kind: 'semantic', title: 'Розкажімо про предмет', word: 'парасоля', emoji: '☂️', questions: [
@@ -68,6 +70,94 @@ const EVERYDAY_NUMBERS = [
   choice('Скільки чашок ще потрібно?', 'Для 12 людей потрібно 12 чашок. На столі вже є 7.', '5 чашок', ['4 чашки', '5 чашок', '6 чашок'], { instruction: 'Оберіть, скільки чашок треба додати.', hint: 'Потрібно відняти 12 − 7. Спочатку відніміть 2 — буде 10. Відніміть ще 5.' }),
 ];
 
+const EASY_NUMBERS = [
+  choice('Скільки всього?', '2 + 3 = ?', '5', ['4', '5'], { equation: true, counters: [2, 3], operator: '+', hintSteps: ['Порахуйте дві крапки.', 'Додайте ще три. Порахуйте всі крапки.'] }),
+  choice('Скільки залишилося?', '5 − 2 = ?', '3', ['3', '4'], { equation: true, counters: [5, 2], operator: '−', hintSteps: ['Візьміть п’ять олівців.', 'Відкладіть два. Порахуйте, скільки залишилося.'] }),
+  choice('Скільки всього?', '4 + 2 = ?', '6', ['5', '6'], { equation: true, counters: [4, 2], operator: '+', hintSteps: ['Порахуйте чотири крапки.', 'Додайте ще дві. Порахуйте всі крапки.'] }),
+];
+const MID_NUMBERS = [
+  choice('Скільки всього?', '12 + 3 = ?', '15', ['14', '15', '16'], { equation: true, hintSteps: ['Почніть із 12.', 'Додайте три одиниці по одній.'] }),
+  choice('Скільки залишилося?', '17 − 4 = ?', '13', ['12', '13', '14'], { equation: true, hintSteps: ['Почніть із 17.', 'Відніміть чотири одиниці по одній.'] }),
+  choice('Скільки всього?', '11 + 6 = ?', '17', ['16', '17', '18'], { equation: true, hintSteps: ['Почніть із 11.', 'Додайте шість одиниць. Десяток залишається.'] }),
+];
+const EASY_EVERYDAY = [
+  choice('Скільки яблук разом?', 'Було 3 яблука.\nДодали ще 2.', '5 яблук', ['4 яблука', '5 яблук'], { counters: [3, 2], operator: '+', hintSteps: ['Порахуйте три яблука або три олівці.', 'Додайте два. Скільки тепер разом?'] }),
+  choice('Скільки чашок залишилося?', 'Було 6 чашок.\nПрибрали 2.', '4 чашки', ['3 чашки', '4 чашки'], { counters: [6, 2], operator: '−', hintSteps: ['Візьміть шість предметів.', 'Приберіть два. Порахуйте решту.'] }),
+];
+const MID_EVERYDAY = [
+  choice('Скільки яблук разом?', 'Було 12 яблук.\nДодали ще 3.', '15 яблук', ['14 яблук', '15 яблук', '16 яблук'], { hintSteps: ['Потрібно додати 12 + 3.', 'Додайте три одиниці до 12.'] }),
+  choice('Скільки чашок залишилося?', 'Було 17 чашок.\nПрибрали 4.', '13 чашок', ['12 чашок', '13 чашок', '14 чашок'], { hintSteps: ['Потрібно відняти 17 − 4.', 'Відніміть чотири одиниці від 17.'] }),
+];
+
+const EXTRA_CHOICES = {
+  парасоля: 'сумка', книга: 'закладка', лампа: 'дзеркало', фрукт: 'овоч', 'на столі': 'під столом', читає: 'пише',
+  замок: 'кнопка', зошит: 'рушник', паста: 'цукор', фрукти: 'овочі', меблі: 'посуд',
+  'витерти рушником': 'намилити руки', ключ: 'ручку', 'відкрити зошит': 'взяти олівець',
+};
+const SEQUENCE_EXTENSIONS = {
+  'Миємо руки': ['Намочити руки', 'Намилити руки', 'Змити мило', 'Витерти руки'],
+  'Надсилаємо лист': ['Написати лист', 'Покласти в конверт', 'Заклеїти конверт', 'Відправити'],
+  'Малюємо олівцем': ['Взяти олівець', 'Намалювати коло', 'Зафарбувати коло', 'Відкласти олівець'],
+};
+
+function prepareTask(source, block, level) {
+  let task = { ...source, level, levelLabel: levelLabel(block, level), curriculumVersion: 3 };
+  if (task.kind === 'choice') {
+    if (block === 'logic' && task.answer === 'відкрити зошит' && level > 1) task.stimulus = 'Зошит закритий. Хочемо побачити чисту сторінку.';
+    if (block !== 'numbers' && level > 1 && task.options.length === 2 && EXTRA_CHOICES[task.answer]) {
+      task.options = [...task.options, EXTRA_CHOICES[task.answer]];
+    }
+    task.ownResponse = level === 3 && block !== 'numbers';
+    if (task.ownResponse) {
+      task.instruction = 'Спробуйте відповісти словом, письмом або жестом. Варіанти можна відкрити за потреби.';
+      if (task.title.startsWith('Оберіть')) task.title = task.question || 'Дайте відповідь на запитання';
+    }
+    if (block === 'numbers') {
+      task.stimulus = task.stimulus.replace(/\. (?=[А-ЯІЇЄҐ])/g, '.\n');
+      task.hintSteps = task.hintSteps || task.hint?.split(/(?<=[.!?])\s+/);
+    }
+    task.options = shuffle(task.options);
+  }
+  if (task.kind === 'reasoning') {
+    task.instruction = 'Прочитайте або послухайте ситуацію. Відповідайте на одне запитання за раз.';
+    task.questions = task.questions.map((q) => ({ ...q, ownResponse: level === 3 && block !== 'numbers', options: shuffle(q.options) }));
+  }
+  if (task.kind === 'semantic') {
+    task.title = level === 1 ? 'Оберіть ознаки предмета' : 'Знайдіть ознаки й назвіть предмет';
+    task.showWord = level === 1;
+    task.questions = task.questions.map((q) => ({ ...q, ownResponse: level === 3, options: shuffle(q.options) }));
+  }
+  if (task.kind === 'sequence') {
+    task.steps = level === 1 ? task.steps.slice(-2) : level === 3 ? task.longerSteps || SEQUENCE_EXTENSIONS[task.title] : [...task.steps];
+    task.validOrders = level === 3 && task.stepOrders ? task.stepOrders.map((order) => order.map((index) => task.steps[index])) : [task.steps];
+    task.instruction = task.stimulus ? 'Прочитайте умови. Оберіть дії в порядку, який виконає цей план.' : task.instruction;
+    task.choices = shuffle(task.steps);
+  }
+  if (task.kind === 'writing') {
+    task.startStage = level === 1 ? 'model' : 'write';
+    if (level === 2) {
+      task.title = 'Напишіть назву й коротке речення';
+      task.writingGoal = 'Напишіть назву предмета. Потім додайте коротке речення: що з ним роблять або для чого він потрібен.';
+      task.modelText = { борщ: 'Борщ їдять ложкою.', яблуко: 'Яблуко росте на дереві.', ключ: 'Ключем відмикають двері.' }[task.word];
+      task.accepted = 'Це один приклад речення. Власне зрозуміле речення про предмет теж підходить.';
+    }
+  }
+  if (task.kind === 'conversation') {
+    task.responseGoal = ['Достатньо показати або сказати одне слово.', 'Скажіть слово або коротку фразу. Жест теж підходить.', 'Спробуйте фразу. За бажанням додайте одну подробицю.'][level - 1];
+    if (task.guided) {
+      task.directions = level === 2 ? task.directions.slice(0, 2) : [...task.directions];
+      task.responseGoal = 'Передайте потрібні деталі своїми словами. Можна доповнити відповідь письмом або жестом.';
+    }
+    if (task.scenario === 'scene') {
+      task.title = level === 1 ? 'Назвіть або покажіть людину на малюнку' : 'Назвіть людину й дію на малюнку';
+      task.prompt = 'Подивіться на малюнок. Одне запитання за раз.';
+      task.directions = level === 1 ? [source.directions[0]] : [...source.directions];
+      if (level === 3) task.directions.push('Де вона готує? Скажіть або покажіть одну подробицю.');
+    }
+  }
+  return task;
+}
+
 // Only untouched old problems are replaced; a recorded answer must keep its original problem.
 const LEGACY_NUMBER_REPLACEMENTS = new Map([
   ['2 + 3 = ?', NUMBERS[0]], ['5 − 2 = ?', NUMBERS[1]], ['3 + 1 = ?', NUMBERS[2]],
@@ -76,6 +166,7 @@ const LEGACY_NUMBER_REPLACEMENTS = new Map([
   ['Нас троє. На столі 2 чашки.', EVERYDAY_NUMBERS[3]],
 ]);
 export function upgradeUntouchedNumberTask(task) {
+  if (task.curriculumVersion >= 2) return task;
   const replacement = task.block === 'numbers' && task.kind === 'choice' && LEGACY_NUMBER_REPLACEMENTS.get(task.stimulus);
   return replacement ? { ...replacement, id: task.id, block: task.block, options: shuffle(replacement.options) } : task;
 }
@@ -125,7 +216,7 @@ const STORY = {
 
 // Sessions contain task snapshots. Refresh the instructions when an older session resumes.
 export function clarifyConversationTask(task) {
-  if (task.kind !== 'conversation') return task;
+  if (task.kind !== 'conversation' || task.curriculumVersion >= 2) return task;
   const current = [...CONVERSATION, STORY].find((item) => task.scenario ? item.scenario === task.scenario : item.model === task.model);
   if (!current) return task;
   const { situation, ...saved } = task;
@@ -141,24 +232,35 @@ const shuffle = (items) => {
   return copy;
 };
 
-export function createPracticeSession(blockId = null, previousSession = null) {
+export function createPracticeSession(blockId = null, previousSession = null, settings = null) {
+  const profile = normalizePracticeSettings(settings);
+  const levels = profile.blocks;
   const previousFirstImage = previousSession?.tasks?.find((task) => task.kind === 'writing')?.image;
   const firstPicture = pick(WRITING_PICTURES.filter((picture) => picture.image !== previousFirstImage));
   const secondPicture = pick(WRITING_PICTURES.filter((picture) => picture.image !== firstPicture.image));
+  const fresh = (items, block, slot, except = null) => {
+    const previous = previousSession?.tasks?.find((task) => task.id === `${block}-${slot}`)?.contentId;
+    const candidates = items.filter((item) => !item.contentId || (item.contentId !== previous && item.contentId !== except));
+    return pick(candidates.length ? candidates : items);
+  };
+  const choose = (items, block, slot) => fresh(items, block, slot);
+  const firstMessage = choose(WRITTEN_MESSAGES, 'writing', 0);
+  const secondMessage = fresh(WRITTEN_MESSAGES, 'writing', 1, firstMessage.contentId);
+  const firstDialogue = choose(DIALOGUES, 'communication', 0);
+  const secondDialogue = fresh(DIALOGUES, 'communication', 1, firstDialogue.contentId);
+  const categories = levels.meaning === 1 ? CATEGORIES.filter((task) => task.options.length === 2).map((task) => ({ ...task, title: 'Оберіть спільну назву' })) : CATEGORY_CONTEXTS[levels.meaning];
   const groups = [
-    [pick(UNDERSTANDING), pick(READING)],
-    [pick(FEATURES), pick(ASSOCIATIONS), pick(CATEGORIES)],
-    [pick(SEQUENCES), pick(LOGIC)],
-    [pick(NUMBERS), pick(EVERYDAY_NUMBERS)],
-    [{ kind: 'writing', title: 'Напишіть назву малюнка', ...firstPicture }, { kind: 'writing', title: 'Ще одне слово в зошиті', ...secondPicture }],
-    [pick(CONVERSATION), STORY],
+    [choose(levels.understanding === 1 ? UNDERSTANDING : CONTEXTS[levels.understanding], 'understanding', 0), choose(levels.understanding === 1 ? READING : READING_CONTEXTS[levels.understanding], 'understanding', 1)],
+    [choose(levels.meaning === 1 ? FEATURES : ITEM_FEATURES, 'meaning', 0), choose(levels.meaning === 1 ? ASSOCIATIONS : RELATIONS[levels.meaning], 'meaning', 1), choose(categories, 'meaning', 2)],
+    [choose(levels.logic === 1 ? SEQUENCES : PLANS, 'logic', 0), choose(levels.logic === 1 ? LOGIC : DECISIONS[levels.logic], 'logic', 1)],
+    [pick([EASY_NUMBERS, MID_NUMBERS, NUMBERS][levels.numbers - 1]), choose([EASY_EVERYDAY, MID_EVERYDAY, NUMBER_CONTEXTS][levels.numbers - 1], 'numbers', 1)],
+    levels.writing === 3 ? [firstMessage, secondMessage] : [{ kind: 'writing', title: 'Напишіть назву малюнка', ...firstPicture }, { kind: 'writing', title: 'Ще одне слово в зошиті', ...secondPicture }],
+    levels.communication === 1 ? [pick(CONVERSATION), STORY] : [firstDialogue, secondDialogue],
   ];
   const tasks = groups.flatMap((group, i) => group.map((task, j) => ({
-    ...task, block: PRACTICE_BLOCKS[i].id, id: `${PRACTICE_BLOCKS[i].id}-${j}`,
-    ...(task.options ? { options: shuffle(task.options) } : {}),
-    ...(task.steps ? { choices: shuffle(task.steps) } : {}),
+    ...prepareTask(task, PRACTICE_BLOCKS[i].id, levels[PRACTICE_BLOCKS[i].id]), block: PRACTICE_BLOCKS[i].id, id: `${PRACTICE_BLOCKS[i].id}-${j}`,
   }))).filter((task) => !blockId || task.block === blockId);
-  return { id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, mode: 'extended', blockId, tasks, createdAt: new Date().toISOString() };
+  return { id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, mode: 'extended', curriculumVersion: 3, levels: { ...levels }, blockId, tasks, createdAt: new Date().toISOString() };
 }
 
 export const getSessionSteps = (session) => session?.mode === 'extended' ? session.tasks.map(clarifyConversationTask) : SESSION_STEPS;
@@ -171,9 +273,12 @@ export function validPracticeSession(session) {
   return session.tasks.every((task) => {
     if (!task || !PRACTICE_BLOCKS.some((block) => block.id === task.block)) return false;
     if (task.kind === 'choice') return Array.isArray(task.options) && task.options.includes(task.answer);
-    if (task.kind === 'semantic') return Array.isArray(task.questions) && task.questions.length > 0 && task.questions.every((q) => q.options?.includes(q.answer));
-    if (task.kind === 'sequence') return Array.isArray(task.steps) && task.steps.length > 0 && Array.isArray(task.choices) && task.choices.length === task.steps.length && new Set(task.choices).size === task.steps.length && task.steps.every((step) => task.choices.includes(step));
-    if (task.kind === 'writing') return typeof task.word === 'string' && Boolean(task.image);
+    if (task.kind === 'semantic' || task.kind === 'reasoning') return (task.kind !== 'reasoning' || typeof task.stimulus === 'string') && Array.isArray(task.questions) && task.questions.length > 0 && task.questions.every((q) => q.options?.includes(q.answer));
+    if (task.kind === 'sequence') {
+      const validSteps = Array.isArray(task.steps) && task.steps.length > 0 && Array.isArray(task.choices) && task.choices.length === task.steps.length && new Set(task.choices).size === task.steps.length && task.steps.every((step) => task.choices.includes(step));
+      return validSteps && (task.validOrders === undefined || (Array.isArray(task.validOrders) && task.validOrders.length > 0 && task.validOrders.every((order) => Array.isArray(order) && order.length === task.steps.length && new Set(order).size === task.steps.length && order.every((step) => task.steps.includes(step)))));
+    }
+    if (task.kind === 'writing') return typeof task.word === 'string' && Boolean(task.image || (task.writingType === 'message' && task.stimulus && task.modelText));
     return task.kind === 'conversation' && typeof task.model === 'string';
   });
 }

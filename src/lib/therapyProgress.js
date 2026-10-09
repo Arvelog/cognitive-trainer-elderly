@@ -30,7 +30,7 @@ export function restoreProgress(raw) {
       if (!done) return;
       details[index] = { ...details[index], done: true };
       const task = extended ? saved.session.tasks[index] : saved.session[['listen', 'find', 'pair', 'phrase', 'scene'][index]];
-      if (task?.answer) details[index].chosen = task.answer;
+      if (task?.answer && details[index].responseKind !== 'own') details[index].chosen = task.answer;
     });
     return {
       session: extended ? session : { ...session, phrase: clarifyPhrase(session.phrase) },

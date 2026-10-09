@@ -3,6 +3,8 @@ import { ArrowLeft, ArrowRight, BookOpen, Check, Home, Pause, RotateCcw } from '
 import { FindWordTask, ListenTask, PairTask, PhraseTask, SceneTask, StrongWordsTask } from './components/therapyTasks';
 import { BLOCK_ICONS, Brand, HomeScreen } from './components/HomeScreen';
 import { PracticeTask } from './components/practiceTasks';
+import { PracticeSummary } from './components/PracticeSummary';
+import { normalizePracticeSettings, restorePracticeSettings, SETTINGS_KEY } from './data/practiceLevels';
 import { createTherapySession } from './data/therapySession';
 import { createPracticeSession, getSessionBlocks, getSessionSteps, getStepCount, PRACTICE_BLOCKS } from './data/practiceSession';
 import { newProgress, restoreProgress, speechTotals, STORAGE_KEY, therapyReducer } from './lib/therapyProgress';
@@ -41,6 +43,8 @@ function Summary({ progress, onHome, onRestart }) {
       return <div key={block.id}><Icon aria-hidden="true" /><strong>{block.short}</strong><span>{indices.filter((i) => completed[i]).length} з {indices.length}</span></div>;
     })}</div> : (speech.independent + speech.together > 0) && <div className="summary-stats"><div><strong>{speech.independent}</strong><span>сказала сама</span></div><div><strong>{speech.together}</strong><span>сказали разом</span></div></div>}
     {extended && <p className="summary-note">Збережіть записи в зошиті: вони допоможуть обговорити з логопедом, що було посильно й де знадобилася допомога.</p>}
+    {extended && <PracticeSummary session={session} completed={completed} details={details} />}
+    {!extended && details[5]?.wordResults?.length > 0 && <details className="practice-summary"><summary>Для близьких: підтримка під час слів</summary><p>Слова залишалися видимими на екрані.</p><ul>{details[5].wordResults.map((result, i) => <li key={i}>{result.word}: {result.mode === 'independent' ? 'сказала сама' : 'сказали разом'}{result.usedAudio ? ' · слухали слово' : ''}{result.usedHint ? ' · відкривали підказку' : ''}.</li>)}</ul></details>}
     <div className="summary-actions"><button className="start-button" type="button" onClick={onHome}><Home aria-hidden="true" />На головну</button><button className="secondary-button" type="button" onClick={onRestart}>Нове заняття</button></div>
   </section></main>;
 }
@@ -52,6 +56,9 @@ export default function App() {
   const { session, currentStep, completed, details } = progress;
   const [view, setView] = useState('home');
   const [saveFailed, setSaveFailed] = useState(false);
+  const [settings, setSettings] = useState(() => { try { return restorePracticeSettings(window.localStorage.getItem(SETTINGS_KEY)); } catch { return normalizePracticeSettings(); } });
+  const [settingsSaved, setSettingsSaved] = useState(true);
+  useEffect(() => { try { window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); setSettingsSaved(true); } catch { setSettingsSaved(false); } }, [settings]);
   useEffect(() => {
     try { if (session) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); setSaveFailed(false); }
     catch { setSaveFailed(true); }
@@ -59,11 +66,11 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); window.speechSynthesis?.cancel(); document.querySelector('main')?.focus({ preventScroll: true });
   }, [currentStep, view]);
-  const startNew = (mode = 'extended', block = null) => { dispatch({ type: 'start', session: mode === 'short' ? createTherapySession() : createPracticeSession(block, session) }); setView('session'); };
+  const startNew = (mode = 'extended', block = null, override = null) => { const selected = override ? normalizePracticeSettings(override) : settings; if (override) setSettings(selected); dispatch({ type: 'start', session: mode === 'short' ? createTherapySession(selected.shortWords) : createPracticeSession(block, session, selected) }); setView('session'); };
   const goHome = () => setView('home');
   const finish = () => { dispatch({ type: 'finish' }); setView('summary'); };
   const notice = <SaveNotice failed={saveFailed} />;
-  if (view === 'home') return <>{notice}<HomeScreen progress={progress} persisted={!saveFailed} onStart={startNew} onResume={() => setView('session')} onSummary={() => setView('summary')}><EvidenceNote /></HomeScreen></>;
+  if (view === 'home') return <>{notice}<HomeScreen progress={progress} persisted={!saveFailed} onStart={startNew} onResume={() => setView('session')} onSummary={() => setView('summary')} settings={settings} onSettings={setSettings} settingsSaved={settingsSaved}><EvidenceNote /></HomeScreen></>;
   if (view === 'summary') return <>{notice}<Summary progress={progress} onRestart={() => startNew()} onHome={goHome} /></>;
   const extended = session.mode === 'extended';
   const steps = getSessionSteps(session);

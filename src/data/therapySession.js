@@ -7,6 +7,7 @@ const WORDS = [
   { word: 'вчасно', emoji: '⏰', sound: 'ВЧ', syllables: 'ВЧАС-НО', phrase: 'прийти вчасно' },
   { word: 'часто', emoji: '🔁', sound: 'Ч', syllables: 'ЧА-СТО', phrase: 'дуже часто' },
   { word: 'чистий', emoji: '✨', sound: 'Ч', syllables: 'ЧИ-СТИЙ', phrase: 'чистий рушник' },
+  { word: 'чашка', emoji: '🍵', sound: 'Ч', syllables: 'ЧАШ-КА', phrase: 'моя чашка' },
 ];
 
 const FIND_TASKS = [
@@ -65,13 +66,19 @@ export const SESSION_STEPS = [
   { short: 'Сказати', title: 'Сильні слова' },
 ];
 
-export const createTherapySession = () => ({
+export const createTherapySession = (level = 1) => {
+  const wordLevel = [1, 2, 3].includes(level) ? level : 1;
+  const pool = wordLevel === 1 ? WORDS.filter((item) => ['чай', 'вода', 'чоботи', 'чашка'].includes(item.word))
+    : wordLevel === 2 ? WORDS.filter((item) => !['вчасно', 'часто', 'чистий'].includes(item.word)) : WORDS;
+  return {
   id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-  listen: pick(WORDS),
+  wordLevel,
+  listen: pick(pool),
   find: pick(FIND_TASKS),
   pair: pick(PAIR_TASKS),
   phrase: pick(PHRASE_TASKS),
   scene: pick(SCENE_TASKS),
-  strongWords: shuffle(WORDS).slice(0, 4),
+  strongWords: shuffle(pool).slice(0, 4),
   createdAt: new Date().toISOString(),
-});
+  };
+};

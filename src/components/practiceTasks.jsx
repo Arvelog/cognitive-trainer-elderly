@@ -1,133 +1,168 @@
 import { useEffect, useRef } from 'react';
-import { BookOpen, Calculator, Check, Lightbulb, Link2, ListOrdered, MessageCircle, PencilLine, RotateCcw } from 'lucide-react';
+import { ArrowRight, BookOpen, Calculator, Check, Lightbulb, Link2, ListOrdered, MessageCircle, PencilLine, RotateCcw } from 'lucide-react';
 import { ChoiceButtons, ListenButton, TaskFrame } from './therapyTasks';
 import { PRACTICE_BLOCKS } from '../data/practiceSession';
+import { levelLabel } from '../data/practiceLevels';
+import { nextSequenceSteps, recordOwnResponse, recordReasoningAnswer, recordSemanticName, recordWritingStage, usedSupport } from '../lib/practiceResults';
 
 const ICONS = { understanding: BookOpen, meaning: Link2, logic: ListOrdered, numbers: Calculator, writing: PencilLine, communication: MessageCircle };
 function Frame({ data, instruction, coach, children }) {
   const block = PRACTICE_BLOCKS.find((item) => item.id === data.block);
-  return <TaskFrame icon={ICONS[data.block]} eyebrow={block.short} title={data.title} instruction={instruction || data.instruction} coach={coach}>{children}</TaskFrame>;
+  return <TaskFrame icon={ICONS[data.block]} eyebrow={block.short} title={data.title} instruction={instruction || data.instruction} coach={coach}>
+    {data.level && <p className="task-level">{data.levelLabel || levelLabel(data.block, data.level, data.curriculumVersion)}</p>}{children}
+  </TaskFrame>;
 }
-
-function Hint({ shown, onToggle, children, label = 'Підказка' }) {
-  return <div className="practice-hint">
-    <button type="button" className="hint-button" aria-expanded={shown} onClick={onToggle}><Lightbulb aria-hidden="true" />{label}</button>
-    {shown && <div className="hint-content">{children}</div>}
-  </div>;
-}
-
-function ChoiceTask({ data, progress, onProgress }) {
-  return <Frame data={data} instruction={data.instruction || 'Оберіть відповідь. Можна міркувати вголос або разом.'} coach={data.block === 'numbers' ? 'Можна рахувати на пальцях або з олівцями. Труднощі з читанням числа не завжди означають труднощі з кількістю. Якщо некомфортно — пропустіть.' : 'Не поспішайте. Прочитайте завдання вголос за потреби. Після вибору запитайте «Чому?» — відповідь може бути словом або жестом.'}>
-    <div className={`practice-stimulus ${data.equation ? 'practice-stimulus--number' : ''}`}>
-      {data.emoji && <span className="practice-emoji" aria-hidden="true">{data.emoji}</span>}
-      <strong aria-label={data.visualCount ? 'Яблука для підрахунку' : undefined}>{data.stimulus}</strong>
-    </div>
-    {!data.visualCount && <ListenButton text={data.stimulus.replace('−', ' мінус ').replace('+', ' плюс ').replace('= ?', ' дорівнює скільки?')} label="Послухати завдання" />}
-    {data.hint && !progress.done && <Hint shown={Boolean(progress.hint)} onToggle={() => onProgress({ ...progress, hint: !progress.hint })}>
-      <p>{data.hint}</p>
-      {data.dots && <div className="counting-dots" aria-hidden="true">{data.dots.map((n, i) => <span key={i}>{i > 0 && <b>+</b>}{Array.from({ length: n }, (_, j) => <i key={j} />)}</span>)}</div>}
-    </Hint>}
-    <ChoiceButtons {...data} progress={progress} onProgress={(next) => onProgress({ ...progress, ...next })} />
+function ReasoningTask({ data, progress, onProgress }) {
+  const index = Math.min(progress.question || 0, data.questions.length - 1);
+  const heading = useRef(null);
+  useEffect(() => { if (index > 0) heading.current?.focus({ preventScroll: true }); }, [index]);
+  const question = data.questions[index];
+  const current = progress.answers?.[index] || {};
+  const update = (next) => onProgress(recordReasoningAnswer(progress, index, next, data.questions.length));
+  return <Frame data={data} coach="Текст можна перечитувати й слухати. Ставте одне запитання за раз. Для власної відповіді приймайте зрозуміле формулювання з потрібним змістом; пояснення не має збігатися зі зразком дослівно.">
+    <div className="practice-context"><p>{data.stimulus}</p></div>
+    <ListenButton text={data.stimulus} label="Послухати ситуацію" onListen={() => onProgress({ ...progress, usedAudio: true })} />
+    <p className="round-label">Запитання {index + 1} з {data.questions.length}</p>
+    <h2 className="subtask-title" tabIndex={-1} ref={heading}>{question.prompt}</h2>
+    <ListenButton text={question.prompt} label="Послухати запитання" onListen={() => update({ ...current, usedAudio: true })} />
+    {question.hint && !current.done && <Hint shown={Boolean(current.hint)} onToggle={() => update({ ...current, hint: !current.hint, usedHint: true })}><p>{question.hint}</p><ListenButton text={question.hint} label="Послухати підказку" /></Hint>}
+    <AnswerResponse data={question} progress={current} onProgress={update} />
+    {current.done && index < data.questions.length - 1 && <button className="confirm-button" type="button" onClick={() => onProgress({ ...progress, question: index + 1 })}>Наступне запитання<ArrowRight aria-hidden="true" /></button>}
   </Frame>;
 }
-
+function Hint({ shown, onToggle, children, label = 'Підказка' }) {
+  return <div className="practice-hint"><button type="button" className="hint-button" aria-expanded={shown} onClick={onToggle}><Lightbulb aria-hidden="true" />{label}</button>{shown && <div className="hint-content">{children}</div>}</div>;
+}
+function Outcomes({ done, mode, onMark, writing = false, stage, disabled = false, label = 'Для людини поруч: як вийшло?' }) {
+  const labels = writing ? stage === 'model' ? ['Списала сама', 'Списали разом', 'Спробували списати'] : ['Написала сама', 'Написали з допомогою', 'Спробували'] : ['Вийшло самостійно', 'Разом / із підказкою', 'Спробували'];
+  const modes = ['independent', 'supported', 'attempted'];
+  return <div className="practice-outcomes"><p className="outcome-label">{label}</p><div className="outcome-buttons">{labels.map((text, i) => <button key={text} type="button" className="secondary-button" disabled={done || disabled} aria-pressed={mode === modes[i]} onClick={() => onMark(modes[i])}>{mode === modes[i] && <Check aria-hidden="true" />}{text}</button>)}</div>{done && <p className="task-feedback" role="status">Спробу збережено.</p>}</div>;
+}
+function AnswerResponse({ data, progress, onProgress }) {
+  if (data.ownResponse && progress.responseKind === 'own' && progress.done) return <p className="task-feedback" role="status">Власну спробу збережено. Можна рухатися далі.</p>;
+  if (data.ownResponse && !progress.optionsRevealed && !progress.done) return <div className="own-response">
+    <p>Спробуйте свою відповідь. Людина поруч відзначить, як вийшло.</p>
+    <button className="hint-button" type="button" onClick={() => onProgress({ ...progress, optionsRevealed: true, usedHint: true })}><Lightbulb aria-hidden="true" />Показати варіанти</button>
+    <Outcomes onMark={(mode) => onProgress(recordOwnResponse(progress, mode))} />
+  </div>;
+  return <ChoiceButtons {...data} progress={progress} onProgress={onProgress} />;
+}
+function Counters({ values, operator = '+' }) {
+  return <div className="counting-dots" role="img" aria-label={`${values[0]} ${operator === '+' ? 'плюс' : 'мінус'} ${values[1]} предметів`}>
+    {values.map((count, index) => <span key={index} aria-hidden="true">{index > 0 && <b>{operator}</b>}{Array.from({ length: count }, (_, j) => <i key={j} />)}</span>)}
+  </div>;
+}
+function ChoiceTask({ data, progress, onProgress }) {
+  const hintSteps = data.hintSteps || (data.hint ? [data.hint] : []);
+  const hintIndex = Math.min(progress.hintStep || 0, hintSteps.length - 1);
+  return <Frame data={data} instruction={data.instruction || 'Оберіть відповідь. Можна міркувати вголос або разом.'} coach={data.block === 'numbers' ? 'Можна рахувати з олівцями. Оберіть посильний рівень наступного заняття в налаштуваннях для близьких. Якщо некомфортно — пропустіть.' : 'Дайте час на відповідь. Озвучення завдання допомагає читати; варіанти й зразок відкривайте за потреби.'}>
+    <div className={`practice-stimulus ${data.equation ? 'practice-stimulus--number' : ''}`}>
+      {data.emoji && <span className="practice-emoji" aria-hidden="true">{data.emoji}</span>}<strong>{data.stimulus}</strong>
+      {data.counters && <Counters values={data.counters} operator={data.operator} />}
+    </div>
+    {!data.visualCount && <ListenButton text={[data.stimulus.replace('−', ' мінус ').replace('+', ' плюс ').replace('= ?', ' дорівнює скільки?'), data.question || data.title].join(' ')} label="Послухати завдання" onListen={() => onProgress({ ...progress, usedAudio: true })} />}
+    {hintSteps.length > 0 && !progress.done && <Hint shown={Boolean(progress.hint)} onToggle={() => onProgress({ ...progress, hint: !progress.hint, usedHint: true })}>
+      <p className="round-label">Крок {hintIndex + 1} з {hintSteps.length}</p><p>{hintSteps[hintIndex]}</p>
+      <ListenButton text={hintSteps[hintIndex]} label="Послухати підказку" />
+      {data.dots && <Counters values={data.dots} />}
+      {hintIndex < hintSteps.length - 1 && <button className="secondary-button" type="button" onClick={() => onProgress({ ...progress, hintStep: hintIndex + 1, usedHint: true })}>Наступний крок підказки</button>}
+    </Hint>}
+    <AnswerResponse data={data} progress={progress} onProgress={onProgress} />
+  </Frame>;
+}
 function SemanticTask({ data, progress, onProgress }) {
-  const index = progress.question || 0;
+  const index = Math.min(progress.question || 0, data.questions.length - 1);
   const questionHeading = useRef(null);
-  useEffect(() => {
-    if (index > 0) {
-      questionHeading.current?.focus({ preventScroll: true });
-      questionHeading.current?.scrollIntoView({ block: 'center', behavior: 'auto' });
-    }
-  }, [index]);
+  useEffect(() => { if (index > 0 || progress.featuresDone) questionHeading.current?.focus({ preventScroll: true }); }, [index, progress.featuresDone]);
   const answers = progress.answers || [];
   const question = data.questions[index];
   const current = answers[index] || {};
-  return <Frame data={data} instruction="Знайдемо кілька ознак. Потім назвіть предмет ще раз." coach="Спочатку запропонуйте свою відповідь. Варіанти допомагають, якщо слово не знаходиться. Наприкінці з’єднайте ознаки в коротку фразу.">
-    <div className="practice-stimulus semantic-stimulus"><span className="practice-emoji" aria-hidden="true">{data.emoji}</span><strong>{data.word}</strong></div>
-    {progress.done ? <div className="practice-completion" role="status"><Check aria-hidden="true" /><p>Ознаки знайшли. Спробуйте ще раз назвати предмет і сказати, для чого він.</p><ListenButton text={data.word} label="Почути назву" /></div> : <>
-      <p className="round-label">Ознака {index + 1} з {data.questions.length}</p>
-      <h2 className="subtask-title" tabIndex={-1} ref={questionHeading}>{question.prompt}</h2>
-      <ListenButton text={question.prompt} label="Послухати запитання" />
-      <ChoiceButtons {...question} progress={current} onProgress={(next) => {
-        const updated = [...answers]; updated[index] = next;
-        onProgress({ ...progress, answers: updated });
-      }} />
-      {current.done && <button className="confirm-button" type="button" onClick={() => onProgress({ ...progress, question: Math.min(index + 1, data.questions.length - 1), done: index === data.questions.length - 1 })}>{index === data.questions.length - 1 ? 'Ознаки готові' : 'Наступна ознака'} <Check aria-hidden="true" /></button>}
+  const naming = progress.naming || {};
+  const showWord = data.showWord ?? true;
+  const markName = (mode) => onProgress(recordSemanticName(progress, showWord, mode));
+  return <Frame data={data} instruction={progress.featuresDone ? 'Тепер назвіть предмет словом, письмом або жестом.' : 'Одне запитання за раз. Потім спробуємо назвати предмет.'} coach="Власна відповідь може бути словом або жестом. Відкривайте варіанти й назву за потреби. Називання записуємо окремо від вибору ознак.">
+    <div className="practice-stimulus semantic-stimulus"><span className="practice-emoji" aria-hidden="true">{data.emoji}</span>{(showWord || progress.nameShown) && <strong>{data.word}</strong>}</div>
+    {progress.done ? <div className="practice-completion" role="status"><Check aria-hidden="true" /><p>Спробу збережено.</p></div> : progress.featuresDone ? <>
+      <h2 className="subtask-title" tabIndex={-1} ref={questionHeading}>Як називається предмет?</h2>
+      {!showWord && !progress.nameShown && <button className="hint-button" type="button" onClick={() => onProgress({ ...progress, nameShown: true, usedModel: true })}>Показати назву</button>}
+      {(showWord || progress.nameShown) && <ListenButton text={data.word} label="Почути назву" onListen={() => onProgress({ ...progress, usedAnswerAudio: true })} />}
+      <Outcomes mode={naming.mode} onMark={markName} label="Для людини поруч: як назвали предмет?" />
+    </> : <>
+      <p className="round-label">Ознака {index + 1} з {data.questions.length}</p><h2 className="subtask-title" tabIndex={-1} ref={questionHeading}>{question.prompt}</h2>
+      <ListenButton text={question.prompt} label="Послухати запитання" onListen={() => onProgress({ ...progress, usedAudio: true })} />
+      <AnswerResponse data={question} progress={current} onProgress={(next) => { const updated = [...answers]; updated[index] = next; onProgress({ ...progress, answers: updated }); }} />
+      {current.done && <button className="confirm-button" type="button" onClick={() => onProgress({ ...progress, question: Math.min(index + 1, data.questions.length - 1), ...(index === data.questions.length - 1 ? data.curriculumVersion >= 2 ? { featuresDone: true } : { done: true } : {}) })}>{index === data.questions.length - 1 ? 'Спробувати назвати предмет' : 'Наступна ознака'}<Check aria-hidden="true" /></button>}
     </>}
   </Frame>;
 }
-
 function SequenceTask({ data, progress, onProgress }) {
   const selected = progress.selected || [];
+  const nextSteps = nextSequenceSteps(data, selected);
   const choose = (step) => {
     if (progress.done || selected.includes(step)) return;
-    if (step !== data.steps[selected.length]) return onProgress({ ...progress, retry: true });
+    if (!nextSteps.includes(step)) return onProgress({ ...progress, retry: true, errors: (progress.errors || 0) + 1 });
     const next = [...selected, step];
-    onProgress({ ...progress, selected: next, retry: false, done: next.length === data.steps.length });
+    onProgress({ ...progress, selected: next, retry: false, done: next.length === data.steps.length, mode: usedSupport(progress) || progress.hint ? 'supported' : 'independent' });
   };
-  return <Frame data={data} coach="Прочитайте дії разом. Можна показати їх жестами. Тут не потрібне перетягування: один дотик обирає одну дію.">
+  return <Frame data={data} coach="Прочитайте дії разом або покажіть жестами. Один дотик обирає одну дію. Підказка називає наступний крок; її використання збережеться.">
+    {data.stimulus && <><div className="practice-context"><p>{data.stimulus}</p></div><ListenButton text={data.stimulus} label="Послухати умови" onListen={() => onProgress({ ...progress, usedAudio: true })} /></>}
     <p className="round-label">{progress.done ? 'Усі дії на своїх місцях' : `Оберіть дію ${selected.length + 1} з ${data.steps.length}`}</p>
-    <div className="sequence-choices">
-      {data.choices.map((step) => {
-        const position = selected.indexOf(step);
-        return <button className="choice-button" type="button" key={step} onClick={() => choose(step)} disabled={position >= 0 || progress.done} data-state={position >= 0 ? 'correct' : undefined}><span className="sequence-number">{position >= 0 ? position + 1 : '•'}</span>{step}</button>;
-      })}
-    </div>
-    <div className="task-feedback" role="status">{progress.done ? 'Послідовність готова. Промовте або покажіть її разом.' : progress.retry ? 'Ця дія буде пізніше. Спробуйте іншу або відкрийте підказку.' : 'Що спочатку, а що потім?'}</div>
-    {!progress.done && <Hint shown={Boolean(progress.hint)} onToggle={() => onProgress({ ...progress, hint: !progress.hint })}><p>Зараз: {data.steps[selected.length]}</p><ListenButton text={data.steps[selected.length]} label="Почути наступну дію" /></Hint>}
+    <div className="sequence-choices">{data.choices.map((step) => { const position = selected.indexOf(step); return <button className="choice-button" type="button" key={step} onClick={() => choose(step)} disabled={position >= 0 || progress.done} data-state={position >= 0 ? 'correct' : undefined}><span className="sequence-number">{position >= 0 ? position + 1 : '•'}</span>{step}</button>; })}</div>
+    <div className="task-feedback" role="status">{progress.done ? 'Послідовність готова.' : progress.retry ? 'Ця дія буде пізніше. Спробуйте іншу або відкрийте підказку.' : 'Що спочатку, а що потім?'}</div>
+    {!progress.done && <Hint shown={Boolean(progress.hint)} onToggle={() => onProgress({ ...progress, hint: !progress.hint, usedHint: true })}><p>Можна зараз: {nextSteps[0]}</p><ListenButton text={nextSteps[0]} label="Почути наступну дію" /></Hint>}
     {selected.length > 0 && <ol className="sequence-result" aria-label="Обраний порядок">{selected.map((step) => <li key={step}>{step}</li>)}</ol>}
   </Frame>;
 }
-
-function Outcomes({ done, mode, onMark, writing = false, partnerResponse }) {
-  const labels = writing ? ['Написала сама', 'Написали з допомогою', 'Спробували'] : ['Вийшло самостійно', 'Разом / із підказкою', 'Жестом або інакше'];
-  const modes = writing ? ['independent', 'supported', 'attempted'] : ['independent', 'supported', 'alternative'];
-  return <div className="practice-outcomes">
-    {partnerResponse && <p className="conversation-response"><strong>Після спроби · для людини поруч</strong>{partnerResponse} Потім оберіть нижче, як вийшло.</p>}
-    {!partnerResponse && <p className="outcome-label">Для людини поруч: як вийшло?</p>}
-    <div className="outcome-buttons">{labels.map((label, i) => <button key={label} type="button" className="secondary-button" disabled={done} aria-pressed={mode === modes[i]} onClick={() => onMark(modes[i])}>{mode === modes[i] && <Check aria-hidden="true" />}{label}</button>)}</div>
-    {done && <p className="task-feedback" role="status">Спробу збережено. Можна рухатися далі.</p>}
-  </div>;
-}
-
 function WritingTask({ data, progress, onProgress }) {
-  const stage = progress.stage || 'write';
+  const stage = progress.stage || data.startStage || 'write';
   const revealed = stage === 'model';
   const stageContent = useRef(null);
-  useEffect(() => {
-    if (stage !== 'write') stageContent.current?.focus({ preventScroll: true });
-  }, [stage]);
+  useEffect(() => { if (stage !== 'write') stageContent.current?.focus({ preventScroll: true }); }, [stage]);
   const change = (patch) => onProgress({ ...progress, ...patch });
-  return <Frame data={data} instruction={stage === 'recall' ? 'Закрийте попередній запис. Напишіть слово ще раз із пам’яті.' : revealed ? 'Подивіться на зразок. Спишіть слово в зошит.' : 'Напишіть олівцем у зошиті, що зображено. Не поспішайте.'} coach="Не називайте предмет до першої спроби. Якщо важко: ознака → перша літера → зразок. Можна списати, сховати зразок і спробувати з пам’яті. Рухові труднощі з письмом не є оцінкою мовлення; можна написати одну літеру або пропустити.">
-    <img className="writing-picture" src={data.image} alt="Малюнок для письмового завдання; назва відкриється за запитом" />
-    {revealed && <div className="writing-model" ref={stageContent} tabIndex={-1} aria-label={`Зразок: ${data.word}`}><strong>{data.word}</strong><ListenButton text={data.word} label="Почути назву" /><p>{data.accepted}</p></div>}
-    {stage === 'recall' && <p className="recall-note" ref={stageContent} tabIndex={-1}>Зразок сховано. Новий рядок — нова спроба.</p>}
+  const stageResult = progress.stageResults?.[stage];
+  const message = data.writingType === 'message';
+  const model = data.modelText || data.word;
+  const mark = (mode) => { const next = recordWritingStage(progress, stage, mode); if (data.level === 3 && !message && stage === 'write') next.done = false; onProgress(next); };
+  const recall = () => change({ stage: 'recall', hint: false, firstLetter: false, usedModel: Boolean(progress.usedModel || revealed) });
+  return <Frame data={data} instruction={stage === 'recall' ? 'Закрийте попередній запис. Напишіть його ще раз із пам’яті.' : revealed ? 'Спишіть зразок у зошит. Це окрема спроба списування.' : message ? 'Напишіть у зошиті коротке повідомлення за ситуацією. Власне формулювання підходить.' : data.writingGoal || 'Напишіть олівцем у зошиті, що зображено. Не поспішайте.'} coach={message ? 'Дайте час на власне повідомлення. Перевірте, чи передано потрібні деталі. Не вимагайте однакового формулювання зі зразком. Приклад відкривайте за потреби; якщо руці важко, можна сказати або пропустити.' : 'Не називайте предмет до першої спроби. Допомога: ознака → перша літера → зразок. Списування й письмо з пам’яті записуємо окремо. Якщо руці важко, достатньо літери або можна пропустити.'}>
+    <p className="round-label">{stage === 'write' ? 'Перша спроба' : revealed ? 'Списування' : 'Письмо з пам’яті'}</p>
+    {data.image && <img className="writing-picture" src={data.image} alt="Малюнок для письмового завдання; назва відкриється за запитом" />}
+    {data.stimulus && <><div className="practice-context"><p>{data.stimulus}</p></div><ListenButton text={data.stimulus} label="Послухати ситуацію" onListen={() => change({ usedAudio: true })} /></>}
+    {revealed && <div className={`writing-model${data.modelText ? ' writing-model--sentence' : ''}`} ref={stageContent} tabIndex={-1} aria-label="Зразок запису"><strong>{model}</strong><ListenButton text={model} label="Послухати зразок" onListen={() => change({ usedAnswerAudio: true })} /><p>{data.accepted}</p></div>}
+    {stage === 'recall' && <p className="recall-note" ref={stageContent} tabIndex={-1}>Зразок сховано. Закрийте й запис у зошиті.</p>}
     {!progress.done && <div className="writing-tools">
-      <div className="writing-actions">
-        {!revealed && <button type="button" className="secondary-button" onClick={() => change({ stage: 'model', usedModel: true, hint: false })}>Показати зразок</button>}
-        {revealed && <button type="button" className="confirm-button" onClick={() => change({ stage: 'recall', hint: false, firstLetter: false })}><RotateCcw aria-hidden="true" />Сховати й написати з пам’яті</button>}
-      </div>
-      {!revealed && <Hint shown={Boolean(progress.hint)} onToggle={() => change({ hint: !progress.hint, usedHint: true })} label="Допомогти пригадати"><p>{data.hint}</p><button className="text-action" type="button" onClick={() => change({ firstLetter: true })}>Показати першу літеру</button>{progress.firstLetter && <strong className="first-letter">{data.first}…</strong>}</Hint>}
+      {!revealed && !stageResult && <button type="button" className="secondary-button" onClick={() => change({ stage: 'model', usedModel: true, hint: false })}>Показати зразок</button>}
+      {revealed && <button type="button" className="confirm-button" onClick={recall}><RotateCcw aria-hidden="true" />Сховати й написати з пам’яті</button>}
+      {stage === 'write' && stageResult && <button type="button" className="confirm-button" onClick={recall}>Закрити запис і написати з пам’яті</button>}
+      {!revealed && !stageResult && <Hint shown={Boolean(progress.hint)} onToggle={() => change({ hint: !progress.hint, usedHint: true, [stage === 'recall' ? 'recallHint' : 'writeHint']: true })} label="Допомогти пригадати"><p>{data.hint}</p>{data.first && <button className="text-action" type="button" onClick={() => change({ firstLetter: true, usedHint: true, [stage === 'recall' ? 'recallHint' : 'writeHint']: true })}>Показати першу літеру</button>}{progress.firstLetter && <strong className="first-letter">{data.first}…</strong>}</Hint>}
     </div>}
-    <Outcomes writing done={progress.done} mode={progress.mode} onMark={(mode) => change({ done: true, mode })} />
+    {(stage === 'recall' ? progress.recallHint : progress.writeHint) && <p className="form-note">У цій спробі використали підказку. Допомога залишиться в записі.</p>}
+    <Outcomes writing stage={stage} done={progress.done || Boolean(stageResult)} mode={stageResult?.mode || (progress.done ? progress.mode : undefined)} onMark={mark} />
+    {!progress.done && stage === 'model' && stageResult && <button className="secondary-button finish-copy" type="button" onClick={() => change({ done: true, mode: stageResult.mode === 'attempted' ? 'attempted' : 'supported', usedModel: true })}>Завершити після списування</button>}
   </Frame>;
 }
-
+const RESPONSE_FORMS = { word: 'Словом', phrase: 'Фразою', writing: 'Письмом', gesture: 'Жестом' };
 function ConversationTask({ data, progress, onProgress }) {
+  const index = Math.min(progress.directionIndex || 0, (data.directions?.length || 1) - 1);
+  const question = useRef(null);
+  useEffect(() => { if (index > 0) question.current?.focus({ preventScroll: true }); }, [index]);
+  const story = Boolean(data.guided || (data.scenario === 'scene' && data.curriculumVersion >= 2));
   return <Frame data={data} instruction={data.prompt} coach={data.coach}>
     {data.setup && <p className="conversation-setup"><strong>Перед початком · для людини поруч</strong>{data.setup}</p>}
     {data.image && <img className="scene-image" src={data.image} alt="Сцена для розповіді" />}
-    {data.directions ? <ol className="conversation-directions" aria-label="Що зробити">{data.directions.map((direction) => <li key={direction}>{direction}</li>)}</ol> : <p className="conversation-situation">{data.situation}</p>}
-    <ListenButton text={[data.prompt, ...(data.directions || [data.situation])].filter(Boolean).join(' ')} label="Послухати, що зробити" />
+    {data.guided && data.situation && <><div className="practice-context"><p>{data.situation}</p></div><ListenButton text={data.situation} label="Послухати ситуацію" onListen={() => onProgress({ ...progress, usedAudio: true })} /></>}
+    {story ? <><p className="round-label">Запитання {index + 1} з {data.directions.length}</p><h2 className="subtask-title" tabIndex={-1} ref={question}>{data.directions[index]}</h2></> : data.directions ? <ol className="conversation-directions" aria-label="Що зробити">{data.directions.map((direction) => <li key={direction}>{direction}</li>)}</ol> : <p>{data.situation}</p>}
+    {data.responseGoal && <p>{data.responseGoal}</p>}
+    <ListenButton text={story ? data.directions[index] : [data.prompt, ...(data.directions || [data.situation])].filter(Boolean).join(' ')} label="Послухати, що зробити" onListen={() => onProgress({ ...progress, usedAudio: true })} />
     {!progress.done && <Hint shown={Boolean(progress.hint)} onToggle={() => onProgress({ ...progress, hint: !progress.hint, usedHint: true })} label="Початок фрази"><strong className="subtask-title">{data.cue}</strong><button type="button" className="text-action" onClick={() => onProgress({ ...progress, model: true, usedModel: true })}>Показати приклад фрази</button></Hint>}
-    {progress.model && <div className="hint-content"><p>{data.model}</p><ListenButton text={data.model} label="Почути приклад" /><p className="conversation-note">Власна відповідь теж підходить.</p></div>}
-    <Outcomes done={progress.done} mode={progress.mode} partnerResponse={data.partnerResponse} onMark={(mode) => onProgress({ ...progress, mode, done: true })} />
+    {progress.model && <div className="hint-content"><p>{data.model}</p><ListenButton text={data.model} label="Почути приклад" /><p>Власна відповідь теж підходить.</p></div>}
+    {story && index < data.directions.length - 1 && !progress.done ? <button className="confirm-button" type="button" onClick={() => onProgress({ ...progress, directionIndex: index + 1 })}>Наступне запитання</button> : <>
+      {data.partnerResponse && <p className="conversation-response"><strong>Після спроби · для людини поруч</strong>{data.partnerResponse}</p>}
+      <fieldset className="response-forms" disabled={progress.done}><legend>Для людини поруч: як відповіли?</legend><div>{Object.entries(RESPONSE_FORMS).map(([key, text]) => <label key={key} data-selected={progress.responseForm === key}><input type="radio" name="response-form" value={key} checked={progress.responseForm === key} onChange={() => onProgress({ ...progress, responseForm: key })} />{text}</label>)}</div></fieldset>
+      {!progress.done && !progress.responseForm && <p className="form-note">Спочатку оберіть спосіб відповіді, потім — чи потрібна була допомога.</p>}
+      <Outcomes done={progress.done} mode={progress.mode} disabled={!progress.responseForm} onMark={(mode) => onProgress(recordOwnResponse(progress, mode))} />
+    </>}
   </Frame>;
 }
-
-const TASKS = { choice: ChoiceTask, semantic: SemanticTask, sequence: SequenceTask, writing: WritingTask, conversation: ConversationTask };
-export function PracticeTask(props) {
-  const Task = TASKS[props.data.kind];
-  return <Task {...props} />;
-}
+const TASKS = { choice: ChoiceTask, reasoning: ReasoningTask, semantic: SemanticTask, sequence: SequenceTask, writing: WritingTask, conversation: ConversationTask };
+export function PracticeTask(props) { const Task = TASKS[props.data.kind]; return <Task {...props} />; }

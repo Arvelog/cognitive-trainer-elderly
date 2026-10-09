@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { speakText } from '../lib/audio';
 import { speechTotals } from '../lib/therapyProgress';
+import { chooseAnswer } from '../lib/practiceResults';
 
 function CoachNote({ children }) {
   return (
@@ -48,7 +49,7 @@ export function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, c
   );
 }
 
-export function ListenButton({ text, label = 'Почути слово', rate = 0.62 }) {
+export function ListenButton({ text, label = 'Почути слово', rate = 0.62, onListen }) {
   const [speaking, setSpeaking] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   useEffect(() => {
@@ -65,6 +66,7 @@ export function ListenButton({ text, label = 'Почути слово', rate = 0
       onError: () => { setSpeaking(false); setUnavailable(true); },
     });
     setSpeaking(started);
+    if (started) onListen?.();
     if (!started) setUnavailable(true);
   };
 
@@ -86,7 +88,7 @@ export function ChoiceButtons({ options, answer, progress, onProgress, spoken })
 
   const choose = (option) => {
     if (done) return;
-    onProgress({ chosen: option, attempts: attempts + 1, done: option === answer });
+    onProgress(chooseAnswer(progress, option, answer));
     if (option === answer) {
       speakText(spoken || answer, { rate: 0.68 });
     }
@@ -234,7 +236,7 @@ export function StrongWordsTask({ words, progress, onProgress }) {
   const mark = (mode) => {
     if (done) return;
     const next = [...results, mode];
-    onProgress({ results: next, hint: false, done: next.length === words.length });
+    onProgress({ ...progress, results: next, wordResults: [...(progress.wordResults || []), { word: word.word, mode, usedAudio: Boolean(progress.usedAudio), usedHint: Boolean(progress.usedHint), presentation: 'visible-word' }], hint: false, usedAudio: false, usedHint: false, done: next.length === words.length });
   };
 
   return (
@@ -252,13 +254,13 @@ export function StrongWordsTask({ words, progress, onProgress }) {
             <strong>{word.word}</strong>
           </div>
           <div className="primary-actions primary-actions--speech">
-            <ListenButton text={word.word} />
-            <button className="hint-button" type="button" onClick={() => onProgress({ ...progress, hint: !hint })} aria-expanded={hint}>
+            <ListenButton text={word.word} onListen={() => onProgress({ ...progress, usedAudio: true })} />
+            <button className="hint-button" type="button" onClick={() => onProgress({ ...progress, hint: !hint, usedHint: true })} aria-expanded={hint}>
               <Lightbulb aria-hidden="true" />
               Підказка
             </button>
           </div>
-          <p className="outcome-label">Для людини поруч: як вийшло?</p>
+          <p className="outcome-label">Слово видно на екрані. Для людини поруч: як вийшло?</p>
           <div className="choice-grid choice-grid--outcomes">
             <button className="choice-button choice-button--outcome" type="button" onClick={() => mark('independent')}>
               <Check aria-hidden="true" />
