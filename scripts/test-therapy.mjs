@@ -4,6 +4,8 @@ import { newProgress, restoreProgress, speechTotals, therapyReducer } from '../s
 import { createPracticeSession, getSessionSteps, getStepCount, PRACTICE_BLOCKS, validPracticeSession, WRITING_PICTURES } from '../src/data/practiceSession.js';
 import { existsSync } from 'node:fs';
 
+// These checks cover the picture-writing path, so they pin the levels that produce it.
+const PICTURE_SETTINGS = { blocks: { understanding: 1, meaning: 1, logic: 2, numbers: 3, writing: 2, communication: 2 }, shortWords: 1 };
 const session = createTherapySession();
 let state = newProgress(session);
 const apply = (action) => { state = therapyReducer(state, action); };
@@ -72,7 +74,7 @@ assert.equal(restoreProgress(JSON.stringify({ session: { id: 'missing-data' }, c
 console.log('Therapy progress: resume, answer locking, repeat, partial summary, finish, migration passed.');
 
 // Full and single-block sessions have their own lengths; the original six-step save still restores.
-const fullSession = createPracticeSession();
+const fullSession = createPracticeSession(null, null, PICTURE_SETTINGS);
 assert.equal(getStepCount(fullSession), 13);
 assert.deepEqual([...new Set(fullSession.tasks.map((task) => task.block))], PRACTICE_BLOCKS.map((block) => block.id));
 for (const block of PRACTICE_BLOCKS) {
@@ -129,7 +131,7 @@ assert.equal(restoreProgress(JSON.stringify({ ...state, session: { ...fullSessio
 
 // Generated task variants must be playable, have sound answer sets and bundled writing pictures.
 for (let i = 0; i < 80; i += 1) {
-  const generated = createPracticeSession();
+  const generated = createPracticeSession(null, null, PICTURE_SETTINGS);
   assert.ok(validPracticeSession(generated));
   assert.equal(new Set(generated.tasks.map((task) => task.id)).size, generated.tasks.length);
   for (const task of generated.tasks) {
@@ -152,14 +154,14 @@ try {
     const firstImages = new Set();
     for (const value of [0, 0.5, 0.999999]) {
       Math.random = () => value;
-      const fresh = createPracticeSession(blockId);
+      const fresh = createPracticeSession(blockId, null, PICTURE_SETTINGS);
       const pictures = fresh.tasks.filter((task) => task.kind === 'writing');
       firstImages.add(pictures[0].image);
       assert.equal(new Set(pictures.map((task) => task.image)).size, 2);
       const snapshot = JSON.stringify(fresh);
       for (const nextValue of [0, 0.5, 0.999999]) {
         Math.random = () => nextValue;
-        const next = createPracticeSession(blockId, fresh).tasks.filter((task) => task.kind === 'writing');
+        const next = createPracticeSession(blockId, fresh, PICTURE_SETTINGS).tasks.filter((task) => task.kind === 'writing');
         assert.notEqual(next[0].image, pictures[0].image, 'A new lesson starts with a different picture');
         assert.notEqual(next[0].image, next[1].image, 'The two writing exercises use different pictures');
         assert.equal(JSON.stringify(fresh), snapshot, 'Selecting pictures does not mutate the previous lesson');

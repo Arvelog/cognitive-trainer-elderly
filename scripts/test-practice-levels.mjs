@@ -1,13 +1,20 @@
 import assert from 'node:assert/strict';
 import { createPracticeSession, getSessionSteps, validPracticeSession } from '../src/data/practiceSession.js';
 import { createTherapySession } from '../src/data/therapySession.js';
-import { levelLabel, normalizePracticeSettings, restorePracticeSettings, RICHER_SETTINGS } from '../src/data/practiceLevels.js';
+import { levelLabel, loadPracticeSettings, normalizePracticeSettings, restorePracticeSettings } from '../src/data/practiceLevels.js';
 import { NUMBER_CONTEXTS, PLANS } from '../src/data/richerPractice.js';
 import { chooseAnswer, nextSequenceSteps, recordOwnResponse, recordReasoningAnswer, recordSemanticName, recordWritingStage, resultMode, summarizeBlock } from '../src/lib/practiceResults.js';
 import { newProgress, restoreProgress, therapyReducer } from '../src/lib/therapyProgress.js';
 
 const defaultSettings = normalizePracticeSettings();
 assert.equal(defaultSettings.blocks.numbers, 3, 'The existing harder math remains the default');
+assert.deepEqual(defaultSettings, { blocks: { understanding: 2, meaning: 3, logic: 3, numbers: 3, writing: 3, communication: 3 }, shortWords: 2 }, 'The richer set is the default');
+const oldDefaults = JSON.stringify({ blocks: { understanding: 1, meaning: 1, logic: 2, numbers: 3, writing: 2, communication: 2 }, shortWords: 1 });
+assert.deepEqual(loadPracticeSettings(null, null), defaultSettings);
+assert.deepEqual(loadPracticeSettings(null, oldDefaults), defaultSettings, 'Untouched old defaults move to the richer set');
+const custom = JSON.stringify({ blocks: { understanding: 1, meaning: 2, logic: 1, numbers: 1, writing: 1, communication: 1 }, shortWords: 3 });
+assert.deepEqual(loadPracticeSettings(null, custom), restorePracticeSettings(custom), 'Settings a family chose themselves are kept');
+assert.deepEqual(loadPracticeSettings(oldDefaults, null), restorePracticeSettings(oldDefaults), 'Settings saved after the change are not migrated again');
 assert.deepEqual(restorePracticeSettings('{broken'), defaultSettings);
 assert.deepEqual(normalizePracticeSettings({ blocks: { numbers: 999 }, shortWords: '3' }), defaultSettings);
 const settingsAt = (level) => ({ blocks: Object.fromEntries(Object.keys(defaultSettings.blocks).map((key) => [key, level])), shortWords: level });
@@ -61,8 +68,8 @@ assert.deepEqual(restoreProgress(JSON.stringify(easySave)), easySave, 'New easy 
 const next = createPracticeSession(null, easy, settingsAt(3));
 assert.deepEqual(easy, originalEasy, 'Changing settings for a new session does not modify the earlier snapshot');
 assert.equal(next.levels.numbers, 3);
-const previous = createPracticeSession(null, null, RICHER_SETTINGS);
-const following = createPracticeSession(null, previous, RICHER_SETTINGS);
+const previous = createPracticeSession(null, null, defaultSettings);
+const following = createPracticeSession(null, previous, defaultSettings);
 previous.tasks.forEach((task, index) => {
   if (task.contentId) assert.notEqual(following.tasks[index].contentId, task.contentId, 'Consecutive sessions vary the same task slot');
 });

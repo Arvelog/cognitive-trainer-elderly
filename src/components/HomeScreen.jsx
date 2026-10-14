@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Calculator, Check, Clock3, HeartHandshake, Leaf, Link2, ListOrdered, MessageCircle, PencilLine, Pause, Play, ShieldCheck, X } from 'lucide-react';
 import { getStepCount, PRACTICE_BLOCKS } from '../data/practiceSession';
-import { levelLabel, RICHER_SETTINGS } from '../data/practiceLevels';
+import { levelLabel } from '../data/practiceLevels';
 import { PracticeSettings } from './PracticeSettings';
 
 export const BLOCK_ICONS = { understanding: BookOpen, meaning: Link2, logic: ListOrdered, numbers: Calculator, writing: PencilLine, communication: MessageCircle };
@@ -34,7 +34,7 @@ export function HomeScreen({ progress, persisted, onStart, onResume, onSummary, 
   const saved = Boolean(session) && status === 'active';
   const finished = Boolean(session) && status === 'completed';
   const [pending, setPending] = useState(null);
-  const requestStart = (mode = 'extended', block = null, levels = null) => saved ? setPending({ mode, block, levels }) : onStart(mode, block, levels);
+  const requestStart = (mode = 'extended', block = null) => saved ? setPending({ mode, block }) : onStart(mode, block);
   const completedCount = completed.filter(Boolean).length;
   const sessionName = saved && session.mode !== 'extended' ? 'Знайомі слова' : saved && session.blockId ? PRACTICE_BLOCKS.find((b) => b.id === session.blockId)?.short : 'Практика на сьогодні';
   const fullLevels = saved ? session.levels : settings.blocks;
@@ -52,8 +52,6 @@ export function HomeScreen({ progress, persisted, onStart, onResume, onSummary, 
           {saved && <div className="saved-progress"><progress value={completedCount} max={getStepCount(session)} aria-label="Виконані завдання" /><span>{completedCount} з {getStepCount(session)} виконано</span></div>}
           <div className="daily-card__actions"><button className="start-button start-button--light" type="button" onClick={saved ? onResume : () => requestStart()}>{saved ? 'Продовжити заняття' : 'Почати заняття'}<ArrowRight aria-hidden="true" /></button>{saved ? <button className="daily-reset" type="button" onClick={() => requestStart()}>Почати заново</button> : <span className="daily-reassurance"><HeartHandshake aria-hidden="true" />Удвох легше</span>}</div>
           {saved && <span className="daily-save"><ShieldCheck aria-hidden="true" />{persisted ? 'Відповіді збережено на цьому пристрої' : 'Збереження недоступне — залишайте сторінку відкритою'}</span>}
-          <button className="daily-richer" type="button" onClick={() => requestStart('extended', null, RICHER_SETTINGS)}>Спробувати змістовніший набір<ArrowRight aria-hidden="true" /></button>
-          <div className="daily-richer-note">Тексти, планування, покупки й власні повідомлення. Можна виконати частину.</div>
         </article>
         <article className="short-card"><span className="short-card__icon"><Leaf aria-hidden="true" /></span><span className="card-label">ТРОХИ МЕНШЕ НА СЬОГОДНІ</span><h2>Знайомі слова</h2><p>Послухати, знайти, промовити.<br />{levelLabel('shortWords', settings.shortWords)}.</p><button className="short-start" type="button" onClick={() => requestStart('short')}><span><Play aria-hidden="true" />Почати коротке заняття</span><ArrowRight aria-hidden="true" /></button><span className="short-duration"><Clock3 aria-hidden="true" />близько 10 хвилин</span></article>
       </section>
@@ -64,6 +62,6 @@ export function HomeScreen({ progress, persisted, onStart, onResume, onSummary, 
       <section id="guide" className="caregiver-guide" aria-label="Для близьких">{children}</section>
     </main>
     <footer className="home-footer"><span>Поруч. Кожне слово має значення.</span><span>Домашня практика доповнює заняття з логопедом.</span></footer>
-    <ReplaceSessionDialog pending={pending} onCancel={() => setPending(null)} onConfirm={() => pending && onStart(pending.mode, pending.block, pending.levels)} />
+    <ReplaceSessionDialog pending={pending} onCancel={() => setPending(null)} onConfirm={() => pending && onStart(pending.mode, pending.block)} />
   </div>;
 }

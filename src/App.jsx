@@ -4,7 +4,7 @@ import { FindWordTask, ListenTask, PairTask, PhraseTask, SceneTask, StrongWordsT
 import { BLOCK_ICONS, Brand, HomeScreen } from './components/HomeScreen';
 import { PracticeTask } from './components/practiceTasks';
 import { PracticeSummary } from './components/PracticeSummary';
-import { normalizePracticeSettings, restorePracticeSettings, SETTINGS_KEY } from './data/practiceLevels';
+import { LEGACY_SETTINGS_KEY, loadPracticeSettings, normalizePracticeSettings, SETTINGS_KEY } from './data/practiceLevels';
 import { createTherapySession } from './data/therapySession';
 import { createPracticeSession, getSessionBlocks, getSessionSteps, getStepCount, PRACTICE_BLOCKS } from './data/practiceSession';
 import { newProgress, restoreProgress, speechTotals, STORAGE_KEY, therapyReducer } from './lib/therapyProgress';
@@ -56,7 +56,7 @@ export default function App() {
   const { session, currentStep, completed, details } = progress;
   const [view, setView] = useState('home');
   const [saveFailed, setSaveFailed] = useState(false);
-  const [settings, setSettings] = useState(() => { try { return restorePracticeSettings(window.localStorage.getItem(SETTINGS_KEY)); } catch { return normalizePracticeSettings(); } });
+  const [settings, setSettings] = useState(() => { try { return loadPracticeSettings(window.localStorage.getItem(SETTINGS_KEY), window.localStorage.getItem(LEGACY_SETTINGS_KEY)); } catch { return normalizePracticeSettings(); } });
   const [settingsSaved, setSettingsSaved] = useState(true);
   useEffect(() => { try { window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); setSettingsSaved(true); } catch { setSettingsSaved(false); } }, [settings]);
   useEffect(() => {
@@ -66,7 +66,7 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); window.speechSynthesis?.cancel(); document.querySelector('main')?.focus({ preventScroll: true });
   }, [currentStep, view]);
-  const startNew = (mode = 'extended', block = null, override = null) => { const selected = override ? normalizePracticeSettings(override) : settings; if (override) setSettings(selected); dispatch({ type: 'start', session: mode === 'short' ? createTherapySession(selected.shortWords) : createPracticeSession(block, session, selected) }); setView('session'); };
+  const startNew = (mode = 'extended', block = null) => { dispatch({ type: 'start', session: mode === 'short' ? createTherapySession(settings.shortWords) : createPracticeSession(block, session, settings) }); setView('session'); };
   const goHome = () => setView('home');
   const finish = () => { dispatch({ type: 'finish' }); setView('summary'); };
   const notice = <SaveNotice failed={saveFailed} />;
