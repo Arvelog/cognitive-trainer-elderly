@@ -40,11 +40,6 @@ function Outcomes({ done, mode, onMark, writing = false, stage, disabled = false
 }
 function AnswerResponse({ data, progress, onProgress }) {
   if (data.ownResponse && progress.responseKind === 'own' && progress.done) return <p className="task-feedback" role="status">Власну спробу збережено. Можна рухатися далі.</p>;
-  if (data.ownResponse && !progress.optionsRevealed && !progress.done) return <div className="own-response">
-    <p>Спробуйте свою відповідь. Людина поруч відзначить, як вийшло.</p>
-    <button className="hint-button" type="button" onClick={() => onProgress({ ...progress, optionsRevealed: true, usedHint: true })}><Lightbulb aria-hidden="true" />Показати варіанти</button>
-    <Outcomes onMark={(mode) => onProgress(recordOwnResponse(progress, mode))} />
-  </div>;
   return <ChoiceButtons {...data} progress={progress} onProgress={onProgress} />;
 }
 function Counters({ values, operator = '+' }) {
@@ -55,7 +50,7 @@ function Counters({ values, operator = '+' }) {
 function ChoiceTask({ data, progress, onProgress }) {
   const hintSteps = data.hintSteps || (data.hint ? [data.hint] : []);
   const hintIndex = Math.min(progress.hintStep || 0, hintSteps.length - 1);
-  return <Frame data={data} instruction={data.instruction || 'Оберіть відповідь. Можна міркувати вголос або разом.'} coach={data.block === 'numbers' ? 'Можна рахувати з олівцями. Оберіть посильний рівень наступного заняття в налаштуваннях для близьких. Якщо некомфортно — пропустіть.' : 'Дайте час на відповідь. Озвучення завдання допомагає читати; варіанти й зразок відкривайте за потреби.'}>
+  return <Frame data={data} instruction={data.instruction || 'Оберіть відповідь. Можна міркувати вголос або разом.'} coach={data.block === 'numbers' ? 'Можна рахувати з олівцями. Оберіть посильний рівень наступного заняття в налаштуваннях для близьких. Якщо некомфортно — пропустіть.' : 'Дайте час на відповідь. Озвучення завдання допомагає читати; зразок відкривайте за потреби.'}>
     <div className={`practice-stimulus ${data.equation ? 'practice-stimulus--number' : ''}`}>
       {data.emoji && <span className="practice-emoji" aria-hidden="true">{data.emoji}</span>}<strong>{data.stimulus}</strong>
       {data.counters && <Counters values={data.counters} operator={data.operator} />}
@@ -90,7 +85,7 @@ function SemanticTask({ data, progress, onProgress }) {
     </> : <>
       <p className="round-label">Ознака {index + 1} з {data.questions.length}</p><h2 className="subtask-title" tabIndex={-1} ref={questionHeading}>{question.prompt}</h2>
       <ListenButton text={question.prompt} label="Послухати запитання" onListen={() => onProgress({ ...progress, usedAudio: true })} />
-      <AnswerResponse data={{ ...question, ownResponse: false }} progress={current} onProgress={(next) => { const updated = [...answers]; updated[index] = next; onProgress({ ...progress, answers: updated }); }} />
+      <AnswerResponse data={question} progress={current} onProgress={(next) => { const updated = [...answers]; updated[index] = next; onProgress({ ...progress, answers: updated }); }} />
       {current.done && <button className="confirm-button" type="button" onClick={() => onProgress({ ...progress, question: Math.min(index + 1, data.questions.length - 1), ...(index === data.questions.length - 1 ? data.curriculumVersion >= 2 ? { featuresDone: true } : { done: true } : {}) })}>{index === data.questions.length - 1 ? 'Спробувати назвати предмет' : 'Наступна ознака'}<Check aria-hidden="true" /></button>}
     </>}
   </Frame>;

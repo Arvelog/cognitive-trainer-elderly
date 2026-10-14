@@ -109,7 +109,7 @@ function prepareTask(source, block, level) {
     }
     task.ownResponse = level === 3 && block !== 'numbers';
     if (task.ownResponse) {
-      task.instruction = 'Спробуйте відповісти словом, письмом або жестом. Варіанти можна відкрити за потреби.';
+      task.instruction = 'Спробуйте відповісти словом, письмом або жестом, а потім оберіть варіант.';
       if (task.title.startsWith('Оберіть')) task.title = task.question || 'Дайте відповідь на запитання';
     }
     if (block === 'numbers') {
@@ -125,7 +125,7 @@ function prepareTask(source, block, level) {
   if (task.kind === 'semantic') {
     task.title = level === 1 ? 'Оберіть ознаки предмета' : 'Знайдіть ознаки й назвіть предмет';
     task.showWord = level === 1;
-    task.questions = task.questions.map((q) => ({ ...q, options: shuffle(q.options) }));
+    task.questions = task.questions.map((q) => ({ ...q, ownResponse: level === 3, options: shuffle(q.options) }));
   }
   if (task.kind === 'sequence') {
     task.steps = level === 1 ? task.steps.slice(-2) : level === 3 ? task.longerSteps || SEQUENCE_EXTENSIONS[task.title] : [...task.steps];
