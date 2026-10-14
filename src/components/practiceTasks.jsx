@@ -80,7 +80,7 @@ function SemanticTask({ data, progress, onProgress }) {
   const naming = progress.naming || {};
   const showWord = data.showWord ?? true;
   const markName = (mode) => onProgress(recordSemanticName(progress, showWord, mode));
-  return <Frame data={data} instruction={progress.featuresDone ? 'Тепер назвіть предмет словом, письмом або жестом.' : 'Одне запитання за раз. Потім спробуємо назвати предмет.'} coach="Власна відповідь може бути словом або жестом. Відкривайте варіанти й назву за потреби. Називання записуємо окремо від вибору ознак.">
+  return <Frame data={data} instruction={progress.featuresDone ? 'Тепер назвіть предмет словом, письмом або жестом.' : 'Одне запитання за раз. Потім спробуємо назвати предмет.'} coach="Власна відповідь може бути словом або жестом. Відкривайте назву за потреби. Називання записуємо окремо від вибору ознак.">
     <div className="practice-stimulus semantic-stimulus"><span className="practice-emoji" aria-hidden="true">{data.emoji}</span>{(showWord || progress.nameShown) && <strong>{data.word}</strong>}</div>
     {progress.done ? <div className="practice-completion" role="status"><Check aria-hidden="true" /><p>Спробу збережено.</p></div> : progress.featuresDone ? <>
       <h2 className="subtask-title" tabIndex={-1} ref={questionHeading}>Як називається предмет?</h2>
@@ -90,7 +90,7 @@ function SemanticTask({ data, progress, onProgress }) {
     </> : <>
       <p className="round-label">Ознака {index + 1} з {data.questions.length}</p><h2 className="subtask-title" tabIndex={-1} ref={questionHeading}>{question.prompt}</h2>
       <ListenButton text={question.prompt} label="Послухати запитання" onListen={() => onProgress({ ...progress, usedAudio: true })} />
-      <AnswerResponse data={question} progress={current} onProgress={(next) => { const updated = [...answers]; updated[index] = next; onProgress({ ...progress, answers: updated }); }} />
+      <AnswerResponse data={{ ...question, ownResponse: false }} progress={current} onProgress={(next) => { const updated = [...answers]; updated[index] = next; onProgress({ ...progress, answers: updated }); }} />
       {current.done && <button className="confirm-button" type="button" onClick={() => onProgress({ ...progress, question: Math.min(index + 1, data.questions.length - 1), ...(index === data.questions.length - 1 ? data.curriculumVersion >= 2 ? { featuresDone: true } : { done: true } : {}) })}>{index === data.questions.length - 1 ? 'Спробувати назвати предмет' : 'Наступна ознака'}<Check aria-hidden="true" /></button>}
     </>}
   </Frame>;
