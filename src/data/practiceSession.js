@@ -109,7 +109,7 @@ function prepareTask(source, block, level) {
     }
     task.ownResponse = level === 3 && block !== 'numbers';
     if (task.ownResponse) {
-      task.instruction = 'Спробуйте відповісти словом, письмом або жестом. Варіанти можна відкрити за потреби.';
+      task.instruction = 'Спробуйте відповісти словом, письмом або жестом, а потім оберіть варіант.';
       if (task.title.startsWith('Оберіть')) task.title = task.question || 'Дайте відповідь на запитання';
     }
     if (block === 'numbers') {
