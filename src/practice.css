@@ -12,10 +12,6 @@
 .practice-context { background: var(--ice); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin: 20px 0; text-align: left; }
 .practice-context p { white-space: pre-line; font-size: 21px; line-height: 1.65; margin: 0; color: var(--ink); }
 .writing-model--sentence strong { font-size: 25px; text-transform: none; letter-spacing: normal; line-height: 1.55; overflow-wrap: anywhere; }
-.daily-richer { display: flex; align-items: center; gap: 12px; max-width: 100%; color: var(--paper); background: transparent; border: 1px solid currentColor; border-radius: 10px; margin-top: 18px; min-height: 48px; padding: 12px 16px; font: inherit; text-align: left; cursor: pointer; }
-.daily-richer svg { flex-shrink: 0; width: 20px; height: 20px; }
-.daily-richer:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
-.daily-richer-note { color: var(--paper); font-size: 16px; line-height: 1.5; margin-top: 10px; max-width: 42ch; opacity: .88; }
 .own-response { margin-top: 24px; }
 .own-response > p { font-size: 19px; line-height: 1.5; }
 .finish-copy { margin-top: 18px; min-height: 48px; }
