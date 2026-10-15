@@ -12,13 +12,14 @@ A quiet, adult practice space: forest green, white surfaces, clear type and rest
 - Success: `#276043` on `#eaf5ed`; retry/hint uses amber plus explanatory text.
 - Focus ring: `#98630b`; on the dark session card: `#f5cf77`.
 - Lora for welcoming and closing headings; IBM Plex Sans for instructions, answers and controls. Ukrainian content and local font fallbacks are preserved.
+- Readability for aphasia and older eyes: no interface text below 16 px, no all-caps or letter-spaced labels, no italics. Three font weights only (400 / 500 / 600). Exercise content (copying words in capitals) is the one exception to the caps rule.
 - Lucide icons for interface controls. Existing emoji remain only as exercise content, not navigation or structural icons.
 
 ## Screens and behavior
 
 - Home: resume/full session first, short familiar-word session second, six directly selectable blocks, preparation and collapsed caregiver guidance.
 - An active session must never be replaced without the native confirmation dialog. Cancel receives initial focus, Escape closes, focus returns to the triggering control.
-- Practice: six-block progress rail, one large task, distinct audio and hint buttons, two or three large answers, collapsible caregiver help, persistent back/next controls.
+- Practice: six-block progress rail (the only progress counter), one large task with one short instruction, distinct audio and hint buttons, two or three large answers, collapsible caregiver help below the task at every width, persistent back/next controls. Caregiver-only details (difficulty level, "can be skipped") live inside «Як допомогти», not on the task screen.
 - Short laptop viewports use tighter spacing without reducing instructional text. Phones use one task column and a two-button bottom bar with a safe-area inset.
 - Blocks advance directly to the next task without automatic breaks. The optional «Перерва» button opens a pause where the user can continue, return later or finish early. Summary shows actual completed counts, including partial sessions.
 - Keep the existing storage key, reducers, task generation and saved-answer migrations. The visual redesign does not replace saved task snapshots.
