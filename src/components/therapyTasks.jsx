@@ -32,7 +32,7 @@ function CoachNote({ children, level }) {
   );
 }
 
-export function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, coach, level }) {
+export function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, coach, level, source }) {
   return (
     <div className="task-layout">
       <section className="task-stage" aria-labelledby="task-title">
@@ -44,7 +44,7 @@ export function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, c
             <p>{instruction}</p>
           </div>
         </div>
-        {children}
+        {source ? <div className="task-body"><div className="task-source">{source}</div><div className="task-work">{children}</div></div> : children}
       </section>
       <CoachNote level={level}>{coach}</CoachNote>
     </div>

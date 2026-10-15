@@ -6,10 +6,10 @@ import { levelLabel } from '../data/practiceLevels';
 import { nextSequenceSteps, recordOwnResponse, recordReasoningAnswer, recordSemanticName, recordWritingStage, usedSupport } from '../lib/practiceResults';
 
 const ICONS = { understanding: BookOpen, meaning: Link2, logic: ListOrdered, numbers: Calculator, writing: PencilLine, communication: MessageCircle };
-function Frame({ data, instruction, coach, children }) {
+function Frame({ data, instruction, coach, source, children }) {
   const block = PRACTICE_BLOCKS.find((item) => item.id === data.block);
   const level = data.level ? data.levelLabel || levelLabel(data.block, data.level, data.curriculumVersion) : null;
-  return <TaskFrame icon={ICONS[data.block]} eyebrow={block.short} title={data.title} instruction={instruction || data.instruction} coach={coach} level={level}>{children}</TaskFrame>;
+  return <TaskFrame icon={ICONS[data.block]} eyebrow={block.short} title={data.title} instruction={instruction || data.instruction} coach={coach} level={level} source={source}>{children}</TaskFrame>;
 }
 function ReasoningTask({ data, progress, onProgress }) {
   const index = Math.min(progress.question || 0, data.questions.length - 1);
@@ -18,9 +18,10 @@ function ReasoningTask({ data, progress, onProgress }) {
   const question = data.questions[index];
   const current = progress.answers?.[index] || {};
   const update = (next) => onProgress(recordReasoningAnswer(progress, index, next, data.questions.length));
-  return <Frame data={data} coach="Текст можна перечитувати й слухати. Ставте одне запитання за раз. Для власної відповіді приймайте зрозуміле формулювання з потрібним змістом; пояснення не має збігатися зі зразком дослівно.">
+  return <Frame data={data} coach="Текст можна перечитувати й слухати. Ставте одне запитання за раз. Для власної відповіді приймайте зрозуміле формулювання з потрібним змістом; пояснення не має збігатися зі зразком дослівно." source={<>
     <div className="practice-context"><p>{data.stimulus}</p></div>
     <ListenButton text={data.stimulus} label="Послухати ситуацію" onListen={() => onProgress({ ...progress, usedAudio: true })} />
+  </>}>
     <p className="round-label">Запитання {index + 1} з {data.questions.length}</p>
     <h2 className="subtask-title" tabIndex={-1} ref={heading}>{question.prompt}</h2>
     <ListenButton text={question.prompt} label="Послухати запитання" onListen={() => update({ ...current, usedAudio: true })} />
@@ -98,8 +99,7 @@ function SequenceTask({ data, progress, onProgress }) {
     const next = [...selected, step];
     onProgress({ ...progress, selected: next, retry: false, done: next.length === data.steps.length, mode: usedSupport(progress) || progress.hint ? 'supported' : 'independent' });
   };
-  return <Frame data={data} coach="Прочитайте дії разом або покажіть жестами. Один дотик обирає одну дію. Підказка називає наступний крок; її використання збережеться.">
-    {data.stimulus && <><div className="practice-context"><p>{data.stimulus}</p></div><ListenButton text={data.stimulus} label="Послухати умови" onListen={() => onProgress({ ...progress, usedAudio: true })} /></>}
+  return <Frame data={data} coach="Прочитайте дії разом або покажіть жестами. Один дотик обирає одну дію. Підказка називає наступний крок; її використання збережеться." source={data.stimulus && <><div className="practice-context"><p>{data.stimulus}</p></div><ListenButton text={data.stimulus} label="Послухати умови" onListen={() => onProgress({ ...progress, usedAudio: true })} /></>}>
     <p className="round-label">{progress.done ? 'Усі дії на своїх місцях' : `Оберіть дію ${selected.length + 1} з ${data.steps.length}`}</p>
     <div className="sequence-choices">{data.choices.map((step) => { const position = selected.indexOf(step); return <button className="choice-button" type="button" key={step} onClick={() => choose(step)} disabled={position >= 0 || progress.done} data-state={position >= 0 ? 'correct' : undefined}><span className="sequence-number">{position >= 0 ? position + 1 : '•'}</span>{step}</button>; })}</div>
     <div className="task-feedback" role="status">{progress.done ? 'Послідовність готова.' : progress.retry ? 'Ця дія буде пізніше. Спробуйте іншу або відкрийте підказку.' : 'Що спочатку, а що потім?'}</div>
@@ -118,10 +118,11 @@ function WritingTask({ data, progress, onProgress }) {
   const model = data.modelText || data.word;
   const mark = (mode) => { const next = recordWritingStage(progress, stage, mode); if (data.level === 3 && !message && stage === 'write') next.done = false; onProgress(next); };
   const recall = () => change({ stage: 'recall', hint: false, firstLetter: false, usedModel: Boolean(progress.usedModel || revealed) });
-  return <Frame data={data} instruction={stage === 'recall' ? 'Закрийте попередній запис. Напишіть його ще раз із пам’яті.' : revealed ? 'Спишіть зразок у зошит. Це окрема спроба списування.' : message ? 'Напишіть у зошиті коротке повідомлення за ситуацією. Власне формулювання підходить.' : data.writingGoal || 'Напишіть олівцем у зошиті, що зображено. Не поспішайте.'} coach={message ? 'Дайте час на власне повідомлення. Перевірте, чи передано потрібні деталі. Не вимагайте однакового формулювання зі зразком. Приклад відкривайте за потреби; якщо руці важко, можна сказати або пропустити.' : 'Не називайте предмет до першої спроби. Допомога: ознака → перша літера → зразок. Списування й письмо з пам’яті записуємо окремо. Якщо руці важко, достатньо літери або можна пропустити.'}>
-    <p className="round-label">{stage === 'write' ? 'Перша спроба' : revealed ? 'Списування' : 'Письмо з пам’яті'}</p>
+  return <Frame data={data} instruction={stage === 'recall' ? 'Закрийте попередній запис. Напишіть його ще раз із пам’яті.' : revealed ? 'Спишіть зразок у зошит. Це окрема спроба списування.' : message ? 'Напишіть у зошиті коротке повідомлення за ситуацією. Власне формулювання підходить.' : data.writingGoal || 'Напишіть олівцем у зошиті, що зображено. Не поспішайте.'} coach={message ? 'Дайте час на власне повідомлення. Перевірте, чи передано потрібні деталі. Не вимагайте однакового формулювання зі зразком. Приклад відкривайте за потреби; якщо руці важко, можна сказати або пропустити.' : 'Не називайте предмет до першої спроби. Допомога: ознака → перша літера → зразок. Списування й письмо з пам’яті записуємо окремо. Якщо руці важко, достатньо літери або можна пропустити.'} source={(data.image || data.stimulus) && <>
     {data.image && <img className="writing-picture" src={data.image} alt="Малюнок для письмового завдання; назва відкриється за запитом" />}
     {data.stimulus && <><div className="practice-context"><p>{data.stimulus}</p></div><ListenButton text={data.stimulus} label="Послухати ситуацію" onListen={() => change({ usedAudio: true })} /></>}
+  </>}>
+    <p className="round-label">{stage === 'write' ? 'Перша спроба' : revealed ? 'Списування' : 'Письмо з пам’яті'}</p>
     {revealed && <div className={`writing-model${data.modelText ? ' writing-model--sentence' : ''}`} ref={stageContent} tabIndex={-1} aria-label="Зразок запису"><strong>{model}</strong><ListenButton text={model} label="Послухати зразок" onListen={() => change({ usedAnswerAudio: true })} /><p>{data.accepted}</p></div>}
     {stage === 'recall' && <p className="recall-note" ref={stageContent} tabIndex={-1}>Зразок сховано. Закрийте й запис у зошиті.</p>}
     {!progress.done && <div className="writing-tools">
@@ -141,10 +142,11 @@ function ConversationTask({ data, progress, onProgress }) {
   const question = useRef(null);
   useEffect(() => { if (index > 0) question.current?.focus({ preventScroll: true }); }, [index]);
   const story = Boolean(data.guided || (data.scenario === 'scene' && data.curriculumVersion >= 2));
-  return <Frame data={data} instruction={data.prompt} coach={data.coach}>
+  return <Frame data={data} instruction={data.prompt} coach={data.coach} source={(data.setup || data.image || (data.guided && data.situation)) && <>
     {data.setup && <p className="conversation-setup"><strong>Перед початком · для людини поруч</strong>{data.setup}</p>}
     {data.image && <img className="scene-image" src={data.image} alt="Сцена для розповіді" />}
     {data.guided && data.situation && <><div className="practice-context"><p>{data.situation}</p></div><ListenButton text={data.situation} label="Послухати ситуацію" onListen={() => onProgress({ ...progress, usedAudio: true })} /></>}
+  </>}>
     {story ? <><p className="round-label">Запитання {index + 1} з {data.directions.length}</p><h2 className="subtask-title" tabIndex={-1} ref={question}>{data.directions[index]}</h2></> : data.directions ? <ol className="conversation-directions" aria-label="Що зробити">{data.directions.map((direction) => <li key={direction}>{direction}</li>)}</ol> : <p>{data.situation}</p>}
     {data.responseGoal && <p>{data.responseGoal}</p>}
     <ListenButton text={story ? data.directions[index] : [data.prompt, ...(data.directions || [data.situation])].filter(Boolean).join(' ')} label="Послухати, що зробити" onListen={() => onProgress({ ...progress, usedAudio: true })} />
