@@ -16,21 +16,23 @@ import { speakText } from '../lib/audio';
 import { speechTotals } from '../lib/therapyProgress';
 import { chooseAnswer } from '../lib/practiceResults';
 
-function CoachNote({ children }) {
+function CoachNote({ children, level }) {
   return (
     <aside className="coach-note">
       <details>
         <summary><HeartHandshake aria-hidden="true" /><span>Як допомогти</span></summary>
+        {level && <p className="coach-note__level">Рівень: {level}.</p>}
         <p>{children}</p>
         <p className="coach-note__hint">
           Дайте 8–10 секунд на відповідь. Якщо важко — скажіть перший звук або промовте слово разом.
         </p>
+        <p className="coach-note__hint">Завдання можна пропустити без відповіді.</p>
       </details>
     </aside>
   );
 }
 
-export function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, coach }) {
+export function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, coach, level }) {
   return (
     <div className="task-layout">
       <section className="task-stage" aria-labelledby="task-title">
@@ -44,7 +46,7 @@ export function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, c
         </div>
         {children}
       </section>
-      <CoachNote>{coach}</CoachNote>
+      <CoachNote level={level}>{coach}</CoachNote>
     </div>
   );
 }
@@ -83,7 +85,7 @@ export function ListenButton({ text, label = 'Почути слово', rate = 0
 
 export function ChoiceButtons({ options, answer, progress, onProgress, spoken }) {
   const { chosen = null, attempts = 0, done = false } = progress;
-  const message = done ? 'Так. Саме так.' : chosen == null ? 'Оберіть один варіант.'
+  const message = done ? 'Так. Саме так.' : chosen == null ? ''
     : attempts > 1 ? `Правильна відповідь: ${answer}. Натисніть її разом.` : 'Це інший варіант. Спробуйте ще раз.';
 
   const choose = (option) => {
