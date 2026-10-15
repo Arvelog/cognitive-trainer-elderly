@@ -8,9 +8,8 @@ import { nextSequenceSteps, recordOwnResponse, recordReasoningAnswer, recordSema
 const ICONS = { understanding: BookOpen, meaning: Link2, logic: ListOrdered, numbers: Calculator, writing: PencilLine, communication: MessageCircle };
 function Frame({ data, instruction, coach, children }) {
   const block = PRACTICE_BLOCKS.find((item) => item.id === data.block);
-  return <TaskFrame icon={ICONS[data.block]} eyebrow={block.short} title={data.title} instruction={instruction || data.instruction} coach={coach}>
-    {data.level && <p className="task-level">{data.levelLabel || levelLabel(data.block, data.level, data.curriculumVersion)}</p>}{children}
-  </TaskFrame>;
+  const level = data.level ? data.levelLabel || levelLabel(data.block, data.level, data.curriculumVersion) : null;
+  return <TaskFrame icon={ICONS[data.block]} eyebrow={block.short} title={data.title} instruction={instruction || data.instruction} coach={coach} level={level}>{children}</TaskFrame>;
 }
 function ReasoningTask({ data, progress, onProgress }) {
   const index = Math.min(progress.question || 0, data.questions.length - 1);

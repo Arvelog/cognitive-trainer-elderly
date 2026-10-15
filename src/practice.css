@@ -15,7 +15,7 @@
 .daily-richer { display: flex; align-items: center; gap: 12px; max-width: 100%; color: var(--paper); background: transparent; border: 1px solid currentColor; border-radius: 10px; margin-top: 18px; min-height: 48px; padding: 12px 16px; font: inherit; text-align: left; cursor: pointer; }
 .daily-richer svg { flex-shrink: 0; width: 20px; height: 20px; }
 .daily-richer:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
-.daily-richer-note { color: var(--paper); font-size: 15px; line-height: 1.5; margin-top: 10px; max-width: 42ch; opacity: .88; }
+.daily-richer-note { color: var(--paper); font-size: 16px; line-height: 1.5; margin-top: 10px; max-width: 42ch; opacity: .88; }
 .own-response { margin-top: 24px; }
 .own-response > p { font-size: 19px; line-height: 1.5; }
 .finish-copy { margin-top: 18px; min-height: 48px; }
