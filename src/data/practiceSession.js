@@ -1,6 +1,7 @@
 import { SESSION_STEPS } from './therapySession.js';
 import { levelLabel, normalizePracticeSettings } from './practiceLevels.js';
 import { CATEGORY_CONTEXTS, CONTEXTS, DECISIONS, DIALOGUES, ITEM_FEATURES, NUMBER_CONTEXTS, PLANS, READING_CONTEXTS, RELATIONS, WRITTEN_MESSAGES } from './richerPractice.js';
+import { normalizePersonalWords, personalNoteTask, personalRecognitionTask, personalStoryTask, personalWritingTask } from './personalWords.js';
 
 export const PRACTICE_BLOCKS = [
   { id: 'understanding', short: 'Розуміння', title: 'Слухаємо й читаємо', minutes: '2–4 хв', description: 'Слова, повідомлення, зміна планів і висновки.' },
@@ -135,7 +136,11 @@ function prepareTask(source, block, level) {
   }
   if (task.kind === 'writing') {
     task.startStage = level === 1 ? 'model' : 'write';
-    if (level === 2) {
+    if (level === 2 && task.personal) {
+      task.title = 'Напишіть підпис і коротке речення';
+      task.writingGoal = 'Напишіть, хто або що на фото. Потім додайте коротке речення про це.';
+      task.accepted = 'Підпис і будь-яке зрозуміле речення про фото підходять.';
+    } else if (level === 2) {
       task.title = 'Напишіть назву й коротке речення';
       task.writingGoal = 'Напишіть назву предмета. Потім додайте коротке речення: що з ним роблять або для чого він потрібен.';
       task.modelText = { борщ: 'Борщ їдять ложкою.', яблуко: 'Яблуко росте на дереві.', ключ: 'Ключем відмикають двері.' }[task.word];
@@ -148,6 +153,7 @@ function prepareTask(source, block, level) {
       task.directions = level === 2 ? task.directions.slice(0, 2) : [...task.directions];
       task.responseGoal = 'Передайте потрібні деталі своїми словами. Можна доповнити відповідь письмом або жестом.';
     }
+    if (task.scenario === 'photo') task.directions = task.directions.slice(0, level);
     if (task.scenario === 'scene') {
       task.title = level === 1 ? 'Назвіть або покажіть людину на малюнку' : 'Назвіть людину й дію на малюнку';
       task.prompt = 'Подивіться на малюнок. Одне запитання за раз.';
@@ -232,8 +238,9 @@ const shuffle = (items) => {
   return copy;
 };
 
-export function createPracticeSession(blockId = null, previousSession = null, settings = null) {
+export function createPracticeSession(blockId = null, previousSession = null, settings = null, personalWords = []) {
   const profile = normalizePracticeSettings(settings);
+  const personal = normalizePersonalWords(personalWords);
   const levels = profile.blocks;
   const previousFirstImage = previousSession?.tasks?.find((task) => task.kind === 'writing')?.image;
   const firstPicture = pick(WRITING_PICTURES.filter((picture) => picture.image !== previousFirstImage));
@@ -249,13 +256,22 @@ export function createPracticeSession(blockId = null, previousSession = null, se
   const firstDialogue = choose(DIALOGUES, 'communication', 0);
   const secondDialogue = fresh(DIALOGUES, 'communication', 1, firstDialogue.contentId);
   const categories = levels.meaning === 1 ? CATEGORIES.filter((task) => task.options.length === 2).map((task) => ({ ...task, title: 'Оберіть спільну назву' })) : CATEGORY_CONTEXTS[levels.meaning];
+  // Own photos replace one task per block; each slot prefers a photo that slot did not show last time.
+  const personalPick = (block, slot, build, pool = personal) => pool.length ? build(fresh(pool.map((entry) => ({ entry, contentId: build(entry).contentId })), block, slot).entry) : null;
+  const recognition = personal.length >= 2 && personalPick('understanding', 0, (entry) => {
+    const task = personalRecognitionTask(entry, personal.filter((item) => item.id !== entry.id));
+    return levels.understanding === 1 ? { ...task, options: task.options.slice(0, 2) } : task;
+  });
+  const writingPhoto = levels.writing < 3 && personalPick('writing', 0, personalWritingTask);
+  const note = levels.writing === 3 && personalPick('writing', 1, personalNoteTask, personal.filter((entry) => entry.kind === 'person'));
+  const photoStory = personalPick('communication', 1, personalStoryTask);
   const groups = [
-    [choose(levels.understanding === 1 ? UNDERSTANDING : CONTEXTS[levels.understanding], 'understanding', 0), choose(levels.understanding === 1 ? READING : READING_CONTEXTS[levels.understanding], 'understanding', 1)],
+    [recognition || choose(levels.understanding === 1 ? UNDERSTANDING : CONTEXTS[levels.understanding], 'understanding', 0), choose(levels.understanding === 1 ? READING : READING_CONTEXTS[levels.understanding], 'understanding', 1)],
     [choose(levels.meaning === 1 ? FEATURES : ITEM_FEATURES, 'meaning', 0), choose(levels.meaning === 1 ? ASSOCIATIONS : RELATIONS[levels.meaning], 'meaning', 1), choose(categories, 'meaning', 2)],
     [choose(levels.logic === 1 ? SEQUENCES : PLANS, 'logic', 0), choose(levels.logic === 1 ? LOGIC : DECISIONS[levels.logic], 'logic', 1)],
     [pick([EASY_NUMBERS, MID_NUMBERS, NUMBERS][levels.numbers - 1]), choose([EASY_EVERYDAY, MID_EVERYDAY, NUMBER_CONTEXTS][levels.numbers - 1], 'numbers', 1)],
-    levels.writing === 3 ? [firstMessage, secondMessage] : [{ kind: 'writing', title: 'Напишіть назву малюнка', ...firstPicture }, { kind: 'writing', title: 'Ще одне слово в зошиті', ...secondPicture }],
-    levels.communication === 1 ? [pick(CONVERSATION), STORY] : [firstDialogue, secondDialogue],
+    levels.writing === 3 ? [firstMessage, note || secondMessage] : [writingPhoto || { kind: 'writing', title: 'Напишіть назву малюнка', ...firstPicture }, { kind: 'writing', title: 'Ще одне слово в зошиті', ...secondPicture }],
+    levels.communication === 1 ? [pick(CONVERSATION), photoStory || STORY] : [firstDialogue, photoStory || secondDialogue],
   ];
   const tasks = groups.flatMap((group, i) => group.map((task, j) => ({
     ...prepareTask(task, PRACTICE_BLOCKS[i].id, levels[PRACTICE_BLOCKS[i].id]), block: PRACTICE_BLOCKS[i].id, id: `${PRACTICE_BLOCKS[i].id}-${j}`,
