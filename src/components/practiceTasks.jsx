@@ -52,7 +52,8 @@ function ChoiceTask({ data, progress, onProgress }) {
   const hintIndex = Math.min(progress.hintStep || 0, hintSteps.length - 1);
   return <Frame data={data} instruction={data.instruction || 'Оберіть відповідь. Можна міркувати вголос або разом.'} coach={data.block === 'numbers' ? 'Можна рахувати з олівцями. Оберіть посильний рівень наступного заняття в налаштуваннях для близьких. Якщо некомфортно — пропустіть.' : 'Дайте час на відповідь. Озвучення завдання допомагає читати; зразок відкривайте за потреби.'}>
     <div className={`practice-stimulus ${data.equation ? 'practice-stimulus--number' : ''}`}>
-      {data.emoji && <span className="practice-emoji" aria-hidden="true">{data.emoji}</span>}<strong>{data.stimulus}</strong>
+      {data.image && <img className="personal-photo" src={data.image} alt="Ваше фото; підпис оберіть нижче" />}
+      {data.emoji && <span className="practice-emoji" aria-hidden="true">{data.emoji}</span>}{data.stimulus && <strong>{data.stimulus}</strong>}
       {data.counters && <Counters values={data.counters} operator={data.operator} />}
     </div>
     {!data.visualCount && <ListenButton text={[data.stimulus.replace('−', ' мінус ').replace('+', ' плюс ').replace('= ?', ' дорівнює скільки?'), data.question || data.title].join(' ')} label="Послухати завдання" onListen={() => onProgress({ ...progress, usedAudio: true })} />}
@@ -119,7 +120,7 @@ function WritingTask({ data, progress, onProgress }) {
   const mark = (mode) => { const next = recordWritingStage(progress, stage, mode); if (data.level === 3 && !message && stage === 'write') next.done = false; onProgress(next); };
   const recall = () => change({ stage: 'recall', hint: false, firstLetter: false, usedModel: Boolean(progress.usedModel || revealed) });
   return <Frame data={data} instruction={stage === 'recall' ? 'Закрийте попередній запис. Напишіть його ще раз із пам’яті.' : revealed ? 'Спишіть зразок у зошит. Це окрема спроба списування.' : message ? 'Напишіть у зошиті коротке повідомлення за ситуацією. Власне формулювання підходить.' : data.writingGoal || 'Напишіть олівцем у зошиті, що зображено. Не поспішайте.'} coach={message ? 'Дайте час на власне повідомлення. Перевірте, чи передано потрібні деталі. Не вимагайте однакового формулювання зі зразком. Приклад відкривайте за потреби; якщо руці важко, можна сказати або пропустити.' : 'Не називайте предмет до першої спроби. Допомога: ознака → перша літера → зразок. Списування й письмо з пам’яті записуємо окремо. Якщо руці важко, достатньо літери або можна пропустити.'} source={(data.image || data.stimulus) && <>
-    {data.image && <img className="writing-picture" src={data.image} alt="Малюнок для письмового завдання; назва відкриється за запитом" />}
+    {data.image && <img className="writing-picture" src={data.image} alt={data.personal ? 'Ваше фото для письмового завдання' : 'Малюнок для письмового завдання; назва відкриється за запитом'} />}
     {data.stimulus && <><div className="practice-context"><p>{data.stimulus}</p></div><ListenButton text={data.stimulus} label="Послухати ситуацію" onListen={() => change({ usedAudio: true })} /></>}
   </>}>
     <p className="round-label">{stage === 'write' ? 'Перша спроба' : revealed ? 'Списування' : 'Письмо з пам’яті'}</p>
@@ -141,10 +142,10 @@ function ConversationTask({ data, progress, onProgress }) {
   const index = Math.min(progress.directionIndex || 0, (data.directions?.length || 1) - 1);
   const question = useRef(null);
   useEffect(() => { if (index > 0) question.current?.focus({ preventScroll: true }); }, [index]);
-  const story = Boolean(data.guided || (data.scenario === 'scene' && data.curriculumVersion >= 2));
+  const story = Boolean(data.guided || data.scenario === 'photo' || (data.scenario === 'scene' && data.curriculumVersion >= 2));
   return <Frame data={data} instruction={data.prompt} coach={data.coach} source={(data.setup || data.image || (data.guided && data.situation)) && <>
     {data.setup && <p className="conversation-setup"><strong>Перед початком · для людини поруч</strong>{data.setup}</p>}
-    {data.image && <img className="scene-image" src={data.image} alt="Сцена для розповіді" />}
+    {data.image && <img className="scene-image" src={data.image} alt={data.personal ? 'Ваше фото для розповіді' : 'Сцена для розповіді'} />}
     {data.guided && data.situation && <><div className="practice-context"><p>{data.situation}</p></div><ListenButton text={data.situation} label="Послухати ситуацію" onListen={() => onProgress({ ...progress, usedAudio: true })} /></>}
   </>}>
     {story ? <><p className="round-label">Запитання {index + 1} з {data.directions.length}</p><h2 className="subtask-title" tabIndex={-1} ref={question}>{data.directions[index]}</h2></> : data.directions ? <ol className="conversation-directions" aria-label="Що зробити">{data.directions.map((direction) => <li key={direction}>{direction}</li>)}</ol> : <p>{data.situation}</p>}

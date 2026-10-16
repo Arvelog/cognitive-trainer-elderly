@@ -29,7 +29,7 @@ function ReplaceSessionDialog({ pending, onCancel, onConfirm }) {
   </dialog>;
 }
 
-export function HomeScreen({ progress, persisted, onStart, onResume, onSummary, settings, onSettings, settingsSaved, children }) {
+export function HomeScreen({ progress, persisted, onStart, onResume, onSummary, settings, onSettings, settingsSaved, personal, children }) {
   const { session, status, currentStep, completed } = progress;
   const saved = Boolean(session) && status === 'active';
   const finished = Boolean(session) && status === 'completed';
@@ -57,6 +57,7 @@ export function HomeScreen({ progress, persisted, onStart, onResume, onSummary, 
       </section>
       {finished && <button className="previous-session" type="button" onClick={onSummary}><span><Check aria-hidden="true" />Попереднє заняття завершено</span><span>Переглянути підсумок<ArrowRight aria-hidden="true" /></span></button>}
       <PracticeSettings settings={settings} onChange={onSettings} saved={settingsSaved} />
+      {personal}
       <section id="practice" className="practice-library" aria-labelledby="practice-title"><div className="section-heading"><div><p className="eyebrow">Окремі вправи</p><h2 id="practice-title">Що попрактикуємо?</h2></div><p>Можна обрати лише один блок.</p></div><div className="block-grid">{PRACTICE_BLOCKS.map((block) => { const Icon = BLOCK_ICONS[block.id]; return <button key={block.id} className="block-card" data-block={block.id} type="button" onClick={() => requestStart('extended', block.id)} aria-label={`${block.short} · ${block.minutes}`}><div className="block-card__top"><span className="block-icon"><Icon aria-hidden="true" /></span><span className="block-duration">{block.minutes}</span></div><h3>{block.short}</h3><p>{block.description}</p><div className="block-card__bottom"><ArrowRight aria-hidden="true" /></div></button>; })}</div></section>
       <aside className="preparation-note"><span className="section-icon"><PencilLine aria-hidden="true" /></span><div><strong>Перед початком</strong><p>Приготуйте зошит та олівець. Оберіть тихе місце, де зручно сидіти поруч.</p></div><span className="preparation-note__aside"><Pause aria-hidden="true" />Перерву можна зробити будь-коли.</span></aside>
       <section id="guide" className="caregiver-guide" aria-label="Для близьких">{children}</section>

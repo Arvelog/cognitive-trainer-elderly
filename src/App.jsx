@@ -4,7 +4,9 @@ import { FindWordTask, ListenTask, PairTask, PhraseTask, SceneTask, StrongWordsT
 import { BLOCK_ICONS, Brand, HomeScreen } from './components/HomeScreen';
 import { PracticeTask } from './components/practiceTasks';
 import { PracticeSummary } from './components/PracticeSummary';
+import { PersonalWords } from './components/PersonalWords';
 import { LEGACY_SETTINGS_KEY, loadPracticeSettings, normalizePracticeSettings, SETTINGS_KEY } from './data/practiceLevels';
+import { loadPersonalWords, normalizePersonalWords, PERSONAL_WORDS_KEY } from './data/personalWords';
 import { createTherapySession } from './data/therapySession';
 import { createPracticeSession, getSessionBlocks, getSessionSteps, getStepCount, PRACTICE_BLOCKS } from './data/practiceSession';
 import { newProgress, restoreProgress, speechTotals, STORAGE_KEY, therapyReducer } from './lib/therapyProgress';
@@ -58,6 +60,15 @@ export default function App() {
   const [saveFailed, setSaveFailed] = useState(false);
   const [settings, setSettings] = useState(() => { try { return loadPracticeSettings(window.localStorage.getItem(SETTINGS_KEY), window.localStorage.getItem(LEGACY_SETTINGS_KEY)); } catch { return normalizePracticeSettings(); } });
   const [settingsSaved, setSettingsSaved] = useState(true);
+  const [personalWords, setPersonalWords] = useState(() => { try { return loadPersonalWords(window.localStorage.getItem(PERSONAL_WORDS_KEY)); } catch { return []; } });
+  const [personalError, setPersonalError] = useState('');
+  // Photos can fill browser storage, so a change is kept only after it is saved.
+  const savePersonalWords = (next) => {
+    const words = normalizePersonalWords(next);
+    try { window.localStorage.setItem(PERSONAL_WORDS_KEY, JSON.stringify(words)); }
+    catch { setPersonalError('Не вдалося зберегти фото: на пристрої закінчилося місце для застосунку. Видаліть одне з фото й спробуйте ще раз.'); return false; }
+    setPersonalWords(words); setPersonalError(''); return true;
+  };
   useEffect(() => { try { window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); setSettingsSaved(true); } catch { setSettingsSaved(false); } }, [settings]);
   useEffect(() => {
     try { if (session) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); setSaveFailed(false); }
@@ -66,11 +77,11 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); window.speechSynthesis?.cancel(); document.querySelector('main')?.focus({ preventScroll: true });
   }, [currentStep, view]);
-  const startNew = (mode = 'extended', block = null) => { dispatch({ type: 'start', session: mode === 'short' ? createTherapySession(settings.shortWords) : createPracticeSession(block, session, settings) }); setView('session'); };
+  const startNew = (mode = 'extended', block = null) => { dispatch({ type: 'start', session: mode === 'short' ? createTherapySession(settings.shortWords) : createPracticeSession(block, session, settings, personalWords) }); setView('session'); };
   const goHome = () => setView('home');
   const finish = () => { dispatch({ type: 'finish' }); setView('summary'); };
   const notice = <SaveNotice failed={saveFailed} />;
-  if (view === 'home') return <>{notice}<HomeScreen progress={progress} persisted={!saveFailed} onStart={startNew} onResume={() => setView('session')} onSummary={() => setView('summary')} settings={settings} onSettings={setSettings} settingsSaved={settingsSaved}><EvidenceNote /></HomeScreen></>;
+  if (view === 'home') return <>{notice}<HomeScreen progress={progress} persisted={!saveFailed} onStart={startNew} onResume={() => setView('session')} onSummary={() => setView('summary')} settings={settings} onSettings={setSettings} settingsSaved={settingsSaved} personal={<PersonalWords words={personalWords} error={personalError} onAdd={(entry) => savePersonalWords([...personalWords, entry])} onRemove={(id) => savePersonalWords(personalWords.filter((entry) => entry.id !== id))} />}><EvidenceNote /></HomeScreen></>;
   if (view === 'summary') return <>{notice}<Summary progress={progress} onRestart={() => startNew()} onHome={goHome} /></>;
   const extended = session.mode === 'extended';
   const steps = getSessionSteps(session);
