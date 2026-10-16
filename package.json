@@ -5,10 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "dev:api": "node scripts/dev-api.mjs",
+    "test": "npm run test:core && npm run test:therapy && npm run test:generation",
+    "test:therapy": "node scripts/test-therapy.mjs && node scripts/test-practice-levels.mjs && node scripts/test-personal-words.mjs && node scripts/test-word-review.mjs && node scripts/test-generated-practice.mjs && node scripts/test-practice-history.mjs",
+    "test:core": "node scripts/test-core.mjs",
+    "test:generation": "node scripts/smoke-generation.mjs",
+    "build": "vite build && node scripts/build-sites.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "canvas-confetti": "^1.9.4",
     "lucide-react": "^0.469.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

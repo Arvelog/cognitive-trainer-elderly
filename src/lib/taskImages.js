@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 
 const DB_NAME = 'cognitive-trainer-task-images';
 const STORE_NAME = 'images';
-const IMAGE_CACHE_VERSION = 'gpt-image-2-low-webp-v1';
+const IMAGE_CACHE_VERSION = 'gpt-image-1-mini-low-webp-v2';
 
 const memoryCache = new Map();
 let dbPromise = null;
+const IMAGE_REQUEST_BATCH_SIZE = 2;
 
 const EMOJI_LABELS = {
   '🍎': 'Яблуко',
@@ -186,6 +187,7 @@ export const useTaskImages = (task, values) => {
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     const loadImages = async () => {
       if (visualItems.length === 0) {
@@ -213,34 +215,47 @@ export const useTaskImages = (task, values) => {
       }
 
       try {
-        const response = await fetch('/api/generate-task-images', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            task,
-            items: missing.map((item) => ({
-              id: item.cacheKey,
-              label: item.label,
-              prompt: item.prompt,
-            })),
-          }),
-        });
+        const batches = [];
+        for (let index = 0; index < missing.length; index += IMAGE_REQUEST_BATCH_SIZE) {
+          batches.push(missing.slice(index, index + IMAGE_REQUEST_BATCH_SIZE));
+        }
 
-        if (!response.ok) throw new Error(`Image endpoint failed: ${response.status}`);
+        for (const batch of batches) {
+          if (cancelled) return;
+          try {
+            const response = await fetch('/api/generate-task-images', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                task,
+                items: batch.map((item) => ({
+                  id: item.cacheKey,
+                  label: item.label,
+                  prompt: item.prompt,
+                })),
+              }),
+              signal: controller.signal,
+            });
 
-        const data = await response.json();
-        const generated = {};
-        await Promise.all((data.images || []).map(async (image) => {
-          if (!image?.ok || !image.url || !image.id) return;
-          generated[image.id] = image.url;
-          await setCachedImage(image.id, image.url);
-        }));
+            if (!response.ok) throw new Error(`Image endpoint failed: ${response.status}`);
+            const data = await response.json();
+            const generated = {};
+            await Promise.all((data.images || []).map(async (image) => {
+              if (!image?.ok || !image.url || !image.id) return;
+              generated[image.id] = image.url;
+              await setCachedImage(image.id, image.url);
+            }));
 
-        if (!cancelled) {
-          setImages((prev) => ({ ...prev, ...generated }));
+            if (!cancelled) {
+              setImages((prev) => ({ ...prev, ...generated }));
+            }
+          } catch (error) {
+            if (controller.signal.aborted) throw error;
+            console.warn('Task image batch unavailable:', error);
+          }
         }
       } catch (error) {
-        console.warn('Task image generation unavailable:', error);
+        if (!cancelled) console.warn('Task image generation unavailable:', error);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -250,6 +265,7 @@ export const useTaskImages = (task, values) => {
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [task, visualItems]);
 

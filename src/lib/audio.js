@@ -1,3 +1,5 @@
+import confetti from 'canvas-confetti';
+
 const audioCtx = () => {
   if (!window._actx) window._actx = new (window.AudioContext || window.webkitAudioContext)();
   return window._actx;
@@ -33,19 +35,34 @@ export const playWrong = () => {
 };
 
 export const playVictory = () => {
-  [523, 587, 659, 698, 784, 880, 988, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.2), i * 150));
+  const timers = [523, 587, 659, 698, 784, 880, 988, 1047]
+    .map((frequency, index) => setTimeout(() => playTone(frequency, 0.2), index * 150));
+  return () => timers.forEach((timer) => clearTimeout(timer));
 };
 
 export const fireConfetti = () => {
-  if (window.confetti) {
-    window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
-    return;
-  }
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
+  confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
+  return true;
+};
 
-  const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js';
-  s.onload = () => window.confetti && window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
-  document.head.appendChild(s);
+export const speakText = (text, { rate = 0.78, pitch = 1, onEnd, onError } = {}) => {
+  if (!text || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
+
+  window.speechSynthesis.cancel();
+  const utterance = new window.SpeechSynthesisUtterance(String(text));
+  utterance.onend = onEnd;
+  utterance.onerror = (event) => {
+    if (event.error === 'canceled' || event.error === 'interrupted') onEnd?.();
+    else onError?.();
+  };
+  utterance.lang = 'uk-UA';
+  utterance.rate = Math.min(1.2, Math.max(0.5, Number(rate) || 0.78));
+  utterance.pitch = Math.min(1.5, Math.max(0.5, Number(pitch) || 1));
+  const ukrainianVoice = window.speechSynthesis.getVoices().find((voice) => voice.lang?.toLowerCase().startsWith('uk'));
+  if (ukrainianVoice) utterance.voice = ukrainianVoice;
+  window.speechSynthesis.speak(utterance);
+  return true;
 };
 
 export const shuffle = (a) => {

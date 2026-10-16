@@ -1,237 +1,118 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Brain, Star, RefreshCw, Loader2, Heart, Sparkles, Volume2 } from 'lucide-react';
-import { Card, BigBtn } from './components/common';
-import { generateAllTasks } from './lib/generate';
-import { playVictory, fireConfetti, pick } from './lib/audio';
-import { TOTAL_TASKS, SLIDES, VERB_DATA } from './data/taskData';
-import { Task1, Task2, Task3, Task4, Task5, Task6, Task7, Task8, Task9, Task10, Task11 } from './components/tasks';
+import { useEffect, useReducer, useState } from 'react';
+import { ArrowLeft, ArrowRight, BookOpen, Check, Home, Pause, RotateCcw } from 'lucide-react';
+import { FindWordTask, ListenTask, PairTask, PhraseTask, SceneTask, StrongWordsTask } from './components/therapyTasks';
+import { BLOCK_ICONS, Brand, HomeScreen } from './components/HomeScreen';
+import { PracticeTask } from './components/practiceTasks';
+import { PracticeSummary } from './components/PracticeSummary';
+import { PersonalWords } from './components/PersonalWords';
+import { PracticeDiary } from './components/PracticeDiary';
+import { HISTORY_KEY, loadHistory, recordSession } from './lib/practiceHistory';
+import { LEGACY_SETTINGS_KEY, loadPracticeSettings, normalizePracticeSettings, SETTINGS_KEY } from './data/practiceLevels';
+import { loadPersonalWords, normalizePersonalWords, PERSONAL_WORDS_KEY } from './data/personalWords';
+import { createTherapySession } from './data/therapySession';
+import { dueWords, loadReview, REVIEW_KEY, updateReview } from './lib/wordReview';
+import { createPracticeSession, getSessionBlocks, getSessionSteps, getStepCount, PRACTICE_BLOCKS } from './data/practiceSession';
+import { newProgress, restoreProgress, speechTotals, STORAGE_KEY, therapyReducer } from './lib/therapyProgress';
 
+const loadSavedSession = () => {
+  try { return restoreProgress(window.localStorage.getItem(STORAGE_KEY)) || newProgress(); }
+  catch { return newProgress(); }
+};
+function ProgressRail({ session, currentStep, completed }) {
+  const extended = session.mode === 'extended';
+  const groups = getSessionBlocks(session);
+  return <ol className="progress-rail" aria-label={extended ? 'Блоки заняття' : 'Кроки заняття'}>{groups.map((block, i) => {
+    const indices = extended ? session.tasks.flatMap((task, j) => task.block === block.id ? [j] : []) : [i];
+    const current = indices.includes(currentStep);
+    const done = indices.every((j) => completed[j]);
+    return <li key={block.id || block.short} data-state={current ? 'current' : done ? 'done' : 'upcoming'} aria-current={current ? 'step' : undefined} aria-label={`${block.short}${done ? ', виконано' : ''}`}><span className="progress-rail__beat">{done ? <Check aria-hidden="true" /> : i + 1}</span><span>{block.short}</span></li>;
+  })}</ol>;
+}
+function EvidenceNote() {
+  return <details className="evidence-note"><summary><BookOpen aria-hidden="true" />Для близьких: як побудовані вправи</summary>
+    <p>Головна мета — розуміння, добір слів, читання, письмо й повсякденне спілкування. Складність і потрібні саме вам вправи варто узгодити з логопедом. Домашня практика доповнює роботу з ним.</p>
+    <p>Завдання на ознаки предметів спираються на принцип семантичних підказок. Письмо пропонує спробу, списування та відтворення з пам’яті. Це спрощені домашні вправи, а не повні клінічні протоколи.</p>
+    <p>Логіка й рахунок — додаткова практика побутових навичок. Немає підстав обіцяти, що самі приклади чи головоломки відновлюють мовлення. 15–20 хвилин — орієнтир для цього набору, а не лікувальна доза. Можна завершити раніше.</p>
+    <p>Залишайте час на власну відповідь. Приймайте слова, письмо й жести. Якщо виникає втома або роздратування — зробіть перерву. Записи «сама / з допомогою» — спостереження близької людини, а не оцінка прогресу реабілітації.</p>
+    <ul><li><a href="https://www.strokeguideline.org/chapter/communication-and-language/" target="_blank" rel="noreferrer">Настанова з реабілітації після інсульту, 2023</a></li><li><a href="https://www.asha.org/Practice-Portal/Clinical-Topics/Aphasia/" target="_blank" rel="noreferrer">ASHA: підходи до роботи з афазією</a></li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3929384/" target="_blank" rel="noreferrer">Дослідження письма: Copy and Recall Treatment</a></li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6700375/" target="_blank" rel="noreferrer">Big CACTUS: можливості й межі комп’ютерної практики</a></li></ul>
+  </details>;
+}
+function Summary({ progress, onHome, onRestart }) {
+  const { session, completed, details } = progress;
+  const extended = session.mode === 'extended';
+  const speech = speechTotals(details[5]);
+  return <main className="summary-screen" tabIndex={-1}><Brand compact /><section className="summary-panel"><div className="summary-symbol"><Check aria-hidden="true" /></div><p className="task-eyebrow">Заняття завершено</p><h1>Сьогодні ви були поруч.</h1><p className="summary-lead">Виконано {completed.filter(Boolean).length} із {completed.length} завдань. Важлива спокійна практика, а не оцінка.</p>
+    {extended ? <div className="block-summary">{getSessionBlocks(session).map((block) => {
+      const indices = session.tasks.flatMap((task, i) => task.block === block.id ? [i] : []);
+      const Icon = BLOCK_ICONS[block.id];
+      return <div key={block.id}><Icon aria-hidden="true" /><strong>{block.short}</strong><span>{indices.filter((i) => completed[i]).length} з {indices.length}</span></div>;
+    })}</div> : (speech.independent + speech.together > 0) && <div className="summary-stats"><div><strong>{speech.independent}</strong><span>сказала сама</span></div><div><strong>{speech.together}</strong><span>сказали разом</span></div></div>}
+    {extended && <p className="summary-note">Збережіть записи в зошиті: вони допоможуть обговорити з логопедом, що було посильно й де знадобилася допомога.</p>}
+    {extended && <PracticeSummary session={session} completed={completed} details={details} />}
+    {!extended && details[5]?.wordResults?.length > 0 && <details className="practice-summary"><summary>Для близьких: підтримка під час слів</summary><p>Слова залишалися видимими на екрані.</p><ul>{details[5].wordResults.map((result, i) => <li key={i}>{result.word}: {result.mode === 'independent' ? 'сказала сама' : 'сказали разом'}{result.usedAudio ? ' · слухали слово' : ''}{result.usedHint ? ' · відкривали підказку' : ''}.</li>)}</ul></details>}
+    <div className="summary-actions"><button className="start-button" type="button" onClick={onHome}><Home aria-hidden="true" />На головну</button><button className="secondary-button" type="button" onClick={onRestart}>Нове заняття</button></div>
+  </section></main>;
+}
+function BreakScreen({ nextBlock, saveFailed, onContinue, onHome, onFinish }) {
+  return <main className="summary-screen break-screen" tabIndex={-1}><Brand compact /><section className="summary-panel"><div className="summary-symbol"><Pause aria-hidden="true" /></div><p className="task-eyebrow">Можна перепочити</p><h1>У вашому темпі.</h1><p className="summary-lead">Відкладіть екран і відпочиньте стільки, скільки потрібно.</p>{nextBlock && <p className="next-block">Після перерви: <strong>{nextBlock.title}</strong> · <span className="time-label">{nextBlock.minutes}</span></p>}<div className="summary-actions"><button className="start-button" type="button" onClick={onContinue}>Продовжити<ArrowRight aria-hidden="true" /></button><button className="secondary-button" type="button" onClick={onHome}>Повернутися пізніше</button><button className="text-action" type="button" onClick={onFinish}>На сьогодні досить</button></div><p className="clinical-note">{saveFailed ? 'Не закривайте сторінку: збереження на пристрої недоступне.' : 'Місце й відповіді збережено на цьому пристрої.'}</p></section></main>;
+}
 export default function App() {
-    const [slide, setSlide] = useState(0);
-    const [score, setScore] = useState(0);
-    const [taskKeys, setTaskKeys] = useState(() => Array.from({ length: TOTAL_TASKS }, () => Math.random()));
-    const [aiData, setAiData] = useState(null);
-    const [generating, setGenerating] = useState(false);
-    const [genError, setGenError] = useState(false);
-    const [rateLimitError, setRateLimitError] = useState(false);
-    const [started, setStarted] = useState(false);
-    const [verbImage, setVerbImage] = useState(null);
-    const [verbQuestions, setVerbQuestions] = useState(null);
-    const [verbScene, setVerbScene] = useState(null);
-    const [verbLoading, setVerbLoading] = useState(false);
-    const addScore = useCallback(() => setScore((s) => s + 1), []);
-    const next = () => setSlide((s) => Math.min(s + 1, SLIDES - 1));
-    const prev = () => setSlide((s) => Math.max(s - 1, 0));
-    const restart = () => {
-        setSlide(0);
-        setScore(0);
-        setAiData(null);
-        setGenError(false);
-        setRateLimitError(false);
-        setStarted(false);
-        setVerbImage(null);
-        setVerbQuestions(null);
-        setVerbScene(null);
-        setTaskKeys(Array.from({ length: TOTAL_TASKS }, () => Math.random()));
-    };
-
-    const generateImage = async (scene) => {
-        try {
-            const res = await fetch('/api/generate-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: scene }),
-            });
-            if (!res.ok) return false;
-            const { url, questions } = await res.json();
-            if (url) setVerbImage(url);
-            if (questions) setVerbQuestions(questions);
-            return Boolean(url);
-        } catch {
-            // Silently fail; Task10 falls back to the emoji version.
-            return false;
-        }
-    };
-
-    const startSession = async () => {
-        setGenerating(true);
-        setGenError(false);
-        setRateLimitError(false);
-        setVerbImage(null);
-        setVerbQuestions(null);
-        setVerbScene(null);
-        setVerbLoading(false);
-        const data = await generateAllTasks();
-        setGenerating(false);
-        if (data && data._rateLimited) {
-            setRateLimitError(true);
-            setAiData(null);
-        } else if (data) {
-            setAiData(data);
-            const scene = typeof data.verbs?.scene === 'string' && data.verbs.scene.trim().length >= 24
-                ? data.verbs.scene
-                : pick(VERB_DATA).scene;
-            setVerbLoading(true);
-            setVerbScene(scene);
-            (async () => {
-                try {
-                    const ok = await generateImage(scene);
-                    if (!ok) {
-                        const fallback = pick(VERB_DATA).scene;
-                        setVerbScene(fallback);
-                        await generateImage(fallback);
-                    }
-                } finally {
-                    setVerbLoading(false);
-                }
-            })();
-        } else {
-            setGenError(true);
-            const fallback = pick(VERB_DATA).scene;
-            setVerbLoading(true);
-            setVerbScene(fallback);
-            (async () => {
-                try {
-                    await generateImage(fallback);
-                } finally {
-                    setVerbLoading(false);
-                }
-            })();
-        }
-        setStarted(true);
-        next();
-    };
-
-    useEffect(() => {
-        if (slide === SLIDES - 1) {
-            playVictory();
-            fireConfetti();
-            setTimeout(fireConfetti, 800);
-        }
-    }, [slide]);
-
-    const tasks = [
-        <Task1 key={taskKeys[0]} onScore={addScore} initialData={aiData?.matchWord} />,
-        <Task2 key={taskKeys[1]} onScore={addScore} initialData={aiData?.sequence} />,
-        <Task8 key={taskKeys[7]} onScore={addScore} initialData={aiData?.antonyms} />,
-        <Task3 key={taskKeys[2]} onScore={addScore} initialData={aiData?.budget} />,
-        <Task4 key={taskKeys[3]} onScore={addScore} initialData={aiData?.sentence} />,
-        <Task5 key={taskKeys[4]} onScore={addScore} initialData={aiData?.associations} />,
-        <Task6 key={taskKeys[5]} onScore={addScore} initialData={aiData?.categories} />,
-        <Task9 key={taskKeys[8]} onScore={addScore} initialData={aiData?.vowels} />,
-        <Task7 key={taskKeys[6]} onScore={addScore} initialData={aiData?.trueFalse} />,
-        <Task10 key={taskKeys[9]} onScore={addScore} initialData={verbQuestions?.correct ? verbQuestions : null} imageUrl={verbImage} scenePrompt={verbScene} loading={verbLoading} />,
-        <Task11 key={taskKeys[10]} onScore={addScore} initialData={aiData?.whatChanged} />,
-    ];
-
-    return (
-        <div className="min-h-screen bg-pastel-beige flex flex-col relative">
-            {rateLimitError && (
-                <div className="absolute top-0 left-0 right-0 bg-yellow-400 text-yellow-900 px-4 py-3 text-center text-sm md:text-base font-bold shadow-md z-50">
-                    ⚠️ Штучний інтелект перевантажено (забагато запитів). Увімкнено базові завдання. Спробуйте пізніше для нових завдань.
-                </div>
-            )}
-
-            <header className="bg-white/70 backdrop-blur-md shadow-sm py-4 px-6 flex items-center justify-between sticky top-0 z-10">
-                <div className="flex items-center gap-3">
-                    <Brain className="w-8 h-8 text-pastel-green" />
-                    <h1 className="text-xl md:text-2xl font-extrabold text-warm-gray">Тренажер Пам'яті</h1>
-                </div>
-                {slide > 0 && slide < SLIDES - 1 && (
-                    <div className="flex items-center gap-2">
-                        <Star className="w-6 h-6 text-yellow-500" />
-                        <span className="text-lg font-bold text-warm-gray">{score}/{TOTAL_TASKS}</span>
-                    </div>
-                )}
-                {slide > 0 && slide < SLIDES - 1 && (
-                    <div className="flex items-center gap-1 text-sm font-semibold text-warm-gray-light">
-                        {aiData && <Sparkles className="w-4 h-4 text-pastel-green" />}
-                        {slide} / {TOTAL_TASKS}
-                    </div>
-                )}
-            </header>
-
-            <main className="flex-1 flex items-start justify-center p-4 md:p-8 overflow-y-auto mt-2">
-                <div className="w-full max-w-2xl">
-                    {slide === 0 && (
-                        <Card className="text-center py-12">
-                            <div className="text-7xl mb-6">🧠</div>
-                            <h1 className="text-3xl md:text-4xl font-extrabold text-warm-gray mb-4">Вітаємо!</h1>
-                            <p className="text-xl text-warm-gray-light mb-2">Цей тренажер допоможе вам тренувати пам'ять та увагу.</p>
-                            <p className="text-lg text-warm-gray-light mb-8">11 цікавих завдань чекають на вас. Не поспішайте і отримуйте задоволення!</p>
-                            {generating ? (
-                                <div className="flex flex-col items-center gap-4">
-                                    <Loader2 className="w-14 h-14 text-pastel-green animate-spin" />
-                                    <p className="text-xl font-bold text-warm-gray animate-pulse">✨ Створюємо нові завдання...</p>
-                                    <p className="text-sm text-warm-gray-light">Зазвичай це займає 5-10 секунд</p>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center gap-4">
-                                    <BigBtn onClick={startSession} className="bg-pastel-green text-warm-gray text-2xl">
-                                        <Sparkles className="w-6 h-6" />
-                                        Розпочати
-                                    </BigBtn>
-                                    <p className="text-sm text-warm-gray-light flex items-center gap-1">
-                                        <Sparkles className="w-4 h-4 text-pastel-green" />
-                                        AI генерує унікальні завдання щоразу
-                                    </p>
-                                    <div className="flex items-center gap-2 text-warm-gray-light">
-                                        <Volume2 className="w-5 h-5" />
-                                        <span className="text-sm">Увімкніть звук для кращого досвіду</span>
-                                    </div>
-                                </div>
-                            )}
-                        </Card>
-                    )}
-
-                    {slide > 0 && slide < SLIDES - 1 && tasks[slide - 1]}
-
-                    {slide === SLIDES - 1 && (
-                        <Card className="text-center py-12">
-                            <div className="text-7xl mb-4">🏆</div>
-                            <h1 className="text-3xl md:text-4xl font-extrabold text-warm-gray mb-4">Вітаємо з завершенням!</h1>
-                            <div className="text-6xl font-extrabold text-pastel-green mb-2">{score} / {TOTAL_TASKS}</div>
-                            <p className="text-xl text-warm-gray-light mb-2">
-                                {score >= 8
-                                    ? 'Чудовий результат! Ваша пам\'ять у відмінній формі! 🌟'
-                                    : score >= 5
-                                        ? 'Гарний результат! Продовжуйте тренуватися! 💪'
-                                        : 'Не засмучуйтесь! Кожне тренування робить вашу пам\'ять кращою! ❤️'}
-                            </p>
-                            <div className="flex items-center justify-center gap-1 my-4">
-                                {Array.from({ length: TOTAL_TASKS }).map((_, i) => (
-                                    <Heart key={i} className={`w-7 h-7 ${i < score ? 'text-red-400 fill-red-400' : 'text-gray-300'}`} />
-                                ))}
-                            </div>
-                            <BigBtn onClick={restart} className="bg-pastel-green text-warm-gray text-xl mt-4">
-                                <RefreshCw className="w-5 h-5" />
-                                Пройти ще раз
-                            </BigBtn>
-                        </Card>
-                    )}
-                </div>
-            </main>
-
-            {(slide > 0 || started) && (
-                <nav className="bg-white/80 backdrop-blur-md shadow-[0_-2px_10px_rgba(0,0,0,0.05)] py-4 px-6 flex justify-between items-center sticky bottom-0 z-10">
-                    <BigBtn onClick={prev} className="bg-pastel-beige-dark text-warm-gray" disabled={slide === 0}>
-                        <ChevronLeft className="w-5 h-5" />
-                        Назад
-                    </BigBtn>
-                    <div className="flex gap-1">
-                        {Array.from({ length: SLIDES }).map((_, i) => (
-                            <div
-                                key={i}
-                                className={`w-2.5 h-2.5 rounded-full transition-all ${i === slide ? 'bg-pastel-green scale-125' : i < slide ? 'bg-pastel-green/50' : 'bg-gray-300'}`}
-                            />
-                        ))}
-                    </div>
-                    <BigBtn onClick={next} className="bg-pastel-green text-warm-gray" disabled={slide === SLIDES - 1}>
-                        Вперед
-                        <ChevronRight className="w-5 h-5" />
-                    </BigBtn>
-                </nav>
-            )}
-        </div>
-    );
+  const [progress, dispatch] = useReducer(therapyReducer, undefined, loadSavedSession);
+  const { session, currentStep, completed, details } = progress;
+  const [view, setView] = useState('home');
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [settings, setSettings] = useState(() => { try { return loadPracticeSettings(window.localStorage.getItem(SETTINGS_KEY), window.localStorage.getItem(LEGACY_SETTINGS_KEY)); } catch { return normalizePracticeSettings(); } });
+  const [settingsSaved, setSettingsSaved] = useState(true);
+  const [personalWords, setPersonalWords] = useState(() => { try { return loadPersonalWords(window.localStorage.getItem(PERSONAL_WORDS_KEY)); } catch { return []; } });
+  const [personalError, setPersonalError] = useState('');
+  const [history, setHistory] = useState(() => { try { return loadHistory(window.localStorage.getItem(HISTORY_KEY)); } catch { return []; } });
+  useEffect(() => { if (session) setHistory((items) => recordSession(items, progress)); }, [progress, session]);
+  useEffect(() => { try { window.localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch { /* The diary is optional; practice works without it. */ } }, [history]);
+  const [review, setReview] = useState(() => { try { return loadReview(window.localStorage.getItem(REVIEW_KEY)); } catch { return {}; } });
+  useEffect(() => { try { window.localStorage.setItem(REVIEW_KEY, JSON.stringify(review)); } catch { /* Review dates are optional; practice works without them. */ } }, [review]);
+  // Photos can fill browser storage, so a change is kept only after it is saved.
+  const savePersonalWords = (next) => {
+    const words = normalizePersonalWords(next);
+    try { window.localStorage.setItem(PERSONAL_WORDS_KEY, JSON.stringify(words)); }
+    catch { setPersonalError('Не вдалося зберегти фото: на пристрої закінчилося місце для застосунку. Видаліть одне з фото й спробуйте ще раз.'); return false; }
+    setPersonalWords(words); setPersonalError(''); return true;
+  };
+  useEffect(() => { try { window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); setSettingsSaved(true); } catch { setSettingsSaved(false); } }, [settings]);
+  useEffect(() => {
+    try { if (session) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); setSaveFailed(false); }
+    catch { setSaveFailed(true); }
+  }, [progress, session]);
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); window.speechSynthesis?.cancel(); document.querySelector('main')?.focus({ preventScroll: true });
+  }, [currentStep, view]);
+  const startNew = (mode = 'extended', block = null) => { dispatch({ type: 'start', session: mode === 'short' ? createTherapySession(settings.shortWords) : createPracticeSession(block, session, settings, personalWords, dueWords(review)) }); setView('session'); };
+  const goHome = () => setView('home');
+  const finish = () => { dispatch({ type: 'finish' }); setView('summary'); };
+  const notice = <SaveNotice failed={saveFailed} />;
+  if (view === 'home') return <>{notice}<HomeScreen progress={progress} persisted={!saveFailed} onStart={startNew} onResume={() => setView('session')} onSummary={() => setView('summary')} settings={settings} onSettings={setSettings} settingsSaved={settingsSaved} personal={<><PersonalWords words={personalWords} error={personalError} onAdd={(entry) => savePersonalWords([...personalWords, entry])} onRemove={(id) => savePersonalWords(personalWords.filter((entry) => entry.id !== id))} /><PracticeDiary history={history} review={review} levels={settings.blocks} /></>}><EvidenceNote /></HomeScreen></>;
+  if (view === 'summary') return <>{notice}<Summary progress={progress} onRestart={() => startNew()} onHome={goHome} /></>;
+  const extended = session.mode === 'extended';
+  const steps = getSessionSteps(session);
+  const block = extended ? PRACTICE_BLOCKS.find((item) => item.id === steps[currentStep].block) : null;
+  if (view === 'break') return <>{notice}<BreakScreen nextBlock={block} saveFailed={saveFailed} onContinue={() => setView('session')} onHome={goHome} onFinish={finish} /></>;
+  const goNext = () => {
+    dispatch({ type: 'next' });
+    if (currentStep === steps.length - 1) setView('summary');
+  };
+  const Task = extended ? PracticeTask : [ListenTask, FindWordTask, PairTask, PhraseTask, SceneTask, StrongWordsTask][currentStep];
+  const data = extended ? steps[currentStep] : session[['listen', 'find', 'pair', 'phrase', 'scene'][currentStep]];
+  const done = completed[currentStep];
+  return <div className="session-screen">{notice}<header className="session-header"><button className="home-link" type="button" onClick={goHome} aria-label="Повернутися на головну"><Home aria-hidden="true" /></button><Brand compact /><div className="session-tools"><button className="pause-button" type="button" onClick={() => setView('break')}><Pause aria-hidden="true" />Перерва</button></div></header><ProgressRail session={session} currentStep={currentStep} completed={completed} />
+    <main className="session-main" tabIndex={-1} aria-label={`Завдання ${currentStep + 1} з ${steps.length}: ${steps[currentStep].title}`}>
+      <Task key={`${session.id}-${currentStep}`} data={data} words={session.strongWords} progress={details[currentStep] || {}} onProgress={(value) => {
+        if (extended && value.done && !details[currentStep]?.done) setReview((state) => updateReview(state, data, value));
+        dispatch({ type: 'progress', index: currentStep, progress: value });
+      }} />
+      {done && <button className="text-action repeat-button" type="button" onClick={() => dispatch({ type: 'repeat', index: currentStep })}><RotateCcw aria-hidden="true" />Повторити завдання</button>}
+    </main>
+    <nav className="session-nav" aria-label="Навігація заняттям"><button className="nav-button nav-button--back" type="button" onClick={() => dispatch({ type: 'back' })} disabled={currentStep === 0}><ArrowLeft aria-hidden="true" />Назад</button><div className="session-nav__status">{done && <><Check aria-hidden="true" />Завдання готове</>}</div><button className={`nav-button ${done ? 'nav-button--next' : 'nav-button--skip'}`} type="button" onClick={goNext}>{currentStep === steps.length - 1 ? (done ? 'Завершити' : 'Завершити зараз') : (done ? 'Далі' : 'Пропустити')}<ArrowRight aria-hidden="true" /></button></nav>
+  </div>;
+}
+function SaveNotice({ failed }) {
+  return failed ? <p className="save-notice" role="alert">Не вдалося зберегти заняття на цьому пристрої. Не закривайте сторінку, щоб продовжити.</p> : null;
 }
