@@ -3,6 +3,7 @@ import { Printer } from 'lucide-react';
 import { PRACTICE_BLOCKS } from '../data/practiceSession';
 import { LEVEL_OPTIONS } from '../data/practiceLevels';
 import { levelSuggestions, weeklyDiary } from '../lib/practiceHistory';
+import { VoiceClips } from './VoiceClips';
 
 const dateLabel = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', timeZone: 'UTC' });
 const weekLabel = (start, index) => index === 0 ? 'Цей тиждень' : index === 1 ? 'Минулий тиждень' : `Тиждень з ${dateLabel(start)}`;
@@ -52,6 +53,7 @@ export function PracticeDiary({ history, review, levels }) {
         })}</ul></>}
         {reviewWords.length > 0 && <><h3 className="diary-heading">Слова на повторенні</h3><p className="form-note">Ці слова минулого разу вийшли з допомогою. Вони повертаються в заняття через 1, 3 і 7 днів.</p>
           <ul className="diary-notes">{reviewWords.map((entry) => <li key={entry.word}>{entry.word} · наступне повторення {dateLabel(entry.due)}</li>)}</ul></>}
+        <VoiceClips />
         <button className="secondary-button diary-print" type="button" onClick={print}><Printer aria-hidden="true" />Роздрукувати або зберегти PDF</button>
       </>}
     </div>
