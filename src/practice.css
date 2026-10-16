@@ -73,3 +73,31 @@
   .personal-words__fields .start-button { align-self: stretch; }
   .personal-photo { height: 200px; }
 }
+
+.diary-legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 16px 0; font-size: 16px; color: var(--ink-soft); }
+.diary-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.diary-legend i { width: 16px; height: 16px; border-radius: 4px; display: inline-block; }
+.diary-legend i[data-mode="independent"], .diary-bar [data-mode="independent"] { background: var(--success); color: #fff; }
+.diary-legend i[data-mode="supported"], .diary-bar [data-mode="supported"] { background: #f1dfb4; color: var(--ink); }
+.diary-legend i[data-mode="attempted"], .diary-bar [data-mode="attempted"] { background: #dfe6e2; color: var(--ink); }
+.diary-weeks { width: 100%; border-collapse: collapse; font-size: 16px; margin: 8px 0 24px; }
+.diary-weeks th, .diary-weeks td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+.diary-weeks thead th { color: var(--ink-soft); font-weight: 500; }
+.diary-weeks td { font-variant-numeric: tabular-nums; }
+.diary-heading { font-size: 18px; font-weight: 600; margin: 24px 0 8px; }
+.diary-blocks { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }
+.diary-blocks li { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.diary-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; gap: 8px; font-size: 16px; color: var(--ink-soft); }
+.diary-bar { display: flex; height: 28px; border-radius: 8px; overflow: hidden; min-width: 0; }
+.diary-bar > span { min-width: 28px; display: grid; place-items: center; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.diary-bar--empty { display: flex; align-items: center; height: 28px; font-size: 16px; }
+.diary-notes { padding-left: 20px; margin: 0; font-size: 16px; line-height: 1.6; }
+.diary-print { margin-top: 24px; display: inline-flex; align-items: center; gap: 8px; }
+@media (max-width: 640px) { .diary-blocks { grid-template-columns: 1fr; } }
+@media print {
+  body.print-diary * { visibility: hidden; }
+  body.print-diary .practice-diary, body.print-diary .practice-diary * { visibility: visible; }
+  body.print-diary .practice-diary { position: absolute; inset: 0 auto auto 0; width: 100%; border: 0; margin: 0; }
+  body.print-diary .diary-print, body.print-diary .practice-diary summary { display: none; }
+  body.print-diary .diary-bar > span { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
