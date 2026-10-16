@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { ArrowRight, BookOpen, Calculator, Check, Lightbulb, Link2, ListOrdered, MessageCircle, PencilLine, RotateCcw } from 'lucide-react';
 import { ChoiceButtons, ListenButton, TaskFrame } from './therapyTasks';
+import { VoiceRecorder } from './VoiceRecorder';
 import { PRACTICE_BLOCKS } from '../data/practiceSession';
 import { levelLabel } from '../data/practiceLevels';
 import { nextSequenceSteps, recordOwnResponse, recordReasoningAnswer, recordSemanticName, recordWritingStage, usedSupport } from '../lib/practiceResults';
@@ -83,6 +84,7 @@ function SemanticTask({ data, progress, onProgress }) {
       <h2 className="subtask-title" tabIndex={-1} ref={questionHeading}>Як називається предмет?</h2>
       {!showWord && !progress.nameShown && <button className="hint-button" type="button" onClick={() => onProgress({ ...progress, nameShown: true, usedModel: true })}>Показати назву</button>}
       {(showWord || progress.nameShown) && <ListenButton text={data.word} label="Почути назву" onListen={() => onProgress({ ...progress, usedAnswerAudio: true })} />}
+      <VoiceRecorder title={`Назва предмета: ${data.word}`} />
       <Outcomes mode={naming.mode} onMark={markName} label="Для людини поруч: як назвали предмет?" />
     </> : <>
       <p className="round-label">Ознака {index + 1} з {data.questions.length}</p><h2 className="subtask-title" tabIndex={-1} ref={questionHeading}>{question.prompt}</h2>
@@ -156,6 +158,7 @@ function ConversationTask({ data, progress, onProgress }) {
     {progress.model && <div className="hint-content"><p>{data.model}</p><ListenButton text={data.model} label="Почути приклад" /><p>Власна відповідь теж підходить.</p></div>}
     {story && index < data.directions.length - 1 && !progress.done ? <button className="confirm-button" type="button" onClick={() => onProgress({ ...progress, directionIndex: index + 1 })}>Наступне запитання</button> : <>
       {data.partnerResponse && <p className="conversation-response"><strong>Після спроби · для людини поруч</strong>{data.partnerResponse}</p>}
+      {!progress.done && <VoiceRecorder title={data.title} />}
       <fieldset className="response-forms" disabled={progress.done}><legend>Для людини поруч: як відповіли?</legend><div>{Object.entries(RESPONSE_FORMS).map(([key, text]) => <label key={key} data-selected={progress.responseForm === key}><input type="radio" name="response-form" value={key} checked={progress.responseForm === key} onChange={() => onProgress({ ...progress, responseForm: key })} />{text}</label>)}</div></fieldset>
       {!progress.done && !progress.responseForm && <p className="form-note">Спочатку оберіть спосіб відповіді, потім — чи потрібна була допомога.</p>}
       <Outcomes done={progress.done} mode={progress.mode} disabled={!progress.responseForm} onMark={(mode) => onProgress(recordOwnResponse(progress, mode))} />
