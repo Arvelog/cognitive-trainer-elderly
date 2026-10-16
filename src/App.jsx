@@ -8,6 +8,7 @@ import { PersonalWords } from './components/PersonalWords';
 import { LEGACY_SETTINGS_KEY, loadPracticeSettings, normalizePracticeSettings, SETTINGS_KEY } from './data/practiceLevels';
 import { loadPersonalWords, normalizePersonalWords, PERSONAL_WORDS_KEY } from './data/personalWords';
 import { createTherapySession } from './data/therapySession';
+import { dueWords, loadReview, REVIEW_KEY, updateReview } from './lib/wordReview';
 import { createPracticeSession, getSessionBlocks, getSessionSteps, getStepCount, PRACTICE_BLOCKS } from './data/practiceSession';
 import { newProgress, restoreProgress, speechTotals, STORAGE_KEY, therapyReducer } from './lib/therapyProgress';
 
@@ -62,6 +63,8 @@ export default function App() {
   const [settingsSaved, setSettingsSaved] = useState(true);
   const [personalWords, setPersonalWords] = useState(() => { try { return loadPersonalWords(window.localStorage.getItem(PERSONAL_WORDS_KEY)); } catch { return []; } });
   const [personalError, setPersonalError] = useState('');
+  const [review, setReview] = useState(() => { try { return loadReview(window.localStorage.getItem(REVIEW_KEY)); } catch { return {}; } });
+  useEffect(() => { try { window.localStorage.setItem(REVIEW_KEY, JSON.stringify(review)); } catch { /* Review dates are optional; practice works without them. */ } }, [review]);
   // Photos can fill browser storage, so a change is kept only after it is saved.
   const savePersonalWords = (next) => {
     const words = normalizePersonalWords(next);
@@ -77,7 +80,7 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); window.speechSynthesis?.cancel(); document.querySelector('main')?.focus({ preventScroll: true });
   }, [currentStep, view]);
-  const startNew = (mode = 'extended', block = null) => { dispatch({ type: 'start', session: mode === 'short' ? createTherapySession(settings.shortWords) : createPracticeSession(block, session, settings, personalWords) }); setView('session'); };
+  const startNew = (mode = 'extended', block = null) => { dispatch({ type: 'start', session: mode === 'short' ? createTherapySession(settings.shortWords) : createPracticeSession(block, session, settings, personalWords, dueWords(review)) }); setView('session'); };
   const goHome = () => setView('home');
   const finish = () => { dispatch({ type: 'finish' }); setView('summary'); };
   const notice = <SaveNotice failed={saveFailed} />;
@@ -96,7 +99,10 @@ export default function App() {
   const done = completed[currentStep];
   return <div className="session-screen">{notice}<header className="session-header"><button className="home-link" type="button" onClick={goHome} aria-label="Повернутися на головну"><Home aria-hidden="true" /></button><Brand compact /><div className="session-tools"><button className="pause-button" type="button" onClick={() => setView('break')}><Pause aria-hidden="true" />Перерва</button></div></header><ProgressRail session={session} currentStep={currentStep} completed={completed} />
     <main className="session-main" tabIndex={-1} aria-label={`Завдання ${currentStep + 1} з ${steps.length}: ${steps[currentStep].title}`}>
-      <Task key={`${session.id}-${currentStep}`} data={data} words={session.strongWords} progress={details[currentStep] || {}} onProgress={(value) => dispatch({ type: 'progress', index: currentStep, progress: value })} />
+      <Task key={`${session.id}-${currentStep}`} data={data} words={session.strongWords} progress={details[currentStep] || {}} onProgress={(value) => {
+        if (extended && value.done && !details[currentStep]?.done) setReview((state) => updateReview(state, data, value));
+        dispatch({ type: 'progress', index: currentStep, progress: value });
+      }} />
       {done && <button className="text-action repeat-button" type="button" onClick={() => dispatch({ type: 'repeat', index: currentStep })}><RotateCcw aria-hidden="true" />Повторити завдання</button>}
     </main>
     <nav className="session-nav" aria-label="Навігація заняттям"><button className="nav-button nav-button--back" type="button" onClick={() => dispatch({ type: 'back' })} disabled={currentStep === 0}><ArrowLeft aria-hidden="true" />Назад</button><div className="session-nav__status">{done && <><Check aria-hidden="true" />Завдання готове</>}</div><button className={`nav-button ${done ? 'nav-button--next' : 'nav-button--skip'}`} type="button" onClick={goNext}>{currentStep === steps.length - 1 ? (done ? 'Завершити' : 'Завершити зараз') : (done ? 'Далі' : 'Пропустити')}<ArrowRight aria-hidden="true" /></button></nav>

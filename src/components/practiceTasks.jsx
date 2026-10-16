@@ -9,7 +9,8 @@ const ICONS = { understanding: BookOpen, meaning: Link2, logic: ListOrdered, num
 function Frame({ data, instruction, coach, source, children }) {
   const block = PRACTICE_BLOCKS.find((item) => item.id === data.block);
   const level = data.level ? data.levelLabel || levelLabel(data.block, data.level, data.curriculumVersion) : null;
-  return <TaskFrame icon={ICONS[data.block]} eyebrow={block.short} title={data.title} instruction={instruction || data.instruction} coach={coach} level={level} source={source}>{children}</TaskFrame>;
+  const review = data.review && 'Повторюємо слово, з яким минулого разу знадобилася допомога. Якщо зараз вийде самостійно, воно повернеться пізніше.';
+  return <TaskFrame icon={ICONS[data.block]} eyebrow={block.short} title={data.title} instruction={instruction || data.instruction} coach={review ? `${review} ${coach || ''}`.trim() : coach} level={level} source={source}>{children}</TaskFrame>;
 }
 function ReasoningTask({ data, progress, onProgress }) {
   const index = Math.min(progress.question || 0, data.questions.length - 1);
