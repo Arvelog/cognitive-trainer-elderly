@@ -1,6 +1,7 @@
 import { SESSION_STEPS } from './therapySession.js';
 import { levelLabel, normalizePracticeSettings } from './practiceLevels.js';
 import { CATEGORY_CONTEXTS, CONTEXTS, DECISIONS, DIALOGUES, ITEM_FEATURES, NUMBER_CONTEXTS, PLANS, READING_CONTEXTS, RELATIONS, WRITTEN_MESSAGES } from './richerPractice.js';
+import { LEXICON_CATEGORY_NAMES, LEXICON_FEATURES, numberProblems } from './generatedPractice.js';
 import { normalizeWord, reviewWord } from '../lib/wordReview.js';
 import { normalizePersonalWords, personalNoteTask, personalRecognitionTask, personalStoryTask, personalWritingTask } from './personalWords.js';
 
@@ -259,7 +260,9 @@ export function createPracticeSession(blockId = null, previousSession = null, se
   const secondMessage = fresh(WRITTEN_MESSAGES, 'writing', 1, firstMessage.contentId);
   const firstDialogue = choose(DIALOGUES, 'communication', 0);
   const secondDialogue = fresh(DIALOGUES, 'communication', 1, firstDialogue.contentId);
-  const categories = levels.meaning === 1 ? CATEGORIES.filter((task) => task.options.length === 2).map((task) => ({ ...task, title: 'Оберіть спільну назву' })) : CATEGORY_CONTEXTS[levels.meaning];
+  const categories = levels.meaning === 1 ? [...CATEGORIES.filter((task) => task.options.length === 2).map((task) => ({ ...task, title: 'Оберіть спільну назву' })), ...LEXICON_CATEGORY_NAMES()] : CATEGORY_CONTEXTS[levels.meaning];
+  // Hand-written items stay; the word list adds many more checked variants of the same task types.
+  const features = levels.meaning === 1 ? [...FEATURES, ...LEXICON_FEATURES(2)] : [...ITEM_FEATURES, ...LEXICON_FEATURES(3)];
   // Own photos replace one task per block; each slot prefers a photo that slot did not show last time.
   const personalPick = (block, slot, build, pool = personal) => pool.length ? build(dueFirst(pool, (entry) => entry.word) || fresh(pool.map((entry) => ({ entry, contentId: build(entry).contentId })), block, slot).entry) : null;
   const recognition = personal.length >= 2 && personalPick('understanding', 0, (entry) => {
@@ -271,9 +274,9 @@ export function createPracticeSession(blockId = null, previousSession = null, se
   const photoStory = personalPick('communication', 1, personalStoryTask);
   const groups = [
     [recognition || choose(levels.understanding === 1 ? UNDERSTANDING : CONTEXTS[levels.understanding], 'understanding', 0), choose(levels.understanding === 1 ? READING : READING_CONTEXTS[levels.understanding], 'understanding', 1)],
-    [dueFirst(levels.meaning === 1 ? FEATURES : ITEM_FEATURES, (item) => item.word) || choose(levels.meaning === 1 ? FEATURES : ITEM_FEATURES, 'meaning', 0), choose(levels.meaning === 1 ? ASSOCIATIONS : RELATIONS[levels.meaning], 'meaning', 1), choose(categories, 'meaning', 2)],
+    [dueFirst(features, (item) => item.word) || choose(features, 'meaning', 0), choose(levels.meaning === 1 ? ASSOCIATIONS : RELATIONS[levels.meaning], 'meaning', 1), choose(categories, 'meaning', 2)],
     [choose(levels.logic === 1 ? SEQUENCES : PLANS, 'logic', 0), choose(levels.logic === 1 ? LOGIC : DECISIONS[levels.logic], 'logic', 1)],
-    [pick([EASY_NUMBERS, MID_NUMBERS, NUMBERS][levels.numbers - 1]), choose([EASY_EVERYDAY, MID_EVERYDAY, NUMBER_CONTEXTS][levels.numbers - 1], 'numbers', 1)],
+    [choose([...[EASY_NUMBERS, MID_NUMBERS, NUMBERS][levels.numbers - 1], ...numberProblems(levels.numbers)], 'numbers', 0), choose([EASY_EVERYDAY, MID_EVERYDAY, NUMBER_CONTEXTS][levels.numbers - 1], 'numbers', 1)],
     levels.writing === 3 ? [firstMessage, note || secondMessage] : [writingPhoto || { kind: 'writing', title: 'Напишіть назву малюнка', ...firstPicture }, { kind: 'writing', title: 'Ще одне слово в зошиті', ...secondPicture }],
     levels.communication === 1 ? [pick(CONVERSATION), photoStory || STORY] : [firstDialogue, photoStory || secondDialogue],
   ];
