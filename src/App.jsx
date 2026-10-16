@@ -5,6 +5,8 @@ import { BLOCK_ICONS, Brand, HomeScreen } from './components/HomeScreen';
 import { PracticeTask } from './components/practiceTasks';
 import { PracticeSummary } from './components/PracticeSummary';
 import { PersonalWords } from './components/PersonalWords';
+import { PracticeDiary } from './components/PracticeDiary';
+import { HISTORY_KEY, loadHistory, recordSession } from './lib/practiceHistory';
 import { LEGACY_SETTINGS_KEY, loadPracticeSettings, normalizePracticeSettings, SETTINGS_KEY } from './data/practiceLevels';
 import { loadPersonalWords, normalizePersonalWords, PERSONAL_WORDS_KEY } from './data/personalWords';
 import { createTherapySession } from './data/therapySession';
@@ -63,6 +65,9 @@ export default function App() {
   const [settingsSaved, setSettingsSaved] = useState(true);
   const [personalWords, setPersonalWords] = useState(() => { try { return loadPersonalWords(window.localStorage.getItem(PERSONAL_WORDS_KEY)); } catch { return []; } });
   const [personalError, setPersonalError] = useState('');
+  const [history, setHistory] = useState(() => { try { return loadHistory(window.localStorage.getItem(HISTORY_KEY)); } catch { return []; } });
+  useEffect(() => { if (session) setHistory((items) => recordSession(items, progress)); }, [progress, session]);
+  useEffect(() => { try { window.localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch { /* The diary is optional; practice works without it. */ } }, [history]);
   const [review, setReview] = useState(() => { try { return loadReview(window.localStorage.getItem(REVIEW_KEY)); } catch { return {}; } });
   useEffect(() => { try { window.localStorage.setItem(REVIEW_KEY, JSON.stringify(review)); } catch { /* Review dates are optional; practice works without them. */ } }, [review]);
   // Photos can fill browser storage, so a change is kept only after it is saved.
@@ -84,7 +89,7 @@ export default function App() {
   const goHome = () => setView('home');
   const finish = () => { dispatch({ type: 'finish' }); setView('summary'); };
   const notice = <SaveNotice failed={saveFailed} />;
-  if (view === 'home') return <>{notice}<HomeScreen progress={progress} persisted={!saveFailed} onStart={startNew} onResume={() => setView('session')} onSummary={() => setView('summary')} settings={settings} onSettings={setSettings} settingsSaved={settingsSaved} personal={<PersonalWords words={personalWords} error={personalError} onAdd={(entry) => savePersonalWords([...personalWords, entry])} onRemove={(id) => savePersonalWords(personalWords.filter((entry) => entry.id !== id))} />}><EvidenceNote /></HomeScreen></>;
+  if (view === 'home') return <>{notice}<HomeScreen progress={progress} persisted={!saveFailed} onStart={startNew} onResume={() => setView('session')} onSummary={() => setView('summary')} settings={settings} onSettings={setSettings} settingsSaved={settingsSaved} personal={<><PersonalWords words={personalWords} error={personalError} onAdd={(entry) => savePersonalWords([...personalWords, entry])} onRemove={(id) => savePersonalWords(personalWords.filter((entry) => entry.id !== id))} /><PracticeDiary history={history} review={review} levels={settings.blocks} /></>}><EvidenceNote /></HomeScreen></>;
   if (view === 'summary') return <>{notice}<Summary progress={progress} onRestart={() => startNew()} onHome={goHome} /></>;
   const extended = session.mode === 'extended';
   const steps = getSessionSteps(session);
