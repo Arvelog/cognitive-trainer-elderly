@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:api": "node scripts/dev-api.mjs",
     "test": "npm run test:core && npm run test:therapy && npm run test:generation",
-    "test:therapy": "node scripts/test-therapy.mjs && node scripts/test-practice-levels.mjs && node scripts/test-personal-words.mjs && node scripts/test-word-review.mjs",
+    "test:therapy": "node scripts/test-therapy.mjs && node scripts/test-practice-levels.mjs && node scripts/test-personal-words.mjs && node scripts/test-word-review.mjs && node scripts/test-generated-practice.mjs",
     "test:core": "node scripts/test-core.mjs",
     "test:generation": "node scripts/smoke-generation.mjs",
     "build": "vite build && node scripts/build-sites.mjs",
