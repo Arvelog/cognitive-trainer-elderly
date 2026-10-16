@@ -1,6 +1,7 @@
 import { SESSION_STEPS } from './therapySession.js';
 import { levelLabel, normalizePracticeSettings } from './practiceLevels.js';
 import { CATEGORY_CONTEXTS, CONTEXTS, DECISIONS, DIALOGUES, ITEM_FEATURES, NUMBER_CONTEXTS, PLANS, READING_CONTEXTS, RELATIONS, WRITTEN_MESSAGES } from './richerPractice.js';
+import { normalizeWord, reviewWord } from '../lib/wordReview.js';
 import { normalizePersonalWords, personalNoteTask, personalRecognitionTask, personalStoryTask, personalWritingTask } from './personalWords.js';
 
 export const PRACTICE_BLOCKS = [
@@ -238,12 +239,15 @@ const shuffle = (items) => {
   return copy;
 };
 
-export function createPracticeSession(blockId = null, previousSession = null, settings = null, personalWords = []) {
+export function createPracticeSession(blockId = null, previousSession = null, settings = null, personalWords = [], reviewWords = []) {
   const profile = normalizePracticeSettings(settings);
   const personal = normalizePersonalWords(personalWords);
+  const due = new Set(reviewWords.map(normalizeWord));
+  // Words that needed help earlier come back first when their review day has arrived.
+  const dueFirst = (items, wordOf) => { const hits = items.filter((item) => due.has(normalizeWord(wordOf(item)))); return hits.length ? pick(hits) : null; };
   const levels = profile.blocks;
   const previousFirstImage = previousSession?.tasks?.find((task) => task.kind === 'writing')?.image;
-  const firstPicture = pick(WRITING_PICTURES.filter((picture) => picture.image !== previousFirstImage));
+  const firstPicture = dueFirst(WRITING_PICTURES, (picture) => picture.word) || pick(WRITING_PICTURES.filter((picture) => picture.image !== previousFirstImage));
   const secondPicture = pick(WRITING_PICTURES.filter((picture) => picture.image !== firstPicture.image));
   const fresh = (items, block, slot, except = null) => {
     const previous = previousSession?.tasks?.find((task) => task.id === `${block}-${slot}`)?.contentId;
@@ -257,7 +261,7 @@ export function createPracticeSession(blockId = null, previousSession = null, se
   const secondDialogue = fresh(DIALOGUES, 'communication', 1, firstDialogue.contentId);
   const categories = levels.meaning === 1 ? CATEGORIES.filter((task) => task.options.length === 2).map((task) => ({ ...task, title: 'Оберіть спільну назву' })) : CATEGORY_CONTEXTS[levels.meaning];
   // Own photos replace one task per block; each slot prefers a photo that slot did not show last time.
-  const personalPick = (block, slot, build, pool = personal) => pool.length ? build(fresh(pool.map((entry) => ({ entry, contentId: build(entry).contentId })), block, slot).entry) : null;
+  const personalPick = (block, slot, build, pool = personal) => pool.length ? build(dueFirst(pool, (entry) => entry.word) || fresh(pool.map((entry) => ({ entry, contentId: build(entry).contentId })), block, slot).entry) : null;
   const recognition = personal.length >= 2 && personalPick('understanding', 0, (entry) => {
     const task = personalRecognitionTask(entry, personal.filter((item) => item.id !== entry.id));
     return levels.understanding === 1 ? { ...task, options: task.options.slice(0, 2) } : task;
@@ -267,7 +271,7 @@ export function createPracticeSession(blockId = null, previousSession = null, se
   const photoStory = personalPick('communication', 1, personalStoryTask);
   const groups = [
     [recognition || choose(levels.understanding === 1 ? UNDERSTANDING : CONTEXTS[levels.understanding], 'understanding', 0), choose(levels.understanding === 1 ? READING : READING_CONTEXTS[levels.understanding], 'understanding', 1)],
-    [choose(levels.meaning === 1 ? FEATURES : ITEM_FEATURES, 'meaning', 0), choose(levels.meaning === 1 ? ASSOCIATIONS : RELATIONS[levels.meaning], 'meaning', 1), choose(categories, 'meaning', 2)],
+    [dueFirst(levels.meaning === 1 ? FEATURES : ITEM_FEATURES, (item) => item.word) || choose(levels.meaning === 1 ? FEATURES : ITEM_FEATURES, 'meaning', 0), choose(levels.meaning === 1 ? ASSOCIATIONS : RELATIONS[levels.meaning], 'meaning', 1), choose(categories, 'meaning', 2)],
     [choose(levels.logic === 1 ? SEQUENCES : PLANS, 'logic', 0), choose(levels.logic === 1 ? LOGIC : DECISIONS[levels.logic], 'logic', 1)],
     [pick([EASY_NUMBERS, MID_NUMBERS, NUMBERS][levels.numbers - 1]), choose([EASY_EVERYDAY, MID_EVERYDAY, NUMBER_CONTEXTS][levels.numbers - 1], 'numbers', 1)],
     levels.writing === 3 ? [firstMessage, note || secondMessage] : [writingPhoto || { kind: 'writing', title: 'Напишіть назву малюнка', ...firstPicture }, { kind: 'writing', title: 'Ще одне слово в зошиті', ...secondPicture }],
@@ -275,7 +279,8 @@ export function createPracticeSession(blockId = null, previousSession = null, se
   ];
   const tasks = groups.flatMap((group, i) => group.map((task, j) => ({
     ...prepareTask(task, PRACTICE_BLOCKS[i].id, levels[PRACTICE_BLOCKS[i].id]), block: PRACTICE_BLOCKS[i].id, id: `${PRACTICE_BLOCKS[i].id}-${j}`,
-  }))).filter((task) => !blockId || task.block === blockId);
+  }))).filter((task) => !blockId || task.block === blockId)
+    .map((task) => due.has(normalizeWord(reviewWord(task))) ? { ...task, review: true } : task);
   return { id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, mode: 'extended', curriculumVersion: 3, levels: { ...levels }, blockId, tasks, createdAt: new Date().toISOString() };
 }
 
