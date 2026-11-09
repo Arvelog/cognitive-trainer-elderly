@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react';
 import { Download, Upload } from 'lucide-react';
-import { backupFileName, blobToDataUrl, buildBackup, dataUrlToBlob, parseBackup, restoreItems } from '../lib/backup';
+import { backupFileName, backupKeys, blobToDataUrl, buildBackup, dataUrlToBlob, parseBackup, restoreItems } from '../lib/backup';
 import { listStore, replaceStore } from '../lib/voiceStore';
 
 const AUDIO_STORES = ['clips', 'prompts'];
@@ -44,13 +44,21 @@ export function DataBackup() {
     const when = backup.exportedAt ? ` від ${dateLabel(backup.exportedAt)}` : '';
     if (!window.confirm(`Відновити копію${when}? Фото, щоденник і записи на цьому пристрої буде замінено даними з файлу.`)) return;
     setBusy(true);
+    // Keep the current data so a failed restore (usually not enough space) leaves the device as it was.
+    const oldItems = Object.fromEntries(backupKeys(window.localStorage).map((key) => [key, window.localStorage.getItem(key)]));
+    let oldAudio = {};
     try {
+      const audio = Object.fromEntries(await Promise.all(AUDIO_STORES.map(async (store) => [store, await Promise.all(backup.audio[store].map(async ({ data, ...rest }) => ({ ...rest, blob: await dataUrlToBlob(data) })))])));
+      if (window.indexedDB) oldAudio = Object.fromEntries(await Promise.all(AUDIO_STORES.map(async (store) => [store, await listStore(store).catch(() => [])])));
       restoreItems(window.localStorage, backup.items);
-      if (window.indexedDB) for (const store of AUDIO_STORES) {
-        await replaceStore(store, await Promise.all(backup.audio[store].map(async ({ data, ...rest }) => ({ ...rest, blob: await dataUrlToBlob(data) }))));
-      }
+      if (window.indexedDB) for (const store of AUDIO_STORES) await replaceStore(store, audio[store]);
       window.location.reload();
-    } catch { setStatus('Не вдалося відновити все: на пристрої замало місця. Видаліть зайві фото чи записи й спробуйте ще раз.'); setBusy(false); }
+    } catch {
+      try { restoreItems(window.localStorage, oldItems); } catch { /* Best effort: the old values were there a moment ago. */ }
+      if (window.indexedDB) for (const store of Object.keys(oldAudio)) await replaceStore(store, oldAudio[store]).catch(() => {});
+      setStatus('Не вдалося відновити копію: на пристрої замало місця. Ваші дані залишилися як були. Видаліть зайві фото чи записи й спробуйте ще раз.');
+      setBusy(false);
+    }
   };
 
   return <details className="practice-settings data-backup">

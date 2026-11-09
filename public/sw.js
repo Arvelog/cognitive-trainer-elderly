@@ -1,7 +1,9 @@
 // Offline support for «Поруч»: the app shell and every file it has loaded stay available without internet.
 // Pages: network first, falling back to the saved copy. Built assets (hashed names), images, fonts: cache first.
-const CACHE = 'poruch-v1';
-const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon.svg'];
+const CACHE = 'poruch-v2';
+const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon.svg',
+  // Task pictures, so writing and scene tasks keep their image even when first opened offline.
+  '/images/practice/01.webp', '/images/practice/02.webp', '/images/practice/03.webp', '/images/scenes/woman-cooking.jpg'];
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
 // The page's own scripts and styles have hashed names, so they are read from the page itself.
