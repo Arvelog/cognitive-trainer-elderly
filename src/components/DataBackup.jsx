@@ -9,7 +9,8 @@ const dateLabel = (iso) => new Date(iso).toLocaleDateString('uk-UA', { day: 'num
 async function exportAudio() {
   if (!window.indexedDB) return {};
   const entries = await Promise.all(AUDIO_STORES.map(async (store) => {
-    const items = await listStore(store).catch(() => []);
+    // A failed read fails the export: a backup silently missing recordings would erase them on restore.
+    const items = await listStore(store);
     return [store, await Promise.all(items.map(async ({ blob, ...rest }) => ({ ...rest, data: await blobToDataUrl(blob) })))];
   }));
   return Object.fromEntries(entries);
