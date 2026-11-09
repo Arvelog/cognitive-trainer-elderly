@@ -4,14 +4,17 @@ import { ChoiceButtons, ListenButton, TaskFrame } from './therapyTasks';
 import { VoiceRecorder } from './VoiceRecorder';
 import { PRACTICE_BLOCKS } from '../data/practiceSession';
 import { levelLabel } from '../data/practiceLevels';
+import { namingCues } from '../lib/namingCues';
+import { SCRIPT_STAGES, scriptCue } from '../data/scripts';
+import { PARTNER_TIPS } from '../data/partnerTips';
 import { nextSequenceSteps, recordOwnResponse, recordReasoningAnswer, recordSemanticName, recordWritingStage, usedSupport } from '../lib/practiceResults';
 
 const ICONS = { understanding: BookOpen, meaning: Link2, logic: ListOrdered, numbers: Calculator, writing: PencilLine, communication: MessageCircle };
 function Frame({ data, instruction, coach, source, children }) {
   const block = PRACTICE_BLOCKS.find((item) => item.id === data.block);
   const level = data.level ? data.levelLabel || levelLabel(data.block, data.level, data.curriculumVersion) : null;
-  const review = data.review && 'Повторюємо слово, з яким минулого разу знадобилася допомога. Якщо зараз вийде самостійно, воно повернеться пізніше.';
-  return <TaskFrame icon={ICONS[data.block]} eyebrow={block.short} title={data.title} instruction={instruction || data.instruction} coach={review ? `${review} ${coach || ''}`.trim() : coach} level={level} source={source}>{children}</TaskFrame>;
+  const review = data.review ? 'Повторюємо слово, з яким минулого разу знадобилася допомога. Якщо зараз вийде самостійно, воно повернеться пізніше.' : data.planned ? 'Слово з плану логопеда.' : null;
+  return <TaskFrame icon={ICONS[data.block]} eyebrow={block.short} title={data.title} instruction={instruction || data.instruction} coach={review ? `${review} ${coach || ''}`.trim() : coach} level={level} source={source} tips={PARTNER_TIPS[data.kind]}>{children}</TaskFrame>;
 }
 function ReasoningTask({ data, progress, onProgress }) {
   const index = Math.min(progress.question || 0, data.questions.length - 1);
@@ -82,7 +85,7 @@ function SemanticTask({ data, progress, onProgress }) {
     <div className="practice-stimulus semantic-stimulus"><span className="practice-emoji" aria-hidden="true">{data.emoji}</span>{(showWord || progress.nameShown) && <strong>{data.word}</strong>}</div>
     {progress.done ? <div className="practice-completion" role="status"><Check aria-hidden="true" /><p>Спробу збережено.</p></div> : progress.featuresDone ? <>
       <h2 className="subtask-title" tabIndex={-1} ref={questionHeading}>Як називається предмет?</h2>
-      {!showWord && !progress.nameShown && <button className="hint-button" type="button" onClick={() => onProgress({ ...progress, nameShown: true, usedModel: true })}>Показати назву</button>}
+      {!showWord && <NamingCues data={data} progress={progress} onProgress={onProgress} />}
       {(showWord || progress.nameShown) && <ListenButton text={data.word} label="Почути назву" onListen={() => onProgress({ ...progress, usedAnswerAudio: true })} />}
       <VoiceRecorder title={`Назва предмета: ${data.word}`} />
       <Outcomes mode={naming.mode} onMark={markName} label="Для людини поруч: як назвали предмет?" />
@@ -93,6 +96,18 @@ function SemanticTask({ data, progress, onProgress }) {
       {current.done && <button className="confirm-button" type="button" onClick={() => onProgress({ ...progress, question: Math.min(index + 1, data.questions.length - 1), ...(index === data.questions.length - 1 ? data.curriculumVersion >= 2 ? { featuresDone: true } : { done: true } : {}) })}>{index === data.questions.length - 1 ? 'Спробувати назвати предмет' : 'Наступна ознака'}<Check aria-hidden="true" /></button>}
     </>}
   </Frame>;
+}
+// Step by step: meaning, first sound, first syllable, then the word itself. Each step is opened only on request.
+function NamingCues({ data, progress, onProgress }) {
+  const cues = namingCues(data);
+  const used = Math.min(progress.cueLevel || 0, cues.length);
+  const next = cues[used];
+  const open = () => onProgress({ ...progress, cueLevel: used + 1, ...(next.kind === 'word' ? { nameShown: true, usedModel: true } : { usedHint: true }) });
+  return <div className="naming-cues">
+    {used > 0 && <ol className="naming-cues__list" aria-label="Відкриті підказки">{cues.slice(0, used).filter((cue) => cue.kind !== 'word').map((cue) => <li key={cue.kind}><span className="round-label">{cue.label}</span><strong>{cue.text}</strong></li>)}</ol>}
+    {next && !progress.done && <button className="hint-button" type="button" onClick={open}><Lightbulb aria-hidden="true" />{used === 0 ? `Підказка: ${next.label.toLocaleLowerCase('uk-UA')}` : next.kind === 'word' ? 'Показати назву' : `Ще підказка: ${next.label.toLocaleLowerCase('uk-UA')}`}</button>}
+    {used === 0 && <p className="form-note">Спершу дайте час. Підказки відкриваються по одній, від найменшої.</p>}
+  </div>;
 }
 function SequenceTask({ data, progress, onProgress }) {
   const selected = progress.selected || [];
@@ -126,6 +141,7 @@ function WritingTask({ data, progress, onProgress }) {
     {data.image && <img className="writing-picture" src={data.image} alt={data.personal ? 'Ваше фото для письмового завдання' : 'Малюнок для письмового завдання; назва відкриється за запитом'} />}
     {data.stimulus && <><div className="practice-context"><p>{data.stimulus}</p></div><ListenButton text={data.stimulus} label="Послухати ситуацію" onListen={() => change({ usedAudio: true })} /></>}
   </>}>
+    {data.dictation && <ListenButton text={data.dictation} label="Послухати слово" />}
     <p className="round-label">{stage === 'write' ? 'Перша спроба' : revealed ? 'Списування' : 'Письмо з пам’яті'}</p>
     {revealed && <div className={`writing-model${data.modelText ? ' writing-model--sentence' : ''}`} ref={stageContent} tabIndex={-1} aria-label="Зразок запису"><strong>{model}</strong><ListenButton text={model} label="Послухати зразок" onListen={() => change({ usedAnswerAudio: true })} /><p>{data.accepted}</p></div>}
     {stage === 'recall' && <p className="recall-note" ref={stageContent} tabIndex={-1}>Зразок сховано. Закрийте й запис у зошиті.</p>}
@@ -165,5 +181,25 @@ function ConversationTask({ data, progress, onProgress }) {
     </>}
   </Frame>;
 }
-const TASKS = { choice: ChoiceTask, reasoning: ReasoningTask, semantic: SemanticTask, sequence: SequenceTask, writing: WritingTask, conversation: ConversationTask };
+function ScriptTask({ data, progress, onProgress }) {
+  const index = Math.min(progress.line || 0, data.lines.length - 1);
+  const heading = useRef(null);
+  useEffect(() => { if (index > 0) heading.current?.focus({ preventScroll: true }); }, [index]);
+  const line = data.lines[index];
+  const cue = scriptCue(line, data.stage);
+  const shown = progress.shownLines?.includes(index);
+  const last = index === data.lines.length - 1;
+  const show = () => onProgress({ ...progress, shownLines: [...(progress.shownLines || []), index], usedModel: true });
+  return <Frame data={data} instruction={data.prompt} coach="Приймайте зміст, а не точні слова. Коли сценарій виходить самостійно, наступного разу тексту на екрані стане менше.">
+    <p className="round-label">Репліка {index + 1} з {data.lines.length} · {SCRIPT_STAGES[data.stage - 1]}</p>
+    <h2 className="subtask-title script-line" tabIndex={-1} ref={heading}>{shown ? line : cue || 'Скажіть цю репліку з пам’яті.'}</h2>
+    {!shown && data.stage > 1 && !progress.done && <button className="hint-button" type="button" onClick={show}><Lightbulb aria-hidden="true" />Показати всю репліку</button>}
+    {(shown || data.stage === 1) && <ListenButton text={line} label="Послухати репліку" onListen={() => onProgress({ ...progress, usedAnswerAudio: true })} />}
+    {!last && !progress.done ? <button className="confirm-button" type="button" onClick={() => onProgress({ ...progress, line: index + 1 })}>Наступна репліка<ArrowRight aria-hidden="true" /></button> : <>
+      {!progress.done && <VoiceRecorder title={`Сценарій: ${data.title}`} />}
+      <Outcomes done={progress.done} mode={progress.mode} onMark={(mode) => onProgress(recordOwnResponse(progress, mode))} label="Для людини поруч: як вийшов увесь сценарій?" />
+    </>}
+  </Frame>;
+}
+const TASKS = { script: ScriptTask, choice: ChoiceTask, reasoning: ReasoningTask, semantic: SemanticTask, sequence: SequenceTask, writing: WritingTask, conversation: ConversationTask };
 export function PracticeTask(props) { const Task = TASKS[props.data.kind]; return <Task {...props} />; }

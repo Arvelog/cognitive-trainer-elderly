@@ -3,6 +3,8 @@ import { Printer } from 'lucide-react';
 import { PRACTICE_BLOCKS } from '../data/practiceSession';
 import { LEVEL_OPTIONS } from '../data/practiceLevels';
 import { levelSuggestions, weeklyDiary } from '../lib/practiceHistory';
+import { planProgress } from '../data/therapyPlan';
+import { CUE_KINDS, CUE_LABELS } from '../lib/namingCues';
 import { VoiceClips } from './VoiceClips';
 
 const dateLabel = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', timeZone: 'UTC' });
@@ -17,7 +19,7 @@ function ShareBar({ counts }) {
   </span>;
 }
 
-export function PracticeDiary({ history, review, levels }) {
+export function PracticeDiary({ history, review, levels, plan = { words: [], note: '' } }) {
   const details = useRef(null);
   const weeks = weeklyDiary(history);
   const suggestions = levelSuggestions(history, levels);
@@ -46,6 +48,10 @@ export function PracticeDiary({ history, review, levels }) {
           <span className="diary-row"><span>Зараз</span><ShareBar counts={weeks[0].blocks[block.id]} /></span>
           <span className="diary-row"><span>Тоді</span><ShareBar counts={weeks[3].blocks[block.id]} /></span>
         </li>)}</ul>
+        {CUE_KINDS.some((kind) => weeks[0].naming[kind]) && <><h3 className="diary-heading">Називання цього тижня</h3><p className="form-note">Яка підказка знадобилася, щоб назвати предмет. Менше підказок з часом — добрий знак.</p>
+          <ul className="diary-notes">{CUE_KINDS.filter((kind) => weeks[0].naming[kind]).map((kind) => <li key={kind}>{CUE_LABELS[kind]}: {weeks[0].naming[kind]}</li>)}</ul></>}
+        {plan.words.length > 0 && <><h3 className="diary-heading">Слова з плану логопеда</h3>{plan.note && <p className="form-note">Порада: {plan.note}</p>}
+          <ul className="diary-notes">{planProgress(plan, history).map((item) => <li key={item.word}>{item.word}: {item.independent + item.supported + item.attempted ? `самостійно ${item.independent}, з допомогою ${item.supported}, спроба ${item.attempted}` : 'ще не траплялося'}</li>)}</ul></>}
         {suggestions.length > 0 && <><h3 className="diary-heading">Можна обговорити рівень</h3><ul className="diary-notes">{suggestions.map(({ block, direction }) => {
           const name = PRACTICE_BLOCKS.find((item) => item.id === block).short;
           const next = LEVEL_OPTIONS[block][levels[block] - 1 + (direction === 'up' ? 1 : -1)];

@@ -10,3 +10,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <App />
     </React.StrictMode>,
 )
+
+// Offline support: only in the built app, so local development always loads fresh files.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}

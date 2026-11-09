@@ -1,5 +1,6 @@
 import { summarizeBlock } from './practiceResults.js';
 import { reviewWord, taskOutcome } from './wordReview.js';
+import { CUE_KINDS, deepestCue } from './namingCues.js';
 
 export const HISTORY_KEY = 'poruch_history_v1';
 const MAX_SESSIONS = 120;
@@ -22,14 +23,16 @@ export function summarizeSession(progress) {
     const mode = word && taskOutcome(task, details[index]);
     return word && ['independent', 'supported', 'attempted'].includes(mode) ? [{ word, mode }] : [];
   });
+  // Which cue the naming needed, when the word was hidden at first.
+  const naming = session.tasks.flatMap((task, index) => task.kind === 'semantic' && completed[index] && Number.isInteger(details[index]?.naming?.cueLevel) ? [deepestCue(task, details[index].naming.cueLevel)] : []);
   const done = completed.filter(Boolean).length;
-  return done ? { id: session.id, date: (session.createdAt || new Date().toISOString()).slice(0, 10), done, total: completed.length, blocks, words } : null;
+  return done ? { id: session.id, date: (session.createdAt || new Date().toISOString()).slice(0, 10), done, total: completed.length, blocks, words, ...(naming.length ? { naming } : {}) } : null;
 }
 
 export function normalizeHistory(value) {
   if (!Array.isArray(value)) return [];
   return value.filter((item) => item && typeof item.id === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && item.blocks && typeof item.blocks === 'object')
-    .map((item) => ({ ...item, words: Array.isArray(item.words) ? item.words.filter((entry) => entry?.word && entry?.mode) : [] }))
+    .map((item) => ({ ...item, words: Array.isArray(item.words) ? item.words.filter((entry) => entry?.word && entry?.mode) : [], ...(Array.isArray(item.naming) ? { naming: item.naming.filter((cue) => CUE_KINDS.includes(cue)) } : {}) }))
     .slice(-MAX_SESSIONS);
 }
 
@@ -64,7 +67,8 @@ export function weeklyDiary(history, now = new Date(), weeks = 4) {
       }, { independent: 0, supported: 0, attempted: 0 });
       return [block, sum];
     }));
-    return { start, sessions: sessions.length, tasks: sessions.reduce((sum, item) => sum + item.done, 0), blocks };
+    const naming = Object.fromEntries(CUE_KINDS.map((kind) => [kind, sessions.reduce((sum, item) => sum + (item.naming || []).filter((cue) => cue === kind).length, 0)]));
+    return { start, sessions: sessions.length, tasks: sessions.reduce((sum, item) => sum + item.done, 0), blocks, naming };
   });
 }
 

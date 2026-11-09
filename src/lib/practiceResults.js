@@ -17,7 +17,7 @@ export function recordOwnResponse(progress, mode) {
 }
 
 export function recordSemanticName(progress, showWord, mode) {
-  const naming = recordOwnResponse({ ...progress.naming, usedModel: Boolean(showWord || progress.nameShown), usedAnswerAudio: progress.usedAnswerAudio }, mode);
+  const naming = recordOwnResponse({ ...progress.naming, usedModel: Boolean(showWord || progress.nameShown), usedAnswerAudio: progress.usedAnswerAudio, usedHint: (progress.cueLevel || 0) > 0, cueLevel: showWord ? null : progress.cueLevel || 0 }, mode);
   const parts = [...(progress.answers || []), naming];
   const outcome = parts.some((part) => part.mode === 'attempted') ? 'attempted'
     : parts.every((part) => part.mode === 'independent') && !usedSupport(progress) ? 'independent' : 'supported';
