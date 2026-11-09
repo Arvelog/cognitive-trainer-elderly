@@ -4,6 +4,8 @@ import { CATEGORY_CONTEXTS, CONTEXTS, DECISIONS, DIALOGUES, ITEM_FEATURES, NUMBE
 import { LEXICON_CATEGORY_NAMES, LEXICON_FEATURES, numberProblems } from './generatedPractice.js';
 import { normalizeWord, reviewWord } from '../lib/wordReview.js';
 import { normalizePersonalWords, personalNoteTask, personalRecognitionTask, personalStoryTask, personalWritingTask } from './personalWords.js';
+import { nextScript, normalizeScripts, scriptTask } from './scripts.js';
+import { normalizePlan, planTask, planUsesWriting } from './therapyPlan.js';
 
 export const PRACTICE_BLOCKS = [
   { id: 'understanding', short: 'Розуміння', title: 'Слухаємо й читаємо', minutes: '2–4 хв', description: 'Слова, повідомлення, зміна планів і висновки.' },
@@ -142,7 +144,7 @@ function prepareTask(source, block, level) {
       task.title = 'Напишіть підпис і коротке речення';
       task.writingGoal = 'Напишіть, хто або що на фото. Потім додайте коротке речення про це.';
       task.accepted = 'Підпис і будь-яке зрозуміле речення про фото підходять.';
-    } else if (level === 2) {
+    } else if (level === 2 && !task.dictation) {
       task.title = 'Напишіть назву й коротке речення';
       task.writingGoal = 'Напишіть назву предмета. Потім додайте коротке речення: що з ним роблять або для чого він потрібен.';
       task.modelText = { борщ: 'Борщ їдять ложкою.', яблуко: 'Яблуко росте на дереві.', ключ: 'Ключем відмикають двері.' }[task.word];
@@ -240,7 +242,7 @@ const shuffle = (items) => {
   return copy;
 };
 
-export function createPracticeSession(blockId = null, previousSession = null, settings = null, personalWords = [], reviewWords = []) {
+export function createPracticeSession(blockId = null, previousSession = null, settings = null, personalWords = [], reviewWords = [], extras = {}) {
   const profile = normalizePracticeSettings(settings);
   const personal = normalizePersonalWords(personalWords);
   const due = new Set(reviewWords.map(normalizeWord));
@@ -272,13 +274,21 @@ export function createPracticeSession(blockId = null, previousSession = null, se
   const writingPhoto = levels.writing < 3 && personalPick('writing', 0, personalWritingTask);
   const note = levels.writing === 3 && personalPick('writing', 1, personalNoteTask, personal.filter((entry) => entry.kind === 'person'));
   const photoStory = personalPick('communication', 1, personalStoryTask);
+  // A personal script takes the first conversation slot; the plan's words take a meaning or writing slot.
+  const script = normalizeScripts(extras.scripts).length ? scriptTask(nextScript(normalizeScripts(extras.scripts))) : null;
+  const plan = normalizePlan(extras.plan);
+  const planPick = (words) => words.length ? fresh(words.map((word) => ({ word, contentId: planTask(word).contentId })), 'plan', 0).word : null;
+  const planMeaningWord = planPick(plan.words.filter((word) => !planUsesWriting(word)));
+  const planWritingWord = levels.writing < 3 ? planPick(plan.words.filter(planUsesWriting)) : null;
+  const planMeaning = planMeaningWord && planTask(planMeaningWord, levels.meaning === 1 ? 2 : 3);
+  const planWriting = planWritingWord && planTask(planWritingWord);
   const groups = [
     [recognition || choose(levels.understanding === 1 ? UNDERSTANDING : CONTEXTS[levels.understanding], 'understanding', 0), choose(levels.understanding === 1 ? READING : READING_CONTEXTS[levels.understanding], 'understanding', 1)],
-    [dueFirst(features, (item) => item.word) || choose(features, 'meaning', 0), choose(levels.meaning === 1 ? ASSOCIATIONS : RELATIONS[levels.meaning], 'meaning', 1), choose(categories, 'meaning', 2)],
+    [dueFirst(features, (item) => item.word) || planMeaning || choose(features, 'meaning', 0), choose(levels.meaning === 1 ? ASSOCIATIONS : RELATIONS[levels.meaning], 'meaning', 1), choose(categories, 'meaning', 2)],
     [choose(levels.logic === 1 ? SEQUENCES : PLANS, 'logic', 0), choose(levels.logic === 1 ? LOGIC : DECISIONS[levels.logic], 'logic', 1)],
     [choose([...[EASY_NUMBERS, MID_NUMBERS, NUMBERS][levels.numbers - 1], ...numberProblems(levels.numbers)], 'numbers', 0), choose([EASY_EVERYDAY, MID_EVERYDAY, NUMBER_CONTEXTS][levels.numbers - 1], 'numbers', 1)],
-    levels.writing === 3 ? [firstMessage, note || secondMessage] : [writingPhoto || { kind: 'writing', title: 'Напишіть назву малюнка', ...firstPicture }, { kind: 'writing', title: 'Ще одне слово в зошиті', ...secondPicture }],
-    levels.communication === 1 ? [pick(CONVERSATION), photoStory || STORY] : [firstDialogue, photoStory || secondDialogue],
+    levels.writing === 3 ? [firstMessage, note || secondMessage] : [writingPhoto || { kind: 'writing', title: 'Напишіть назву малюнка', ...firstPicture }, planWriting || { kind: 'writing', title: 'Ще одне слово в зошиті', ...secondPicture }],
+    levels.communication === 1 ? [script || pick(CONVERSATION), photoStory || STORY] : [script || firstDialogue, photoStory || secondDialogue],
   ];
   const tasks = groups.flatMap((group, i) => group.map((task, j) => ({
     ...prepareTask(task, PRACTICE_BLOCKS[i].id, levels[PRACTICE_BLOCKS[i].id]), block: PRACTICE_BLOCKS[i].id, id: `${PRACTICE_BLOCKS[i].id}-${j}`,
@@ -302,7 +312,8 @@ export function validPracticeSession(session) {
       const validSteps = Array.isArray(task.steps) && task.steps.length > 0 && Array.isArray(task.choices) && task.choices.length === task.steps.length && new Set(task.choices).size === task.steps.length && task.steps.every((step) => task.choices.includes(step));
       return validSteps && (task.validOrders === undefined || (Array.isArray(task.validOrders) && task.validOrders.length > 0 && task.validOrders.every((order) => Array.isArray(order) && order.length === task.steps.length && new Set(order).size === task.steps.length && order.every((step) => task.steps.includes(step)))));
     }
-    if (task.kind === 'writing') return typeof task.word === 'string' && Boolean(task.image || (task.writingType === 'message' && task.stimulus && task.modelText));
+    if (task.kind === 'writing') return typeof task.word === 'string' && Boolean(task.image || task.dictation || (task.writingType === 'message' && task.stimulus && task.modelText));
+    if (task.kind === 'script') return Array.isArray(task.lines) && task.lines.length > 0 && task.lines.every((line) => typeof line === 'string') && [1, 2, 3].includes(task.stage);
     return task.kind === 'conversation' && typeof task.model === 'string';
   });
 }

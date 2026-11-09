@@ -6,6 +6,15 @@ import { PracticeTask } from './components/practiceTasks';
 import { PracticeSummary } from './components/PracticeSummary';
 import { PersonalWords } from './components/PersonalWords';
 import { PracticeDiary } from './components/PracticeDiary';
+import { ScriptsEditor } from './components/ScriptsEditor';
+import { TherapyPlanEditor } from './components/TherapyPlanEditor';
+import { CaregiverVoice } from './components/CaregiverVoice';
+import { PartnerGuide } from './components/PartnerGuide';
+import { AppSetup } from './components/AppSetup';
+import { DataBackup } from './components/DataBackup';
+import { loadScripts, normalizeScripts, SCRIPTS_KEY, updateScriptStage } from './data/scripts';
+import { loadPlan, normalizePlan, PLAN_KEY } from './data/therapyPlan';
+import { loadPrompts } from './lib/caregiverVoice';
 import { HISTORY_KEY, loadHistory, recordSession } from './lib/practiceHistory';
 import { LEGACY_SETTINGS_KEY, loadPracticeSettings, normalizePracticeSettings, SETTINGS_KEY } from './data/practiceLevels';
 import { loadPersonalWords, normalizePersonalWords, PERSONAL_WORDS_KEY } from './data/personalWords';
@@ -70,6 +79,11 @@ export default function App() {
   useEffect(() => { try { window.localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch { /* The diary is optional; practice works without it. */ } }, [history]);
   const [review, setReview] = useState(() => { try { return loadReview(window.localStorage.getItem(REVIEW_KEY)); } catch { return {}; } });
   useEffect(() => { try { window.localStorage.setItem(REVIEW_KEY, JSON.stringify(review)); } catch { /* Review dates are optional; practice works without them. */ } }, [review]);
+  const [scripts, setScripts] = useState(() => { try { return loadScripts(window.localStorage.getItem(SCRIPTS_KEY)); } catch { return []; } });
+  useEffect(() => { try { window.localStorage.setItem(SCRIPTS_KEY, JSON.stringify(normalizeScripts(scripts))); } catch { /* Scripts work for this visit even if they cannot be saved. */ } }, [scripts]);
+  const [plan, setPlan] = useState(() => { try { return loadPlan(window.localStorage.getItem(PLAN_KEY)); } catch { return normalizePlan(); } });
+  useEffect(() => { try { window.localStorage.setItem(PLAN_KEY, JSON.stringify(normalizePlan(plan))); } catch { /* The plan works for this visit even if it cannot be saved. */ } }, [plan]);
+  useEffect(() => { loadPrompts(); }, []);
   // Photos can fill browser storage, so a change is kept only after it is saved.
   const savePersonalWords = (next) => {
     const words = normalizePersonalWords(next);
@@ -85,11 +99,16 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); window.speechSynthesis?.cancel(); document.querySelector('main')?.focus({ preventScroll: true });
   }, [currentStep, view]);
-  const startNew = (mode = 'extended', block = null) => { dispatch({ type: 'start', session: mode === 'short' ? createTherapySession(settings.shortWords) : createPracticeSession(block, session, settings, personalWords, dueWords(review)) }); setView('session'); };
+  const startNew = (mode = 'extended', block = null) => { dispatch({ type: 'start', session: mode === 'short' ? createTherapySession(settings.shortWords) : createPracticeSession(block, session, settings, personalWords, dueWords(review), { scripts, plan }) }); setView('session'); };
   const goHome = () => setView('home');
   const finish = () => { dispatch({ type: 'finish' }); setView('summary'); };
   const notice = <SaveNotice failed={saveFailed} />;
-  if (view === 'home') return <>{notice}<HomeScreen progress={progress} persisted={!saveFailed} onStart={startNew} onResume={() => setView('session')} onSummary={() => setView('summary')} settings={settings} onSettings={setSettings} settingsSaved={settingsSaved} personal={<><PersonalWords words={personalWords} error={personalError} onAdd={(entry) => savePersonalWords([...personalWords, entry])} onRemove={(id) => savePersonalWords(personalWords.filter((entry) => entry.id !== id))} /><PracticeDiary history={history} review={review} levels={settings.blocks} /></>}><EvidenceNote /></HomeScreen></>;
+  if (view === 'home') return <>{notice}<HomeScreen progress={progress} persisted={!saveFailed} onStart={startNew} onResume={() => setView('session')} onSummary={() => setView('summary')} settings={settings} onSettings={setSettings} settingsSaved={settingsSaved} personal={<><PersonalWords words={personalWords} error={personalError} onAdd={(entry) => savePersonalWords([...personalWords, entry])} onRemove={(id) => savePersonalWords(personalWords.filter((entry) => entry.id !== id))} />
+      <ScriptsEditor scripts={scripts} onChange={setScripts} />
+      <TherapyPlanEditor plan={plan} onChange={(next) => setPlan(normalizePlan(next))} />
+      <CaregiverVoice suggestions={[...personalWords.map((entry) => entry.word), ...plan.words, ...Object.values(review).map((entry) => entry.word), ...scripts.flatMap((script) => script.lines)]} />
+      <PracticeDiary history={history} review={review} levels={settings.blocks} plan={plan} />
+      <PartnerGuide /><AppSetup /><DataBackup /></>}><EvidenceNote /></HomeScreen></>;
   if (view === 'summary') return <>{notice}<Summary progress={progress} onRestart={() => startNew()} onHome={goHome} /></>;
   const extended = session.mode === 'extended';
   const steps = getSessionSteps(session);
@@ -105,7 +124,10 @@ export default function App() {
   return <div className="session-screen">{notice}<header className="session-header"><button className="home-link" type="button" onClick={goHome} aria-label="Повернутися на головну"><Home aria-hidden="true" /></button><Brand compact /><div className="session-tools"><button className="pause-button" type="button" onClick={() => setView('break')}><Pause aria-hidden="true" />Перерва</button></div></header><ProgressRail session={session} currentStep={currentStep} completed={completed} />
     <main className="session-main" tabIndex={-1} aria-label={`Завдання ${currentStep + 1} з ${steps.length}: ${steps[currentStep].title}`}>
       <Task key={`${session.id}-${currentStep}`} data={data} words={session.strongWords} progress={details[currentStep] || {}} onProgress={(value) => {
-        if (extended && value.done && !details[currentStep]?.done) setReview((state) => updateReview(state, data, value));
+        if (extended && value.done && !details[currentStep]?.done) {
+          setReview((state) => updateReview(state, data, value));
+          if (data.kind === 'script') setScripts((items) => updateScriptStage(items, data.scriptId, value.mode));
+        }
         dispatch({ type: 'progress', index: currentStep, progress: value });
       }} />
       {done && <button className="text-action repeat-button" type="button" onClick={() => dispatch({ type: 'repeat', index: currentStep })}><RotateCcw aria-hidden="true" />Повторити завдання</button>}

@@ -13,16 +13,18 @@ import {
   Volume2,
 } from 'lucide-react';
 import { speakText } from '../lib/audio';
+import { playPrompt, promptFor, stopPrompt } from '../lib/caregiverVoice';
 import { speechTotals } from '../lib/therapyProgress';
 import { chooseAnswer } from '../lib/practiceResults';
 
-function CoachNote({ children, level }) {
+function CoachNote({ children, level, tips = [] }) {
   return (
     <aside className="coach-note">
       <details>
         <summary><HeartHandshake aria-hidden="true" /><span>Як допомогти</span></summary>
         {level && <p className="coach-note__level">Рівень: {level}.</p>}
         <p>{children}</p>
+        {tips.length > 0 && <ul className="coach-note__tips">{tips.map((tip) => <li key={tip}>{tip}</li>)}</ul>}
         <p className="coach-note__hint">
           Дайте 8–10 секунд на відповідь. Якщо важко — скажіть перший звук або промовте слово разом.
         </p>
@@ -32,7 +34,7 @@ function CoachNote({ children, level }) {
   );
 }
 
-export function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, coach, level, source }) {
+export function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, coach, level, source, tips }) {
   return (
     <div className="task-layout">
       <section className="task-stage" aria-labelledby="task-title">
@@ -46,7 +48,7 @@ export function TaskFrame({ icon: Icon, eyebrow, title, instruction, children, c
         </div>
         {source ? <div className="task-body"><div className="task-source">{source}</div><div className="task-work">{children}</div></div> : children}
       </section>
-      <CoachNote level={level}>{coach}</CoachNote>
+      <CoachNote level={level} tips={tips}>{coach}</CoachNote>
     </div>
   );
 }
@@ -57,11 +59,15 @@ export function ListenButton({ text, label = 'Почути слово', rate = 0
   useEffect(() => {
     setSpeaking(false);
     setUnavailable(false);
-    return () => window.speechSynthesis?.cancel();
+    return () => { window.speechSynthesis?.cancel(); stopPrompt(); };
   }, [text]);
 
+  const own = Boolean(promptFor(text));
   const play = () => {
     setUnavailable(false);
+    const callbacks = { onEnd: () => setSpeaking(false), onError: () => { setSpeaking(false); setUnavailable(true); } };
+    // The caregiver's own recording of this exact text wins over the synthetic voice.
+    if (playPrompt(text, callbacks)) { window.speechSynthesis?.cancel(); setSpeaking(true); onListen?.(); return; }
     const started = speakText(text, {
       rate,
       onEnd: () => setSpeaking(false),
@@ -78,6 +84,7 @@ export function ListenButton({ text, label = 'Почути слово', rate = 0
         <Volume2 aria-hidden="true" />
         {speaking ? 'Слухаємо…' : label}
       </button>
+      {own && <span className="form-note">Голос близької людини</span>}
       {unavailable && <span className="audio-notice" role="status">Звук недоступний. Прочитайте вголос.</span>}
     </div>
   );
@@ -92,7 +99,7 @@ export function ChoiceButtons({ options, answer, progress, onProgress, spoken })
     if (done) return;
     onProgress(chooseAnswer(progress, option, answer));
     if (option === answer) {
-      speakText(spoken || answer, { rate: 0.68 });
+      if (!playPrompt(spoken || answer)) speakText(spoken || answer, { rate: 0.68 });
     }
   };
 
